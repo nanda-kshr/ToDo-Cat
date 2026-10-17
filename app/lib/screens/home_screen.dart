@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../services/widget_service.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/cat_animation.dart';
+import '../widgets/draggable_floating_cat.dart';
 import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -424,16 +425,33 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF0A0A0A),
         elevation: 0,
-        title: const Row(
+        title: Row(
           children: [
-            AppLogo(size: 32, borderRadius: 8),
-            SizedBox(width: 10),
-            Text(
+            const AppLogo(size: 32, borderRadius: 8),
+            const SizedBox(width: 10),
+            const Text(
               'TodoCat',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 10),
+            GestureDetector(
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(_catSpeedMessage),
+                    duration: const Duration(seconds: 2),
+                    backgroundColor: const Color(0xFF171717),
+                  ),
+                );
+              },
+              child: CatAnimation(
+                speedPercent: _catSpeed,
+                size: 32,
+                idleRunWhenSleeping: true,
               ),
             ),
           ],
@@ -461,10 +479,12 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _loadData,
-        color: Colors.white,
-        backgroundColor: const Color(0xFF171717),
+      body: Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: _loadData,
+            color: Colors.white,
+            backgroundColor: const Color(0xFF171717),
         child: _loading
             ? const Center(
                 child: CircularProgressIndicator(color: Colors.white),
@@ -513,7 +533,11 @@ class _HomeScreenState extends State<HomeScreen> {
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                CatAnimation(speedPercent: _catSpeed, size: 52),
+                                CatAnimation(
+                                  speedPercent: _catSpeed,
+                                  size: 52,
+                                  idleRunWhenSleeping: true,
+                                ),
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
@@ -686,6 +710,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         ...filtered.map((task) => _taskTile(task)),
                     ],
                   ),
+          ),
+          if (!_loading && _error == null)
+            DraggableFloatingCat(
+              speedPercent: _catSpeed,
+              speedMessage: _catSpeedMessage,
+            ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.white,

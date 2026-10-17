@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -22,21 +23,37 @@ class ApiService {
   ApiService._internal();
 
   static const String _tokenKey = 'todocat_access_token';
+  static const String _refreshTokenKey = 'todocat_refresh_token';
+
+  Completer<bool>? _refreshCompleter;
 
   Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_tokenKey);
   }
 
-  Future<void> saveToken(String token) async {
+  Future<String?> getRefreshToken() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, token);
+    return prefs.getString(_refreshTokenKey);
   }
 
-  Future<void> clearToken() async {
+  Future<void> saveTokens({required String accessToken, String? refreshToken}) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, accessToken);
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      await prefs.setString(_refreshTokenKey, refreshToken);
+    }
+  }
+
+  Future<void> saveToken(String token) => saveTokens(accessToken: token);
+
+  Future<void> clearTokens() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
+    await prefs.remove(_refreshTokenKey);
   }
+
+  Future<void> clearToken() => clearTokens();
 
   Future<bool> isLoggedIn() async {
     final token = await getToken();
@@ -55,6 +72,73 @@ class ApiService {
     return headers;
   }
 
+  /// Automatically refreshes the expired access token using the stored refresh token.
+  /// Deduplicates parallel refresh calls with a Completer.
+  Future<bool> _refreshAccessToken() async {
+    if (_refreshCompleter != null) {
+      return _refreshCompleter!.future;
+    }
+
+    _refreshCompleter = Completer<bool>();
+
+    try {
+      final refreshToken = await getRefreshToken();
+      if (refreshToken == null || refreshToken.isEmpty) {
+        await clearTokens();
+        _refreshCompleter!.complete(false);
+        return false;
+      }
+
+      final response = await http.post(
+        Uri.parse(ApiConfig.refresh),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode({'refreshToken': refreshToken}),
+      );
+
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final data = jsonDecode(response.body);
+        final newAccess = data['accessToken'] as String?;
+        final newRefresh = (data['refreshToken'] as String?) ?? refreshToken;
+        if (newAccess != null && newAccess.isNotEmpty) {
+          await saveTokens(accessToken: newAccess, refreshToken: newRefresh);
+          _refreshCompleter!.complete(true);
+          return true;
+        }
+      }
+
+      // If refresh failed (token expired/revoked), clear stored credentials
+      await clearTokens();
+      _refreshCompleter!.complete(false);
+      return false;
+    } catch (_) {
+      _refreshCompleter!.complete(false);
+      return false;
+    } finally {
+      _refreshCompleter = null;
+    }
+  }
+
+  /// Wraps authenticated requests to automatically retry once after refreshing an expired token.
+  Future<http.Response> _authenticatedRequest(
+    Future<http.Response> Function(Map<String, String> headers) makeRequest,
+  ) async {
+    final headers = await _getHeaders();
+    var response = await makeRequest(headers);
+
+    if (response.statusCode == 401) {
+      final refreshed = await _refreshAccessToken();
+      if (refreshed) {
+        final retryHeaders = await _getHeaders();
+        response = await makeRequest(retryHeaders);
+      }
+    }
+
+    return response;
+  }
+
   // --- Auth API ---
 
   Future<User> login(String email, String password) async {
@@ -71,7 +155,10 @@ class ApiService {
       final data = jsonDecode(response.body);
       if (response.statusCode >= 200 && response.statusCode < 300) {
         if (data['accessToken'] != null) {
-          await saveToken(data['accessToken']);
+          await saveTokens(
+            accessToken: data['accessToken'],
+            refreshToken: data['refreshToken'],
+          );
         }
         return User.fromJson(data['user']);
       } else {
@@ -101,7 +188,10 @@ class ApiService {
       final data = jsonDecode(response.body);
       if (response.statusCode >= 200 && response.statusCode < 300) {
         if (data['accessToken'] != null) {
-          await saveToken(data['accessToken']);
+          await saveTokens(
+            accessToken: data['accessToken'],
+            refreshToken: data['refreshToken'],
+          );
         }
         return User.fromJson(data['user']);
       } else {
@@ -118,9 +208,8 @@ class ApiService {
 
   Future<User> getMe() async {
     try {
-      final response = await http.get(
-        Uri.parse(ApiConfig.me),
-        headers: await _getHeaders(),
+      final response = await _authenticatedRequest(
+        (headers) => http.get(Uri.parse(ApiConfig.me), headers: headers),
       );
 
       final data = jsonDecode(response.body);
@@ -128,7 +217,7 @@ class ApiService {
         return User.fromJson(data['user']);
       } else {
         if (response.statusCode == 401) {
-          await clearToken();
+          await clearTokens();
         }
         throw ApiException(
           data['message'] ?? 'Unauthorized',
@@ -175,7 +264,10 @@ class ApiService {
       final data = jsonDecode(response.body);
       if (response.statusCode >= 200 && response.statusCode < 300) {
         if (data['accessToken'] != null) {
-          await saveToken(data['accessToken']);
+          await saveTokens(
+            accessToken: data['accessToken'],
+            refreshToken: data['refreshToken'],
+          );
         }
         return User.fromJson(data['user']);
       } else {
@@ -205,7 +297,7 @@ class ApiService {
     } catch (_) {
       // Ignore network errors on logout
     } finally {
-      await clearToken();
+      await clearTokens();
       try {
         await GoogleSignIn.instance.signOut();
       } catch (_) {}
@@ -216,9 +308,8 @@ class ApiService {
 
   Future<List<Task>> fetchTasks() async {
     try {
-      final response = await http.get(
-        Uri.parse(ApiConfig.tasks),
-        headers: await _getHeaders(),
+      final response = await _authenticatedRequest(
+        (headers) => http.get(Uri.parse(ApiConfig.tasks), headers: headers),
       );
 
       final data = jsonDecode(response.body);
@@ -245,16 +336,18 @@ class ApiService {
     String category = 'General',
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse(ApiConfig.tasks),
-        headers: await _getHeaders(),
-        body: jsonEncode({
-          'title': title.trim(),
-          if (description != null) 'description': description.trim(),
-          if (dueDate != null) 'dueDate': dueDate.toIso8601String(),
-          'priority': priority,
-          'category': category.trim().isNotEmpty ? category.trim() : 'General',
-        }),
+      final response = await _authenticatedRequest(
+        (headers) => http.post(
+          Uri.parse(ApiConfig.tasks),
+          headers: headers,
+          body: jsonEncode({
+            'title': title.trim(),
+            if (description != null) 'description': description.trim(),
+            if (dueDate != null) 'dueDate': dueDate.toIso8601String(),
+            'priority': priority,
+            'category': category.trim().isNotEmpty ? category.trim() : 'General',
+          }),
+        ),
       );
 
       final data = jsonDecode(response.body);
@@ -292,10 +385,12 @@ class ApiService {
       if (priority != null) body['priority'] = priority;
       if (category != null) body['category'] = category.trim();
 
-      final response = await http.patch(
-        Uri.parse(ApiConfig.taskById(id)),
-        headers: await _getHeaders(),
-        body: jsonEncode(body),
+      final response = await _authenticatedRequest(
+        (headers) => http.patch(
+          Uri.parse(ApiConfig.taskById(id)),
+          headers: headers,
+          body: jsonEncode(body),
+        ),
       );
 
       final data = jsonDecode(response.body);
@@ -315,9 +410,11 @@ class ApiService {
 
   Future<bool> deleteTask(String id) async {
     try {
-      final response = await http.delete(
-        Uri.parse(ApiConfig.taskById(id)),
-        headers: await _getHeaders(),
+      final response = await _authenticatedRequest(
+        (headers) => http.delete(
+          Uri.parse(ApiConfig.taskById(id)),
+          headers: headers,
+        ),
       );
 
       if (response.statusCode >= 200 && response.statusCode < 300) {

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/User";
-import { generateTokens } from "@/lib/auth";
+import { generateTokens, setRefreshTokenCookie } from "@/lib/auth";
 
 export async function GET(request: Request) {
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -92,8 +92,11 @@ export async function POST(request: Request) {
     user.refreshTokens = [...(user.refreshTokens || []).slice(-9), refreshToken];
     await user.save();
 
+    await setRefreshTokenCookie(refreshToken);
+
     return NextResponse.json({
       accessToken,
+      refreshToken,
       user: {
         id: user._id.toString(),
         email: user.email,

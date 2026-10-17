@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 class CatAnimation extends StatefulWidget {
   final int speedPercent;
   final double size;
+  final bool idleRunWhenSleeping;
 
   const CatAnimation({
     super.key,
     required this.speedPercent,
     this.size = 44,
+    this.idleRunWhenSleeping = false,
   });
 
   @override
@@ -18,11 +20,19 @@ class _CatAnimationState extends State<CatAnimation>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
+  int get _effectiveSpeed {
+    if (widget.speedPercent <= 0 && widget.idleRunWhenSleeping) {
+      return 15;
+    }
+    return widget.speedPercent;
+  }
+
   Duration _getDuration() {
-    if (widget.speedPercent <= 0) {
+    final speed = _effectiveSpeed;
+    if (speed <= 0) {
       return const Duration(seconds: 1);
     }
-    final clamped = widget.speedPercent.clamp(1, 100);
+    final clamped = speed.clamp(1, 100);
     final sec = (1.5 - (clamped / 100.0) * 1.05).clamp(0.45, 1.5);
     return Duration(milliseconds: (sec * 1000).round());
   }
@@ -35,7 +45,7 @@ class _CatAnimationState extends State<CatAnimation>
       duration: _getDuration(),
     );
 
-    if (widget.speedPercent > 0) {
+    if (_effectiveSpeed > 0) {
       _controller.repeat();
     }
   }
@@ -43,9 +53,11 @@ class _CatAnimationState extends State<CatAnimation>
   @override
   void didUpdateWidget(covariant CatAnimation oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.speedPercent != widget.speedPercent) {
+    final oldEffective = oldWidget.speedPercent <= 0 && oldWidget.idleRunWhenSleeping ? 15 : oldWidget.speedPercent;
+    final newEffective = _effectiveSpeed;
+    if (oldEffective != newEffective) {
       _controller.duration = _getDuration();
-      if (widget.speedPercent > 0) {
+      if (newEffective > 0) {
         if (!_controller.isAnimating) {
           _controller.repeat();
         }
@@ -64,14 +76,16 @@ class _CatAnimationState extends State<CatAnimation>
 
   @override
   Widget build(BuildContext context) {
-    final isSleeping = widget.speedPercent <= 0;
+    final isSleeping = _effectiveSpeed <= 0;
+    final radius = (widget.size * 0.22).clamp(6.0, 12.0);
+    final pad = (widget.size * 0.08).clamp(2.0, 5.0);
 
     return Container(
       width: widget.size,
       height: widget.size,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(radius),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.18),
@@ -80,7 +94,7 @@ class _CatAnimationState extends State<CatAnimation>
           ),
         ],
       ),
-      padding: const EdgeInsets.all(4),
+      padding: EdgeInsets.all(pad),
       child: Center(
         child: isSleeping
             ? Image.asset(
