@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../models/task.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
+import '../services/widget_service.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/cat_animation.dart';
 import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -45,6 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
           _tasks = tasks;
           _loading = false;
         });
+        _syncWidget();
       }
     } catch (e) {
       if (mounted) {
@@ -53,6 +56,31 @@ class _HomeScreenState extends State<HomeScreen> {
           _loading = false;
         });
       }
+    }
+  }
+
+  void _syncWidget() {
+    WidgetService.updateWidget(
+      pendingCount: _activeCount,
+      totalCount: _tasks.length,
+      speedPercent: _catSpeed,
+      speedMessage: _catSpeedMessage,
+    );
+  }
+
+  Future<void> _pinWidget() async {
+    _syncWidget();
+    final messenger = ScaffoldMessenger.of(context);
+    final pinned = await WidgetService.requestPinWidget();
+    if (!pinned && mounted) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text(
+            'To add the Cat widget, long-press on your phone home screen and tap Widgets > TodoCat.',
+          ),
+          backgroundColor: Color(0xFF171717),
+        ),
+      );
     }
   }
 
@@ -73,6 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
         return t.id == task.id ? t.copyWith(completed: nextCompleted) : t;
       }).toList();
     });
+    _syncWidget();
 
     try {
       await _apiService.toggleTask(task);
@@ -84,6 +113,7 @@ class _HomeScreenState extends State<HomeScreen> {
             return t.id == task.id ? t.copyWith(completed: task.completed) : t;
           }).toList();
         });
+        _syncWidget();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to update task: $e')),
         );
@@ -96,6 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _tasks.removeWhere((t) => t.id == id);
     });
+    _syncWidget();
 
     try {
       await _apiService.deleteTask(id);
@@ -104,6 +135,7 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _tasks = original;
         });
+        _syncWidget();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to delete task: $e')),
         );
@@ -325,6 +357,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           setState(() {
                             _tasks.insert(0, created);
                           });
+                          _syncWidget();
                         } catch (e) {
                           if (mounted) {
                             messenger.showSnackBar(
@@ -406,6 +439,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.widgets_outlined, color: Colors.white70, size: 20),
+            tooltip: 'Add Cat Widget to Home Screen',
+            onPressed: _pinWidget,
+          ),
           if (_user != null)
             Padding(
               padding: const EdgeInsets.only(right: 8.0),
@@ -473,51 +511,65 @@ class _HomeScreenState extends State<HomeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      _catSpeed == 0 ? Icons.nightlight_round : Icons.flash_on,
-                                      size: 16,
-                                      color: _catSpeed == 0
-                                          ? const Color(0xFF818CF8)
-                                          : _catSpeed >= 100
-                                              ? const Color(0xFFF43F5E)
-                                              : const Color(0xFFF59E0B),
-                                    ),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      '$_catSpeed% Speed',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: _catSpeed == 0
-                                            ? const Color(0xFF818CF8)
-                                            : _catSpeed >= 100
-                                                ? const Color(0xFFF43F5E)
-                                                : const Color(0xFFF59E0B),
+                                CatAnimation(speedPercent: _catSpeed, size: 52),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              Icon(
+                                                _catSpeed == 0 ? Icons.nightlight_round : Icons.flash_on,
+                                                size: 16,
+                                                color: _catSpeed == 0
+                                                    ? const Color(0xFF818CF8)
+                                                    : _catSpeed >= 100
+                                                        ? const Color(0xFFF43F5E)
+                                                        : const Color(0xFFF59E0B),
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                '$_catSpeed% Speed',
+                                                style: TextStyle(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: _catSpeed == 0
+                                                      ? const Color(0xFF818CF8)
+                                                      : _catSpeed >= 100
+                                                          ? const Color(0xFFF43F5E)
+                                                          : const Color(0xFFF59E0B),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          Text(
+                                            '$_completedCount/${_tasks.length} done',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Color(0xFF737373),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                Text(
-                                  '$_completedCount/${_tasks.length} done',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFF737373),
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        _catSpeedMessage,
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              _catSpeedMessage,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white,
-                              ),
                             ),
                             const SizedBox(height: 10),
                             ClipRRect(
@@ -532,6 +584,46 @@ class _HomeScreenState extends State<HomeScreen> {
                                       : _catSpeed >= 100
                                           ? const Color(0xFFF43F5E)
                                           : const Color(0xFFF59E0B),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: InkWell(
+                                onTap: _pinWidget,
+                                borderRadius: BorderRadius.circular(8),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF262626),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: const Color(0xFF383838),
+                                    ),
+                                  ),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(
+                                        Icons.widgets_outlined,
+                                        size: 14,
+                                        color: Colors.white70,
+                                      ),
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'Add Cat Widget to Home Screen',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),

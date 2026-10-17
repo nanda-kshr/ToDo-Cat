@@ -18,15 +18,17 @@ export default function CatAnimation({
 }: CatAnimationProps) {
   const isSleeping = speedPercent <= 0;
 
-  // Calculate run cycle duration in seconds: 1.0s (slow) down to 0.15s (100% speed)
+  // Calculate run cycle duration in seconds: 1.5s (slow) down to 0.45s (100% speed)
   const duration = useMemo(() => {
     if (isSleeping) return 0;
     const clamped = Math.max(1, Math.min(100, speedPercent));
-    const sec = 1.0 - (clamped / 100) * 0.85;
-    return Math.max(0.15, Number(sec.toFixed(3)));
+    const sec = 1.5 - (clamped / 100) * 1.05;
+    return Math.max(0.45, Number(sec.toFixed(3)));
   }, [speedPercent, isSleeping]);
 
-  const totalWidth = size * 5;
+  const frameWidth = size;
+  const frameHeight = Math.round((size * 100) / 120);
+  const totalWidth = frameWidth * 15;
 
   const content = (
     <div
@@ -38,30 +40,30 @@ export default function CatAnimation({
         // Resting frame (cat_0.png)
         <div
           className="relative"
-          style={{ width: `${size}px`, height: `${size}px` }}
+          style={{ width: `${frameWidth}px`, height: `${frameHeight}px` }}
         >
           <Image
             src="/runners/cat/cat_0.png"
             alt="Resting cat"
-            width={size}
-            height={size}
+            width={frameWidth}
+            height={frameHeight}
             className="w-full h-full object-contain"
             style={{ imageRendering: "pixelated" }}
             priority
           />
         </div>
       ) : (
-        // Running state: 5-frame CSS sprite sheet with dynamic speed
+        // Running state: 15-frame CSS sprite sheet with dynamic speed
         <div
-          className="w-full h-full overflow-hidden"
+          className="overflow-hidden"
           style={{
-            width: `${size}px`,
-            height: `${size}px`,
+            width: `${frameWidth}px`,
+            height: `${frameHeight}px`,
             backgroundImage: "url('/runners/cat/cat-spritesheet.png')",
-            backgroundSize: `${totalWidth}px ${size}px`,
+            backgroundSize: `${totalWidth}px ${frameHeight}px`,
             backgroundRepeat: "no-repeat",
             imageRendering: "pixelated",
-            animation: `runcatRun ${duration}s steps(5) infinite`,
+            animation: `runcatRun ${duration}s steps(15) infinite`,
           }}
         />
       )}

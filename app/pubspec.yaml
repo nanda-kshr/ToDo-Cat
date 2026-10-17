@@ -1,5 +1,5 @@
-name: android
-description: "A new Flutter project."
+name: todocat
+description: "TodoCat - Visual task management powered by RunCat"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -38,6 +38,7 @@ dependencies:
   shared_preferences: ^2.5.5
   google_sign_in: ^7.2.0
   flutter_svg: ^2.3.0
+  home_widget: ^0.10.0
 
 dev_dependencies:
   flutter_test:
@@ -49,6 +50,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -63,6 +65,22 @@ flutter:
 
   assets:
     - assets/logo.svg
+    - assets/logo.png
+    - assets/runners/cat/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo.png"
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: "assets/logo.png"
+    background_color: "#0a0a0a"
+    theme_color: "#ffffff"
+  macos:
+    generate: true
+    image_path: "assets/logo.png"
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

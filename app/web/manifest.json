@@ -1,11 +1,11 @@
 {
-    "name": "android",
-    "short_name": "android",
+    "name": "TodoCat",
+    "short_name": "TodoCat",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0a0a0a",
+    "theme_color": "#ffffff",
+    "description": "TodoCat - Visual task management powered by RunCat",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:android/main.dart';
+import 'package:todocat/main.dart';
 
 void main() {
   testWidgets('TodoCatApp smoke test', (WidgetTester tester) async {
