@@ -1,0 +1,66 @@
+import mongoose, { Document, Model, Schema, Types } from "mongoose";
+
+export type TaskPriority = "low" | "medium" | "high";
+
+export interface ITask extends Document {
+  userId: Types.ObjectId;
+  title: string;
+  description?: string;
+  completed: boolean;
+  dueDate?: Date | null;
+  priority: TaskPriority;
+  category: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const TaskSchema = new Schema<ITask>(
+  {
+    userId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+    title: {
+      type: String,
+      required: [true, "Title is required"],
+      trim: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    completed: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    dueDate: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    priority: {
+      type: String,
+      enum: ["low", "medium", "high"],
+      default: "medium",
+      index: true,
+    },
+    category: {
+      type: String,
+      trim: true,
+      default: "General",
+      index: true,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+export const Task: Model<ITask> =
+  mongoose.models.Task || mongoose.model<ITask>("Task", TaskSchema);
+
+export default Task;
