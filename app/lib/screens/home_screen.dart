@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/task.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
+import '../widgets/app_logo.dart';
 import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -390,21 +391,11 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFF0A0A0A),
         elevation: 0,
-        title: Row(
+        title: const Row(
           children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Center(
-                child: Icon(Icons.pets, size: 20, color: Colors.black),
-              ),
-            ),
-            const SizedBox(width: 10),
-            const Text(
+            AppLogo(size: 32, borderRadius: 8),
+            SizedBox(width: 10),
+            Text(
               'TodoCat',
               style: TextStyle(
                 color: Colors.white,

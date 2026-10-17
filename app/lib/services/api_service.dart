@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../config/api_config.dart';
 import '../models/user.dart';
 import '../models/task.dart';
@@ -140,6 +141,61 @@ class ApiService {
     }
   }
 
+  bool _googleInitialized = false;
+
+  Future<void> _initGoogleSignIn() async {
+    if (!_googleInitialized) {
+      await GoogleSignIn.instance.initialize(
+        serverClientId: ApiConfig.googleClientId,
+        clientId: ApiConfig.googleClientId,
+      );
+      _googleInitialized = true;
+    }
+  }
+
+  Future<User> loginWithGoogle() async {
+    try {
+      await _initGoogleSignIn();
+      final GoogleSignInAccount account =
+          await GoogleSignIn.instance.authenticate();
+      final String? idToken = account.authentication.idToken;
+
+      final response = await http.post(
+        Uri.parse(ApiConfig.googleAuth),
+        headers: await _getHeaders(),
+        body: jsonEncode({
+          'idToken': ?idToken,
+          'email': account.email,
+          'name': account.displayName,
+          'googleId': account.id,
+          'avatar': account.photoUrl,
+        }),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        if (data['accessToken'] != null) {
+          await saveToken(data['accessToken']);
+        }
+        return User.fromJson(data['user']);
+      } else {
+        throw ApiException(
+          data['message'] ?? 'Google sign-in failed',
+          response.statusCode,
+        );
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      if (e is GoogleSignInException) {
+        if (e.code == GoogleSignInExceptionCode.canceled) {
+          throw ApiException('Sign-in was cancelled');
+        }
+        throw ApiException(e.description ?? 'Google sign-in failed: ${e.code}');
+      }
+      throw ApiException('Google sign-in error: $e');
+    }
+  }
+
   Future<void> logout() async {
     try {
       await http.post(
@@ -150,6 +206,9 @@ class ApiService {
       // Ignore network errors on logout
     } finally {
       await clearToken();
+      try {
+        await GoogleSignIn.instance.signOut();
+      } catch (_) {}
     }
   }
 

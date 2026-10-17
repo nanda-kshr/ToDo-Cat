@@ -414,6 +414,13 @@ export default function Home() {
               </svg>
               <span>nandakishorep212@gmail.com</span>
             </a>
+
+            <Link href="/privacy" className="text-neutral-400 hover:text-white transition">
+              Privacy Policy
+            </Link>
+            <Link href="/terms" className="text-neutral-400 hover:text-white transition">
+              Terms &amp; Conditions
+            </Link>
           </div>
 
           <div className="flex items-center gap-4 text-xs">
