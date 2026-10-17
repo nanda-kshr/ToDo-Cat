@@ -1,37 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TodoCat
 
-## Getting Started
+TodoCat is a customizable to-do list that turns productivity into a visual experience. Your character's running speed reflects your task completion progress, helping you stay motivated as you work through your daily goals.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Task management:** Create, edit, delete, and complete tasks.
+- **Progress-based animation:** The character's running speed changes according to the proportion of completed tasks.
+- **Reverse speed mode:** Optionally make the character slow down as more tasks are completed.
+- **Customizable characters:** Choose from different characters and animation styles, such as cats, pixel-art characters, and other runners.
+- **Local storage:** Keep tasks on your device.
+- **Account and cloud sync:** Sign in with Google or email to store and synchronize tasks across devices, if cloud sync is implemented.
+
+## How It Works
+
+TodoCat calculates progress using the number of completed tasks divided by the total number of tasks.
+
+```text
+Completion percentage = (Completed tasks / Total tasks) * 100
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+For example, completing 6 out of 10 tasks results in 60% progress. In normal mode, the character runs at a speed corresponding to that progress. In reverse mode, the speed is inverted.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Goals
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Make task management engaging and motivating.
+- Support customizable characters and animations.
+- Give users control over how their data is stored.
 
-## Learn More
+## Development Status
 
-To learn more about Next.js, take a look at the following resources:
+TodoCat is a project in development. Features described in this README may be planned rather than implemented.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Contributing
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Ideas, bug reports, and contributions are welcome. If you would like to contribute, open an issue to discuss a proposed change before submitting a pull request.
 
-## Deploy on Vercel
+## License
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-# ToDo-Cat
+A license has not yet been selected. Until one is added, all rights remain with the project owner.
