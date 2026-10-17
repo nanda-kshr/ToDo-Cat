@@ -3,6 +3,7 @@ import '../models/task.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../services/widget_service.dart';
+import '../services/floating_cat_service.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/cat_animation.dart';
 import '../widgets/draggable_floating_cat.dart';
@@ -25,11 +26,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _filter = 'all'; // all, today, upcoming, completed
   String _priorityFilter = 'all'; // all, high, medium, low
+  bool _isFloatingOverlayRunning = false;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _checkFloatingOverlayStatus();
+  }
+
+  Future<void> _checkFloatingOverlayStatus() async {
+    final running = await FloatingCatService.isRunning();
+    if (mounted && running != _isFloatingOverlayRunning) {
+      setState(() => _isFloatingOverlayRunning = running);
+    }
   }
 
   Future<void> _loadData() async {
@@ -67,6 +77,80 @@ class _HomeScreenState extends State<HomeScreen> {
       speedPercent: _catSpeed,
       speedMessage: _catSpeedMessage,
     );
+    if (_isFloatingOverlayRunning) {
+      FloatingCatService.update(
+        speedPercent: _catSpeed,
+        speedMessage: _catSpeedMessage,
+      );
+    }
+  }
+
+  Future<void> _toggleFloatingCat() async {
+    if (!FloatingCatService.isSupported) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Floating cat overlay is supported on Android devices')),
+      );
+      return;
+    }
+
+    if (_isFloatingOverlayRunning) {
+      await FloatingCatService.stop();
+      if (mounted) {
+        setState(() => _isFloatingOverlayRunning = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Floating Cat closed')),
+        );
+      }
+      return;
+    }
+
+    final hasPerm = await FloatingCatService.hasPermission();
+    if (!hasPerm && mounted) {
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: const Color(0xFF1E1E1E),
+          title: const Text('Enable Floating Cat', style: TextStyle(color: Colors.white)),
+          content: const Text(
+            'To float the animated cat over your home screen and other apps, Android requires the "Display over other apps" permission.',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black,
+              ),
+              child: const Text('Open Settings'),
+            ),
+          ],
+        ),
+      );
+
+      if (proceed == true) {
+        await FloatingCatService.requestPermission();
+      }
+      return;
+    }
+
+    await FloatingCatService.start(
+      speedPercent: _catSpeed,
+      speedMessage: _catSpeedMessage,
+    );
+    if (mounted) {
+      setState(() => _isFloatingOverlayRunning = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Floating Cat active! Drag it anywhere on screen.'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
   }
 
   Future<void> _pinWidget() async {
@@ -458,6 +542,21 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         actions: [
           IconButton(
+            icon: Icon(
+              _isFloatingOverlayRunning
+                  ? Icons.picture_in_picture
+                  : Icons.picture_in_picture_alt,
+              color: _isFloatingOverlayRunning
+                  ? const Color(0xFF818CF8)
+                  : Colors.white70,
+              size: 20,
+            ),
+            tooltip: _isFloatingOverlayRunning
+                ? 'Floating Cat is active (tap to close)'
+                : 'Float Cat Over Apps (System Overlay)',
+            onPressed: _toggleFloatingCat,
+          ),
+          IconButton(
             icon: const Icon(Icons.widgets_outlined, color: Colors.white70, size: 20),
             tooltip: 'Add Cat Widget to Home Screen',
             onPressed: _pinWidget,
@@ -612,44 +711,95 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: InkWell(
-                                onTap: _pinWidget,
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF262626),
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: const Color(0xFF383838),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                InkWell(
+                                  onTap: _toggleFloatingCat,
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: _isFloatingOverlayRunning
+                                          ? const Color(0xFF312E81)
+                                          : const Color(0xFF262626),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: _isFloatingOverlayRunning
+                                            ? const Color(0xFF6366F1)
+                                            : const Color(0xFF383838),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          _isFloatingOverlayRunning
+                                              ? Icons.picture_in_picture
+                                              : Icons.picture_in_picture_alt,
+                                          size: 14,
+                                          color: _isFloatingOverlayRunning
+                                              ? const Color(0xFFA5B4FC)
+                                              : Colors.white70,
+                                        ),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          _isFloatingOverlayRunning
+                                              ? 'Floating Cat (ON)'
+                                              : 'Float Over Apps',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: _isFloatingOverlayRunning
+                                                ? const Color(0xFFA5B4FC)
+                                                : Colors.white,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.widgets_outlined,
-                                        size: 14,
-                                        color: Colors.white70,
+                                ),
+                                const SizedBox(width: 8),
+                                InkWell(
+                                  onTap: _pinWidget,
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF262626),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: const Color(0xFF383838),
                                       ),
-                                      SizedBox(width: 6),
-                                      Text(
-                                        'Add Cat Widget to Home Screen',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.white,
+                                    ),
+                                    child: const Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.widgets_outlined,
+                                          size: 14,
+                                          color: Colors.white70,
                                         ),
-                                      ),
-                                    ],
+                                        SizedBox(width: 6),
+                                        Text(
+                                          'Home Widget',
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
-                              ),
+                              ],
                             ),
                           ],
                         ),
