@@ -40,9 +40,28 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadData();
+    _loadCachedTasks().then((_) => _loadData());
     _checkFloatingOverlayStatus();
     _initWidgetLaunchHandling();
+  }
+
+  Future<void> _loadCachedTasks() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('tasks_json');
+      if (raw != null && raw.isNotEmpty) {
+        final List<dynamic> localList = jsonDecode(raw);
+        final loaded = localList
+            .map((e) => Task.fromJson(e as Map<String, dynamic>))
+            .toList();
+        if (mounted && loaded.isNotEmpty && _tasks.isEmpty) {
+          setState(() {
+            _tasks = loaded;
+            _loading = false;
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   void _initWidgetLaunchHandling() {
@@ -73,7 +92,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _loadData();
+      _loadCachedTasks();
+      _loadData(showLoading: false);
       _checkFloatingOverlayStatus();
     }
   }
@@ -85,11 +105,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _loadData() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  Future<void> _loadData({bool showLoading = false}) async {
+    if (showLoading || _tasks.isEmpty) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
 
     try {
       final user = await _apiService.getMe();
@@ -137,13 +159,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _user = user;
           _tasks = tasks;
           _loading = false;
+          _error = null;
         });
         _syncWidget();
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          if (_tasks.isEmpty) {
+            _error = e.toString();
+          }
           _loading = false;
         });
       }

@@ -52,6 +52,8 @@ class Task {
       if (dueDate != null) 'dueDate': dueDate!.toIso8601String(),
       'priority': priority,
       'category': category,
+      if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
+      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
     };
   }
 

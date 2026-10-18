@@ -277,7 +277,9 @@ class FloatingCatService : Service() {
 
     private fun startForegroundServiceWithNotification() {
         val openAppIntent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            action = Intent.ACTION_MAIN
+            addCategory(Intent.CATEGORY_LAUNCHER)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
         }
         val openAppPendingIntent = PendingIntent.getActivity(
             this,
@@ -705,7 +707,9 @@ class FloatingCatService : Service() {
                 setPadding(0, (8 * density).toInt(), 0, (2 * density).toInt())
                 setOnClickListener {
                     val intent = Intent(context, MainActivity::class.java).apply {
-                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                        action = Intent.ACTION_MAIN
+                        addCategory(Intent.CATEGORY_LAUNCHER)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
                     }
                     startActivity(intent)
                     collapse(wm, catParams, density)
