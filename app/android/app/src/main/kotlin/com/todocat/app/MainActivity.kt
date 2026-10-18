@@ -37,10 +37,18 @@ class MainActivity : FlutterActivity() {
                 "startFloatingCat" -> {
                     val speedPercent = call.argument<Int>("speedPercent") ?: 0
                     val speedMessage = call.argument<String>("speedMessage") ?: "TodoCat is running"
+                    val tasksJson = call.argument<String>("tasksJson")
+                    val isCatWhite = call.argument<Boolean>("isCatWhite")
                     val intent = Intent(this, FloatingCatService::class.java).apply {
                         action = FloatingCatService.ACTION_START
                         putExtra(FloatingCatService.EXTRA_SPEED_PERCENT, speedPercent)
                         putExtra(FloatingCatService.EXTRA_SPEED_MESSAGE, speedMessage)
+                        if (isCatWhite != null) {
+                            putExtra(FloatingCatService.EXTRA_IS_WHITE, isCatWhite)
+                        }
+                        if (tasksJson != null) {
+                            putExtra(FloatingCatService.EXTRA_TASKS_JSON, tasksJson)
+                        }
                     }
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         startForegroundService(intent)
@@ -52,10 +60,18 @@ class MainActivity : FlutterActivity() {
                 "updateFloatingCat" -> {
                     val speedPercent = call.argument<Int>("speedPercent") ?: 0
                     val speedMessage = call.argument<String>("speedMessage") ?: "TodoCat is running"
+                    val tasksJson = call.argument<String>("tasksJson")
+                    val isCatWhite = call.argument<Boolean>("isCatWhite")
                     val intent = Intent(this, FloatingCatService::class.java).apply {
                         action = FloatingCatService.ACTION_UPDATE
                         putExtra(FloatingCatService.EXTRA_SPEED_PERCENT, speedPercent)
                         putExtra(FloatingCatService.EXTRA_SPEED_MESSAGE, speedMessage)
+                        if (isCatWhite != null) {
+                            putExtra(FloatingCatService.EXTRA_IS_WHITE, isCatWhite)
+                        }
+                        if (tasksJson != null) {
+                            putExtra(FloatingCatService.EXTRA_TASKS_JSON, tasksJson)
+                        }
                     }
                     startService(intent)
                     result.success(true)
@@ -73,5 +89,10 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
     }
 }

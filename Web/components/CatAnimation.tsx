@@ -18,17 +18,17 @@ export default function CatAnimation({
 }: CatAnimationProps) {
   const isSleeping = speedPercent <= 0;
 
-  // Calculate run cycle duration in seconds: 1.5s (slow) down to 0.45s (100% speed)
+  // Calculate run cycle duration in seconds: 1.0s (slow) down to 0.2s (100% speed)
   const duration = useMemo(() => {
     if (isSleeping) return 0;
     const clamped = Math.max(1, Math.min(100, speedPercent));
-    const sec = 1.5 - (clamped / 100) * 1.05;
-    return Math.max(0.45, Number(sec.toFixed(3)));
+    const sec = 1.0 - (clamped / 100) * 0.8;
+    return Math.max(0.2, Number(sec.toFixed(3)));
   }, [speedPercent, isSleeping]);
 
   const frameWidth = size;
   const frameHeight = Math.round((size * 100) / 120);
-  const totalWidth = frameWidth * 15;
+  const totalWidth = frameWidth * 7;
 
   const content = (
     <div
@@ -53,7 +53,7 @@ export default function CatAnimation({
           />
         </div>
       ) : (
-        // Running state: 15-frame CSS sprite sheet with dynamic speed
+        // Running state: 7-frame CSS sprite sheet with dynamic speed
         <div
           className="overflow-hidden"
           style={{
@@ -63,7 +63,7 @@ export default function CatAnimation({
             backgroundSize: `${totalWidth}px ${frameHeight}px`,
             backgroundRepeat: "no-repeat",
             imageRendering: "pixelated",
-            animation: `runcatRun ${duration}s steps(15) infinite`,
+            animation: `runcatRun ${duration}s steps(7) infinite`,
           }}
         />
       )}

@@ -27,12 +27,16 @@ class FloatingCatService {
   static Future<bool> start({
     required int speedPercent,
     required String speedMessage,
+    String? tasksJson,
+    bool? isCatWhite,
   }) async {
     if (!isSupported) return false;
     try {
       final res = await _channel.invokeMethod<bool>('startFloatingCat', {
         'speedPercent': speedPercent,
         'speedMessage': speedMessage,
+        'tasksJson': ?tasksJson,
+        'isCatWhite': ?isCatWhite,
       });
       return res ?? false;
     } catch (_) {
@@ -43,12 +47,16 @@ class FloatingCatService {
   static Future<void> update({
     required int speedPercent,
     required String speedMessage,
+    String? tasksJson,
+    bool? isCatWhite,
   }) async {
     if (!isSupported) return;
     try {
       await _channel.invokeMethod('updateFloatingCat', {
         'speedPercent': speedPercent,
         'speedMessage': speedMessage,
+        'tasksJson': ?tasksJson,
+        'isCatWhite': ?isCatWhite,
       });
     } catch (_) {}
   }

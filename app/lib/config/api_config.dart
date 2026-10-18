@@ -1,8 +1,9 @@
 class ApiConfig {
   static const String baseUrl = 'https://to-do-cat.vercel.app';
 
-  static const String googleClientId =
-      '17924355632-ng13bunirja9pvc8aicsaf6nl8q314i5.apps.googleusercontent.com';
+  // Web Application Client ID for Google Sign-In serverClientId (ID Token audience)
+  static const String googleServerClientId =
+      '17924355632-um8arel8s3b3i714rsi0ciaspcjhlif9.apps.googleusercontent.com';
 
   // Auth endpoints
   static const String login = '$baseUrl/api/auth/login';

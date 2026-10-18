@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">TodoCat</string>
+    <string name="widget_cat_label">TodoCat Running Cat</string>
+    <string name="widget_cat_description">Animated running cat reacting to task speed.</string>
+    <string name="widget_list_label">TodoCat Tasks</string>
+    <string name="widget_list_description">Scrollable tasks list with quick add button.</string>
+</resources>

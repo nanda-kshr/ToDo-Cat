@@ -235,7 +235,7 @@ class ApiService {
   Future<void> _initGoogleSignIn() async {
     if (!_googleInitialized) {
       await GoogleSignIn.instance.initialize(
-        serverClientId: ApiConfig.googleClientId,
+        serverClientId: ApiConfig.googleServerClientId,
       );
       _googleInitialized = true;
     }

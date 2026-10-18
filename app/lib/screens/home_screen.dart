@@ -1,12 +1,17 @@
+
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:home_widget/home_widget.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/task.dart';
 import '../models/user.dart';
 import '../services/api_service.dart';
 import '../services/widget_service.dart';
 import '../services/floating_cat_service.dart';
+import '../services/theme_service.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/cat_animation.dart';
-import '../widgets/draggable_floating_cat.dart';
 import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -16,7 +21,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final ApiService _apiService = ApiService();
 
   User? _user;
@@ -27,12 +32,47 @@ class _HomeScreenState extends State<HomeScreen> {
   String _filter = 'all'; // all, today, upcoming, completed
   String _priorityFilter = 'all'; // all, high, medium, low
   bool _isFloatingOverlayRunning = false;
+  StreamSubscription<Uri?>? _widgetClickSubscription;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadData();
     _checkFloatingOverlayStatus();
+    _initWidgetLaunchHandling();
+  }
+
+  void _initWidgetLaunchHandling() {
+    HomeWidget.initiallyLaunchedFromHomeWidget().then(_handleWidgetLaunchUri);
+    _widgetClickSubscription = HomeWidget.widgetClicked.listen(_handleWidgetLaunchUri);
+  }
+
+  void _handleWidgetLaunchUri(Uri? uri) {
+    if (uri == null) return;
+    final uriStr = uri.toString().toLowerCase();
+    if (uriStr.contains('create_task') || uri.host == 'create_task') {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showCreateTaskDialog();
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _widgetClickSubscription?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadData();
+      _checkFloatingOverlayStatus();
+    }
   }
 
   Future<void> _checkFloatingOverlayStatus() async {
@@ -51,6 +91,25 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final user = await _apiService.getMe();
       final tasks = await _apiService.fetchTasks();
+
+      // Sync any local offline tasks created via floating overlay
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final raw = prefs.getString('tasks_json');
+        if (raw != null) {
+          final List<dynamic> localList = jsonDecode(raw);
+          final serverTitles = tasks.map((t) => t.title).toSet();
+          for (final item in localList) {
+            final title = item['title'] as String?;
+            final id = item['id'] as String?;
+            if (title != null && title.isNotEmpty && id != null && id.contains('-') && !serverTitles.contains(title)) {
+              final created = await _apiService.createTask(title: title);
+              tasks.insert(0, created);
+              serverTitles.add(title);
+            }
+          }
+        }
+      } catch (_) {}
 
       if (mounted) {
         setState(() {
@@ -71,16 +130,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _syncWidget() {
+    final tasksJson = jsonEncode(_tasks.map((t) => t.toJson()).toList());
     WidgetService.updateWidget(
       pendingCount: _activeCount,
       totalCount: _tasks.length,
       speedPercent: _catSpeed,
-      speedMessage: _catSpeedMessage,
+      speedMessage: _activeCount == 0 ? 'All caught up' : '$_activeCount tasks pending',
+      tasks: _tasks,
     );
     if (_isFloatingOverlayRunning) {
+      final isWhite = ThemeService.instance.isCatWhite(context);
       FloatingCatService.update(
         speedPercent: _catSpeed,
-        speedMessage: _catSpeedMessage,
+        speedMessage: _activeCount == 0 ? 'All caught up' : '$_activeCount tasks pending',
+        tasksJson: tasksJson,
+        isCatWhite: isWhite,
       );
     }
   }
@@ -106,25 +170,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final hasPerm = await FloatingCatService.hasPermission();
     if (!hasPerm && mounted) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
       final proceed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          backgroundColor: const Color(0xFF1E1E1E),
-          title: const Text('Enable Floating Cat', style: TextStyle(color: Colors.white)),
-          content: const Text(
+          backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          title: Text(
+            'Enable Floating Cat',
+            style: TextStyle(color: isDark ? Colors.white : const Color(0xFF111827)),
+          ),
+          content: Text(
             'To float the animated cat over your home screen and other apps, Android requires the "Display over other apps" permission.',
-            style: TextStyle(color: Colors.white70),
+            style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF4B5563)),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+              child: Text('Cancel', style: TextStyle(color: isDark ? Colors.white54 : const Color(0xFF6B7280))),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: Colors.black,
+                backgroundColor: isDark ? Colors.white : const Color(0xFF111827),
+                foregroundColor: isDark ? Colors.black : Colors.white,
               ),
               child: const Text('Open Settings'),
             ),
@@ -138,35 +206,127 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
+    if (!mounted) return;
+    final tasksJson = jsonEncode(_tasks.map((t) => t.toJson()).toList());
+    final isWhite = ThemeService.instance.isCatWhite(context);
     await FloatingCatService.start(
       speedPercent: _catSpeed,
-      speedMessage: _catSpeedMessage,
+      speedMessage: _activeCount == 0 ? 'All caught up' : '$_activeCount tasks pending',
+      tasksJson: tasksJson,
+      isCatWhite: isWhite,
     );
     if (mounted) {
       setState(() => _isFloatingOverlayRunning = true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Floating Cat active! Drag it anywhere on screen.'),
+          content: Text('Floating Cat active! Tap to expand tasks, drag to bottom to remove.'),
           duration: Duration(seconds: 3),
         ),
       );
     }
   }
 
-  Future<void> _pinWidget() async {
+  Future<void> _pinWidget({bool isCatWidget = false}) async {
     _syncWidget();
     final messenger = ScaffoldMessenger.of(context);
-    final pinned = await WidgetService.requestPinWidget();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final pinned = await WidgetService.requestPinWidget(isCatWidget: isCatWidget);
     if (!pinned && mounted) {
       messenger.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'To add the Cat widget, long-press on your phone home screen and tap Widgets > TodoCat.',
+        SnackBar(
+          content: const Text(
+            'To add the widget, long-press home screen > Widgets > TodoCat.',
           ),
-          backgroundColor: Color(0xFF171717),
+          backgroundColor: isDark ? const Color(0xFF171717) : const Color(0xFF111827),
         ),
       );
     }
+  }
+
+  Future<void> _showWidgetChoiceDialog() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF171717) : Colors.white;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF111827);
+    final textSecondary = isDark ? const Color(0xFF737373) : const Color(0xFF6B7280);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: cardBg,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.only(left: 20, right: 20, bottom: 28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Choose Widget',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: textPrimary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF262626) : const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.checklist, color: textPrimary, size: 22),
+                ),
+                title: Text(
+                  'TodoCat Tasks',
+                  style: TextStyle(color: textPrimary, fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+                subtitle: Text(
+                  'Scrollable tasks list with quick add button',
+                  style: TextStyle(color: textSecondary, fontSize: 12),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pinWidget(isCatWidget: false);
+                },
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: 42,
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF262626) : const Color(0xFFF3F4F6),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(Icons.pets, color: textPrimary, size: 22),
+                ),
+                title: Text(
+                  'TodoCat Running Cat',
+                  style: TextStyle(color: textPrimary, fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+                subtitle: Text(
+                  'Square animated companion with velocity and counts',
+                  style: TextStyle(color: textSecondary, fontSize: 12),
+                ),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pinWidget(isCatWidget: true);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   Future<void> _logout() async {
@@ -174,6 +334,299 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
+    );
+  }
+
+  Future<void> _showSettingsSheet() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF171717) : Colors.white;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF111827);
+    final textSecondary = isDark ? const Color(0xFF737373) : const Color(0xFF6B7280);
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: cardBg,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final themeMode = ThemeService.instance.themeMode.value;
+            final catVariant = ThemeService.instance.catColorVariant.value;
+
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Settings',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: textPrimary,
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close, color: textSecondary, size: 20),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 1. Theme Mode Dropdown
+                    Text(
+                      'Theme',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF262626) : const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF383838) : const Color(0xFFE5E7EB),
+                        ),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<ThemeMode>(
+                          value: themeMode,
+                          isExpanded: true,
+                          dropdownColor: isDark ? const Color(0xFF262626) : Colors.white,
+                          icon: Icon(Icons.keyboard_arrow_down, color: textSecondary),
+                          items: [
+                            DropdownMenuItem(
+                              value: ThemeMode.system,
+                              child: Text('System Default (Auto)', style: TextStyle(color: textPrimary, fontSize: 14)),
+                            ),
+                            DropdownMenuItem(
+                              value: ThemeMode.dark,
+                              child: Text('Dark Mode', style: TextStyle(color: textPrimary, fontSize: 14)),
+                            ),
+                            DropdownMenuItem(
+                              value: ThemeMode.light,
+                              child: Text('Light Mode', style: TextStyle(color: textPrimary, fontSize: 14)),
+                            ),
+                          ],
+                          onChanged: (mode) {
+                            if (mode != null) {
+                              ThemeService.instance.setThemeMode(mode);
+                              setSheetState(() {});
+                              setState(() {});
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // 2. Cat Color Variant
+                    Text(
+                      'Cat Appearance',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF262626) : const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF383838) : const Color(0xFFE5E7EB),
+                        ),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: catVariant,
+                          isExpanded: true,
+                          dropdownColor: isDark ? const Color(0xFF262626) : Colors.white,
+                          icon: Icon(Icons.keyboard_arrow_down, color: textSecondary),
+                          items: [
+                            DropdownMenuItem(
+                              value: 'auto',
+                              child: Text('Auto (Dark = White cat, Light = Black cat)', style: TextStyle(color: textPrimary, fontSize: 14)),
+                            ),
+                            DropdownMenuItem(
+                              value: 'white',
+                              child: Text('White Cat', style: TextStyle(color: textPrimary, fontSize: 14)),
+                            ),
+                            DropdownMenuItem(
+                              value: 'black',
+                              child: Text('Black Cat', style: TextStyle(color: textPrimary, fontSize: 14)),
+                            ),
+                          ],
+                          onChanged: (variant) {
+                            if (variant != null) {
+                              ThemeService.instance.setCatColorVariant(variant);
+                              setSheetState(() {});
+                              setState(() {});
+                              _syncWidget();
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // 3. Floating Cat Companion Toggle
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF262626) : const Color(0xFFF3F4F6),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark ? const Color(0xFF383838) : const Color(0xFFE5E7EB),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Floating Companion',
+                                style: TextStyle(
+                                  color: textPrimary,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Float running cat over other apps',
+                                style: TextStyle(
+                                  color: textSecondary,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Switch(
+                            value: _isFloatingOverlayRunning,
+                            activeThumbColor: isDark ? Colors.white : const Color(0xFF111827),
+                            onChanged: (_) async {
+                              await _toggleFloatingCat();
+                              setSheetState(() {});
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // 4. Home Screen Widgets Option
+                    InkWell(
+                      onTap: () {
+                        Navigator.pop(ctx);
+                        _showWidgetChoiceDialog();
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFF262626) : const Color(0xFFF3F4F6),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF383838) : const Color(0xFFE5E7EB),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.widgets_outlined, size: 20, color: textPrimary),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Home Screen Widgets',
+                                    style: TextStyle(
+                                      color: textPrimary,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'Add responsive TodoCat widget to home screen',
+                                    style: TextStyle(
+                                      color: textSecondary,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(Icons.chevron_right, color: textSecondary, size: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    if (_user != null) ...[
+                      const SizedBox(height: 16),
+                      Divider(color: isDark ? const Color(0xFF262626) : const Color(0xFFE5E7EB)),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _user!.name ?? _user!.email.split('@').first,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: textPrimary,
+                                ),
+                              ),
+                              Text(
+                                _user!.email,
+                                style: TextStyle(fontSize: 12, color: textSecondary),
+                              ),
+                            ],
+                          ),
+                          TextButton.icon(
+                            onPressed: () {
+                              Navigator.pop(ctx);
+                              _logout();
+                            },
+                            icon: const Icon(Icons.logout, size: 16, color: Color(0xFFEF4444)),
+                            label: const Text('Sign Out', style: TextStyle(color: Color(0xFFEF4444), fontSize: 13)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -235,12 +688,19 @@ class _HomeScreenState extends State<HomeScreen> {
     DateTime? selectedDate;
     String selectedPriority = 'medium';
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final sheetBg = isDark ? const Color(0xFF181818) : Colors.white;
+    final fieldBg = isDark ? const Color(0xFF252525) : const Color(0xFFF3F4F6);
+    final textPrimary = isDark ? Colors.white : const Color(0xFF111827);
+    final textSecondary = isDark ? const Color(0xFF888888) : const Color(0xFF6B7280);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF171717),
+      backgroundColor: sheetBg,
+      showDragHandle: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
@@ -249,47 +709,49 @@ class _HomeScreenState extends State<HomeScreen> {
               padding: EdgeInsets.only(
                 left: 20,
                 right: 20,
-                top: 20,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                top: 8,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
               ),
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'New Task',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, color: Colors.white70),
-                          onPressed: () => Navigator.pop(ctx),
-                        ),
-                      ],
+                    Text(
+                      'New Task',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: textPrimary,
+                      ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     // Title
                     TextField(
                       controller: titleController,
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      style: TextStyle(color: textPrimary, fontSize: 15),
                       decoration: InputDecoration(
-                        hintText: 'Task Title (required)',
-                        hintStyle: const TextStyle(color: Color(0xFF737373)),
+                        hintText: 'Task Title',
+                        hintStyle: TextStyle(color: textSecondary),
                         filled: true,
-                        fillColor: const Color(0xFF0A0A0A),
+                        fillColor: fieldBg,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF262626)),
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: isDark ? Colors.white24 : Colors.black12,
+                            width: 1.5,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -298,17 +760,28 @@ class _HomeScreenState extends State<HomeScreen> {
                     TextField(
                       controller: descController,
                       maxLines: 2,
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                      style: TextStyle(color: textPrimary, fontSize: 14),
                       decoration: InputDecoration(
                         hintText: 'Description (optional)',
-                        hintStyle: const TextStyle(color: Color(0xFF737373)),
+                        hintStyle: TextStyle(color: textSecondary),
                         filled: true,
-                        fillColor: const Color(0xFF0A0A0A),
+                        fillColor: fieldBg,
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Color(0xFF262626)),
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide(
+                            color: isDark ? Colors.white24 : Colors.black12,
+                            width: 1.5,
+                          ),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -331,24 +804,27 @@ class _HomeScreenState extends State<HomeScreen> {
                                 });
                               }
                             },
+                            borderRadius: BorderRadius.circular(16),
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF0A0A0A),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFF262626)),
+                                color: fieldBg,
+                                borderRadius: BorderRadius.circular(16),
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.calendar_today, size: 16, color: Colors.white70),
+                                  Icon(Icons.calendar_today, size: 16, color: textSecondary),
                                   const SizedBox(width: 8),
-                                  Text(
-                                    selectedDate != null
-                                        ? '${selectedDate!.month}/${selectedDate!.day}/${selectedDate!.year}'
-                                        : 'Due Date',
-                                    style: TextStyle(
-                                      fontSize: 13,
-                                      color: selectedDate != null ? Colors.white : const Color(0xFF737373),
+                                  Expanded(
+                                    child: Text(
+                                      selectedDate != null
+                                          ? '${selectedDate!.month}/${selectedDate!.day}/${selectedDate!.year}'
+                                          : 'Due Date',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: selectedDate != null ? textPrimary : textSecondary,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
                                 ],
@@ -356,73 +832,92 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: TextField(
                             controller: categoryController,
-                            style: const TextStyle(color: Colors.white, fontSize: 13),
+                            style: TextStyle(color: textPrimary, fontSize: 13),
                             decoration: InputDecoration(
                               hintText: 'Category',
-                              hintStyle: const TextStyle(color: Color(0xFF737373)),
+                              hintStyle: TextStyle(color: textSecondary),
                               filled: true,
-                              fillColor: const Color(0xFF0A0A0A),
+                              fillColor: fieldBg,
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                borderSide: const BorderSide(color: Color(0xFF262626)),
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide.none,
                               ),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(16),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                             ),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 16),
 
-                    // Priority selector
+                    // Priority Chips (Pill shape, smooth soft colors)
                     Row(
-                      children: ['low', 'medium', 'high'].map((p) {
-                        final isSel = selectedPriority == p;
+                      children: [
+                        {'key': 'low', 'label': 'LOW', 'color': const Color(0xFF10B981)},
+                        {'key': 'medium', 'label': 'MED', 'color': const Color(0xFFF59E0B)},
+                        {'key': 'high', 'label': 'HIGH', 'color': const Color(0xFFEF4444)},
+                      ].map((item) {
+                        final key = item['key'] as String;
+                        final label = item['label'] as String;
+                        final color = item['color'] as Color;
+                        final isSel = selectedPriority == key;
+
                         return Expanded(
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                            child: ChoiceChip(
-                              label: Center(
-                                child: Text(
-                                  p.toUpperCase(),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: isSel ? Colors.white : Colors.white60,
+                            child: InkWell(
+                              onTap: () {
+                                setModalState(() {
+                                  selectedPriority = key;
+                                });
+                              },
+                              borderRadius: BorderRadius.circular(14),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                padding: const EdgeInsets.symmetric(vertical: 10),
+                                decoration: BoxDecoration(
+                                  color: isSel ? color.withValues(alpha: isDark ? 0.25 : 0.15) : fieldBg,
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: isSel ? color : Colors.transparent,
+                                    width: 1.5,
+                                  ),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    label,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: isSel ? color : textSecondary,
+                                    ),
                                   ),
                                 ),
                               ),
-                              selected: isSel,
-                              selectedColor: p == 'high'
-                                  ? const Color(0xFFF43F5E)
-                                  : p == 'medium'
-                                      ? const Color(0xFFF59E0B)
-                                      : const Color(0xFF10B981),
-                              backgroundColor: const Color(0xFF0A0A0A),
-                              onSelected: (_) {
-                                setModalState(() {
-                                  selectedPriority = p;
-                                });
-                              },
                             ),
                           ),
                         );
                       }).toList(),
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 20),
 
                     // Create Button
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF0A0A0A),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        backgroundColor: isDark ? Colors.white : const Color(0xFF111827),
+                        foregroundColor: isDark ? Colors.black : Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(18),
                         ),
                       ),
                       onPressed: () async {
@@ -453,7 +948,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                       child: const Text(
                         'Create Task',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                       ),
                     ),
                   ],
@@ -489,53 +984,34 @@ class _HomeScreenState extends State<HomeScreen> {
 
   int get _catSpeed {
     if (_tasks.isEmpty || _activeCount == 0) return 0;
-    return ((_activeCount / 5.0) * 100).clamp(0, 100).round();
-  }
-
-  String get _catSpeedMessage {
-    if (_tasks.isEmpty) return 'No tasks yet • Cat is resting';
-    if (_activeCount == 0) return 'All tasks completed! Cat is sleeping';
-    if (_catSpeed >= 100) return '$_activeCount tasks pending • Maximum speed!';
-    if (_catSpeed >= 60) return '$_activeCount tasks pending • Cat is running';
-    return '$_activeCount task pending • Cat is alert';
+    final totalRef = _tasks.length < 5 ? 5.0 : _tasks.length.toDouble();
+    return ((_activeCount / totalRef) * 100).clamp(0, 100).round();
   }
 
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredTasks;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? const Color(0xFF171717) : Colors.white;
+    final cardBorder = isDark ? const Color(0xFF262626) : const Color(0xFFE5E7EB);
+    final textPrimary = isDark ? Colors.white : const Color(0xFF111827);
+    final textSecondary = isDark ? const Color(0xFF737373) : const Color(0xFF6B7280);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
+      backgroundColor: isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF9FAFB),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF0A0A0A),
+        backgroundColor: isDark ? const Color(0xFF0A0A0A) : Colors.white,
         elevation: 0,
         title: Row(
           children: [
             const AppLogo(size: 32, borderRadius: 8),
             const SizedBox(width: 10),
-            const Text(
+            Text(
               'TodoCat',
               style: TextStyle(
-                color: Colors.white,
+                color: textPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(width: 10),
-            GestureDetector(
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(_catSpeedMessage),
-                    duration: const Duration(seconds: 2),
-                    backgroundColor: const Color(0xFF171717),
-                  ),
-                );
-              },
-              child: CatAnimation(
-                speedPercent: _catSpeed,
-                size: 32,
-                idleRunWhenSleeping: true,
               ),
             ),
           ],
@@ -543,50 +1019,24 @@ class _HomeScreenState extends State<HomeScreen> {
         actions: [
           IconButton(
             icon: Icon(
-              _isFloatingOverlayRunning
-                  ? Icons.picture_in_picture
-                  : Icons.picture_in_picture_alt,
-              color: _isFloatingOverlayRunning
-                  ? const Color(0xFF818CF8)
-                  : Colors.white70,
-              size: 20,
+              Icons.settings_outlined,
+              color: isDark ? Colors.white70 : const Color(0xFF4B5563),
+              size: 22,
             ),
-            tooltip: _isFloatingOverlayRunning
-                ? 'Floating Cat is active (tap to close)'
-                : 'Float Cat Over Apps (System Overlay)',
-            onPressed: _toggleFloatingCat,
-          ),
-          IconButton(
-            icon: const Icon(Icons.widgets_outlined, color: Colors.white70, size: 20),
-            tooltip: 'Add Cat Widget to Home Screen',
-            onPressed: _pinWidget,
-          ),
-          if (_user != null)
-            Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: Center(
-                child: Text(
-                  _user!.name ?? _user!.email.split('@').first,
-                  style: const TextStyle(fontSize: 12, color: Colors.white70),
-                ),
-              ),
-            ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white70, size: 20),
-            tooltip: 'Sign Out',
-            onPressed: _logout,
+            tooltip: 'Settings',
+            onPressed: _showSettingsSheet,
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          RefreshIndicator(
-            onRefresh: _loadData,
-            color: Colors.white,
-            backgroundColor: const Color(0xFF171717),
+      body: RefreshIndicator(
+        onRefresh: _loadData,
+        color: isDark ? Colors.white : const Color(0xFF111827),
+        backgroundColor: cardBg,
         child: _loading
-            ? const Center(
-                child: CircularProgressIndicator(color: Colors.white),
+            ? Center(
+                child: CircularProgressIndicator(
+                  color: isDark ? Colors.white : const Color(0xFF111827),
+                ),
               )
             : _error != null
                 ? Center(
@@ -595,19 +1045,23 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.cloud_off, size: 48, color: Colors.white38),
+                          Icon(
+                            Icons.cloud_off,
+                            size: 48,
+                            color: isDark ? Colors.white38 : const Color(0xFF9CA3AF),
+                          ),
                           const SizedBox(height: 12),
                           Text(
                             _error!,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.white70, fontSize: 13),
+                            style: TextStyle(color: textSecondary, fontSize: 13),
                           ),
                           const SizedBox(height: 16),
                           ElevatedButton(
                             onPressed: _loadData,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: Colors.black,
+                              backgroundColor: isDark ? Colors.white : const Color(0xFF111827),
+                              foregroundColor: isDark ? Colors.black : Colors.white,
                             ),
                             child: const Text('Retry'),
                           ),
@@ -618,188 +1072,81 @@ class _HomeScreenState extends State<HomeScreen> {
                 : ListView(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     children: [
-                      // Cat Speed Banner Card
+                      // Status Banner Card: Big Square Cat + Progress on Right
                       Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF171717),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFF262626)),
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: cardBorder),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                CatAnimation(
-                                  speedPercent: _catSpeed,
-                                  size: 52,
-                                  idleRunWhenSleeping: true,
-                                ),
-                                const SizedBox(width: 14),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                            // Big Square Running Cat (No border, no background box)
+                            CatAnimation(
+                              speedPercent: _catSpeed,
+                              size: 84,
+                              showContainer: false,
+                              idleRunWhenSleeping: false,
+                            ),
+                            const SizedBox(width: 16),
+                            // Progress on the right side
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Row(
-                                            children: [
-                                              Icon(
-                                                _catSpeed == 0 ? Icons.nightlight_round : Icons.flash_on,
-                                                size: 16,
-                                                color: _catSpeed == 0
-                                                    ? const Color(0xFF818CF8)
-                                                    : _catSpeed >= 100
-                                                        ? const Color(0xFFF43F5E)
-                                                        : const Color(0xFFF59E0B),
-                                              ),
-                                              const SizedBox(width: 6),
-                                              Text(
-                                                '$_catSpeed% Speed',
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: _catSpeed == 0
-                                                      ? const Color(0xFF818CF8)
-                                                      : _catSpeed >= 100
-                                                          ? const Color(0xFFF43F5E)
-                                                          : const Color(0xFFF59E0B),
-                                                ),
-                                              ),
-                                            ],
+                                      Flexible(
+                                        child: Text(
+                                          _activeCount == 0
+                                              ? 'All caught up'
+                                              : '$_activeCount ${_activeCount == 1 ? 'task' : 'tasks'} pending',
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                            color: textPrimary,
                                           ),
-                                          Text(
-                                            '$_completedCount/${_tasks.length} done',
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Color(0xFF737373),
-                                            ),
-                                          ),
-                                        ],
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
-                                      const SizedBox(height: 6),
+                                      const SizedBox(width: 8),
                                       Text(
-                                        _catSpeedMessage,
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w500,
-                                          color: Colors.white,
+                                        '$_catSpeed%',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: textPrimary,
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: LinearProgressIndicator(
-                                value: _catSpeed / 100.0,
-                                minHeight: 6,
-                                backgroundColor: const Color(0xFF262626),
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  _catSpeed == 0
-                                      ? const Color(0xFF6366F1)
-                                      : _catSpeed >= 100
-                                          ? const Color(0xFFF43F5E)
-                                          : const Color(0xFFF59E0B),
-                                ),
+                                  const SizedBox(height: 10),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(6),
+                                    child: LinearProgressIndicator(
+                                      value: (_tasks.isEmpty ? 0.0 : (_completedCount / _tasks.length)).clamp(0.0, 1.0),
+                                      minHeight: 6,
+                                      backgroundColor: isDark ? const Color(0xFF262626) : const Color(0xFFE5E7EB),
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        isDark ? Colors.white : const Color(0xFF111827),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '$_completedCount of ${_tasks.length} tasks completed',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: textSecondary,
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                            const SizedBox(height: 12),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                InkWell(
-                                  onTap: _toggleFloatingCat,
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: _isFloatingOverlayRunning
-                                          ? const Color(0xFF312E81)
-                                          : const Color(0xFF262626),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: _isFloatingOverlayRunning
-                                            ? const Color(0xFF6366F1)
-                                            : const Color(0xFF383838),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          _isFloatingOverlayRunning
-                                              ? Icons.picture_in_picture
-                                              : Icons.picture_in_picture_alt,
-                                          size: 14,
-                                          color: _isFloatingOverlayRunning
-                                              ? const Color(0xFFA5B4FC)
-                                              : Colors.white70,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          _isFloatingOverlayRunning
-                                              ? 'Floating Cat (ON)'
-                                              : 'Float Over Apps',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                            color: _isFloatingOverlayRunning
-                                                ? const Color(0xFFA5B4FC)
-                                                : Colors.white,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                InkWell(
-                                  onTap: _pinWidget,
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 6,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF262626),
-                                      borderRadius: BorderRadius.circular(8),
-                                      border: Border.all(
-                                        color: const Color(0xFF383838),
-                                      ),
-                                    ),
-                                    child: const Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.widgets_outlined,
-                                          size: 14,
-                                          color: Colors.white70,
-                                        ),
-                                        SizedBox(width: 6),
-                                        Text(
-                                          'Home Widget',
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
                             ),
                           ],
                         ),
@@ -861,16 +1208,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
           ),
-          if (!_loading && _error == null)
-            DraggableFloatingCat(
-              speedPercent: _catSpeed,
-              speedMessage: _catSpeedMessage,
-            ),
-        ],
-      ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black,
+        backgroundColor: isDark ? Colors.white : const Color(0xFF111827),
+        foregroundColor: isDark ? Colors.black : Colors.white,
         onPressed: _showCreateTaskDialog,
         child: const Icon(Icons.add),
       ),
@@ -879,20 +1219,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _filterChip(String id, String label) {
     final isSel = _filter == id;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ChoiceChip(
       label: Text(
         label,
         style: TextStyle(
           fontSize: 11,
           fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
-          color: isSel ? Colors.white : Colors.white60,
+          color: isSel
+              ? (isDark ? Colors.white : const Color(0xFF111827))
+              : (isDark ? Colors.white60 : const Color(0xFF6B7280)),
         ),
       ),
       selected: isSel,
-      selectedColor: const Color(0xFF262626),
-      backgroundColor: const Color(0xFF171717),
+      selectedColor: isDark ? const Color(0xFF262626) : const Color(0xFFE5E7EB),
+      backgroundColor: isDark ? const Color(0xFF171717) : const Color(0xFFF3F4F6),
       side: BorderSide(
-        color: isSel ? const Color(0xFF525252) : const Color(0xFF262626),
+        color: isSel
+            ? (isDark ? const Color(0xFF525252) : const Color(0xFFD1D5DB))
+            : (isDark ? const Color(0xFF262626) : const Color(0xFFE5E7EB)),
       ),
       onSelected: (_) {
         setState(() {
@@ -904,20 +1249,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _priorityChip(String id, String label) {
     final isSel = _priorityFilter == id;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return ChoiceChip(
       label: Text(
         label,
         style: TextStyle(
           fontSize: 10,
           fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
-          color: isSel ? Colors.white : Colors.white60,
+          color: isSel
+              ? (isDark ? Colors.white : const Color(0xFF111827))
+              : (isDark ? Colors.white60 : const Color(0xFF6B7280)),
         ),
       ),
       selected: isSel,
-      selectedColor: const Color(0xFF262626),
-      backgroundColor: const Color(0xFF171717),
+      selectedColor: isDark ? const Color(0xFF262626) : const Color(0xFFE5E7EB),
+      backgroundColor: isDark ? const Color(0xFF171717) : const Color(0xFFF3F4F6),
       side: BorderSide(
-        color: isSel ? const Color(0xFF525252) : const Color(0xFF262626),
+        color: isSel
+            ? (isDark ? const Color(0xFF525252) : const Color(0xFFD1D5DB))
+            : (isDark ? const Color(0xFF262626) : const Color(0xFFE5E7EB)),
       ),
       onSelected: (_) {
         setState(() {
@@ -928,14 +1278,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _taskTile(Task task) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: task.completed ? const Color(0xFF0F0F0F) : const Color(0xFF171717),
+        color: task.completed
+            ? (isDark ? const Color(0xFF0F0F0F) : const Color(0xFFF9FAFB))
+            : (isDark ? const Color(0xFF171717) : Colors.white),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: task.completed ? const Color(0xFF1C1C1C) : const Color(0xFF262626),
+          color: task.completed
+              ? (isDark ? const Color(0xFF1C1C1C) : const Color(0xFFF3F4F6))
+              : (isDark ? const Color(0xFF262626) : const Color(0xFFE5E7EB)),
         ),
       ),
       child: Row(
@@ -952,11 +1307,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 color: task.completed ? const Color(0xFF10B981) : Colors.transparent,
                 borderRadius: BorderRadius.circular(6),
                 border: Border.all(
-                  color: task.completed ? const Color(0xFF10B981) : const Color(0xFF525252),
+                  color: task.completed
+                      ? const Color(0xFF10B981)
+                      : (isDark ? const Color(0xFF525252) : const Color(0xFF9CA3AF)),
                 ),
               ),
               child: task.completed
-                  ? const Icon(Icons.check, size: 14, color: Colors.black)
+                  ? const Icon(Icons.check, size: 14, color: Colors.white)
                   : null,
             ),
           ),
@@ -974,7 +1331,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
-                          color: task.completed ? const Color(0xFF737373) : Colors.white,
+                          color: task.completed
+                              ? (isDark ? const Color(0xFF737373) : const Color(0xFF9CA3AF))
+                              : (isDark ? Colors.white : const Color(0xFF111827)),
                           decoration: task.completed ? TextDecoration.lineThrough : null,
                         ),
                       ),
@@ -989,7 +1348,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     task.description,
                     style: TextStyle(
                       fontSize: 12,
-                      color: task.completed ? const Color(0xFF525252) : const Color(0xFFA3A3A3),
+                      color: task.completed
+                          ? (isDark ? const Color(0xFF525252) : const Color(0xFF9CA3AF))
+                          : (isDark ? const Color(0xFFA3A3A3) : const Color(0xFF4B5563)),
                     ),
                   ),
                 ],
@@ -1000,12 +1361,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF262626),
+                          color: isDark ? const Color(0xFF262626) : const Color(0xFFF3F4F6),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           task.category,
-                          style: const TextStyle(fontSize: 10, color: Colors.white70),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: isDark ? Colors.white70 : const Color(0xFF4B5563),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),

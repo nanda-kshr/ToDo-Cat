@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_cat_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <!-- Flexible Cat Container -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- Running Cat Flipper -->
+        <ViewFlipper
+            android:id="@+id/widget_cat_flipper"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:autoStart="true"
+            android:flipInterval="100">
+
+            <ImageView
+                android:id="@+id/widget_cat_frame_0"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitCenter"
+                android:src="@drawable/cat_white_0" />
+
+            <ImageView
+                android:id="@+id/widget_cat_frame_1"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitCenter"
+                android:src="@drawable/cat_white_1" />
+
+            <ImageView
+                android:id="@+id/widget_cat_frame_2"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitCenter"
+                android:src="@drawable/cat_white_2" />
+
+            <ImageView
+                android:id="@+id/widget_cat_frame_3"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitCenter"
+                android:src="@drawable/cat_white_3" />
+
+            <ImageView
+                android:id="@+id/widget_cat_frame_4"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitCenter"
+                android:src="@drawable/cat_white_4" />
+
+            <ImageView
+                android:id="@+id/widget_cat_frame_5"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitCenter"
+                android:src="@drawable/cat_white_5" />
+
+            <ImageView
+                android:id="@+id/widget_cat_frame_6"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="fitCenter"
+                android:src="@drawable/cat_white_6" />
+        </ViewFlipper>
+
+        <!-- Sleeping/Relaxed Cat when 0 tasks -->
+        <ImageView
+            android:id="@+id/widget_cat_sleeping"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:scaleType="fitCenter"
+            android:src="@drawable/cat_white_0"
+            android:visibility="gone" />
+    </FrameLayout>
+
+    <!-- Colored Counts Row -->
+    <LinearLayout
+        android:id="@+id/widget_cat_counts_row"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <!-- Pending Count Badge (Amber / Orange) -->
+        <TextView
+            android:id="@+id/widget_cat_pending_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/widget_count_badge_pending"
+            android:fontFamily="@font/sniglet"
+            android:paddingStart="8dp"
+            android:paddingTop="3dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="3dp"
+            android:text="0 pending"
+            android:textColor="#F59E0B"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <!-- Completed Count Badge (Emerald Green) -->
+        <TextView
+            android:id="@+id/widget_cat_completed_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:background="@drawable/widget_count_badge_completed"
+            android:fontFamily="@font/sniglet"
+            android:paddingStart="8dp"
+            android:paddingTop="3dp"
+            android:paddingEnd="8dp"
+            android:paddingBottom="3dp"
+            android:text="0 done"
+            android:textColor="#10B981"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+</LinearLayout>
