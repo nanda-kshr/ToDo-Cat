@@ -91,8 +91,7 @@ class QuickAddActivity : Activity() {
                 }
             }
 
-            val totalRef = if (totalCount < 5) 5.0 else totalCount.toDouble()
-            val speedPercent = ((pendingCount / totalRef) * 100).toInt().coerceIn(0, 100)
+            val speedPercent = if (pendingCount == 0) 0 else ((pendingCount / 5.0) * 100).toInt().coerceIn(0, 100)
 
             // Save to HomeWidgetPreferences
             homePrefs.edit().apply {

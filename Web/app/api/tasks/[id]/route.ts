@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Task } from "@/models/Task";
 import { getUserFromRequest } from "@/lib/auth";
+import { updateCachedTask, removeCachedTask } from "@/lib/taskCache";
 
 export async function PATCH(
   request: Request,
@@ -60,6 +61,8 @@ export async function PATCH(
       return NextResponse.json({ message: "Task not found" }, { status: 404 });
     }
 
+    updateCachedTask(payload.userId, task);
+
     return NextResponse.json({ task });
   } catch (error: unknown) {
     if ((error as { digest?: string })?.digest?.startsWith("NEXT_")) {
@@ -88,6 +91,8 @@ export async function DELETE(
     if (!task) {
       return NextResponse.json({ message: "Task not found" }, { status: 404 });
     }
+
+    removeCachedTask(payload.userId, id);
 
     return NextResponse.json({ message: "Task deleted successfully" });
   } catch (error: unknown) {

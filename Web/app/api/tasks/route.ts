@@ -2,12 +2,25 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Task } from "@/models/Task";
 import { getUserFromRequest } from "@/lib/auth";
+import {
+  getCachedTasks,
+  setCachedTasks,
+  addCachedTask,
+} from "@/lib/taskCache";
 
 export async function GET(request: Request) {
   try {
     const payload = getUserFromRequest(request);
     if (!payload?.userId) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const cachedTasks = getCachedTasks(payload.userId);
+    if (cachedTasks) {
+      return NextResponse.json(
+        { tasks: cachedTasks },
+        { headers: { "X-Cache": "HIT" } }
+      );
     }
 
     await connectDB();
@@ -17,7 +30,12 @@ export async function GET(request: Request) {
       createdAt: -1,
     });
 
-    return NextResponse.json({ tasks });
+    setCachedTasks(payload.userId, tasks);
+
+    return NextResponse.json(
+      { tasks },
+      { headers: { "X-Cache": "MISS" } }
+    );
   } catch (error: unknown) {
     if ((error as { digest?: string })?.digest?.startsWith("NEXT_")) {
       throw error;
@@ -50,6 +68,8 @@ export async function POST(request: Request) {
       priority: ["low", "medium", "high"].includes(priority) ? priority : "medium",
       category: typeof category === "string" && category.trim() ? category.trim() : "General",
     });
+
+    addCachedTask(payload.userId, task);
 
     return NextResponse.json({ task }, { status: 201 });
   } catch (error: unknown) {

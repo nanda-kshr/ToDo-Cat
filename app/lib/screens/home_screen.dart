@@ -95,16 +95,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final user = await _apiService.getMe();
       final tasks = await _apiService.fetchTasks();
 
-      // Sync offline tasks created via widget or floating cat
+      // Sync offline tasks created or updated via widget or floating cat
       try {
         final prefs = await SharedPreferences.getInstance();
         final raw = prefs.getString('tasks_json');
         if (raw != null) {
           final List<dynamic> localList = jsonDecode(raw);
+          final serverTaskMap = {for (var t in tasks) t.id: t};
           final serverTitles = tasks.map((t) => t.title).toSet();
           for (final item in localList) {
             final title = item['title'] as String?;
             final id = item['id'] as String?;
+            final completed = item['completed'] as bool? ?? false;
             if (title != null &&
                 title.isNotEmpty &&
                 id != null &&
@@ -113,6 +115,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               final created = await _apiService.createTask(title: title);
               tasks.insert(0, created);
               serverTitles.add(title);
+            } else if (id != null && serverTaskMap.containsKey(id)) {
+              final serverTask = serverTaskMap[id]!;
+              if (serverTask.completed != completed) {
+                await _apiService.updateTask(id, completed: completed);
+                final idx = tasks.indexWhere((t) => t.id == id);
+                if (idx != -1) {
+                  tasks[idx] = tasks[idx].copyWith(
+                    completed: completed,
+                    updatedAt: DateTime.now(),
+                  );
+                }
+              }
             }
           }
         }
@@ -142,7 +156,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     WidgetService.updateWidget(
       pendingCount: _activeCount,
-      totalCount: _tasks.length,
+      totalCount: _todayTotalCount,
       speedPercent: _catSpeed,
       speedMessage: _activeCount == 0 ? 'All caught up' : '$_activeCount tasks pending',
       isDark: isDark,
@@ -160,12 +174,22 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  bool _isToday(DateTime? date) {
+    if (date == null) return false;
+    final now = DateTime.now();
+    return date.year == now.year && date.month == now.month && date.day == now.day;
+  }
+
   int get _activeCount => _tasks.where((t) => !t.completed).length;
   int get _completedCount => _tasks.where((t) => t.completed).length;
+  int get _completedTodayCount => _tasks
+      .where((t) => t.completed && _isToday(t.updatedAt ?? t.createdAt))
+      .length;
+  int get _todayTotalCount => _activeCount + _completedTodayCount;
 
   int get _catSpeed {
-    if (_tasks.isEmpty || _activeCount == 0) return 0;
-    final totalRef = _tasks.length < 5 ? 5.0 : _tasks.length.toDouble();
+    if (_todayTotalCount == 0 || _activeCount == 0) return 0;
+    final totalRef = _todayTotalCount < 5 ? 5.0 : _todayTotalCount.toDouble();
     return ((_activeCount / totalRef) * 100).clamp(0, 100).round();
   }
 
@@ -203,9 +227,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _toggleTask(Task task) async {
     final nextCompleted = !task.completed;
+    final now = DateTime.now();
     setState(() {
       _tasks = _tasks.map((t) {
-        return t.id == task.id ? t.copyWith(completed: nextCompleted) : t;
+        return t.id == task.id
+            ? t.copyWith(completed: nextCompleted, updatedAt: now)
+            : t;
       }).toList();
     });
     _syncWidget();
@@ -1287,9 +1314,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
 
     final filtered = _filteredTasks;
-    final completionPercent = _tasks.isEmpty
+    final completionPercent = _todayTotalCount == 0
         ? 0
-        : ((_completedCount / _tasks.length) * 100).round();
+        : ((_completedTodayCount / _todayTotalCount) * 100).round();
 
     return Scaffold(
       backgroundColor: scaffoldBg,
@@ -1425,9 +1452,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                       ClipRRect(
                                         borderRadius: BorderRadius.circular(8),
                                         child: LinearProgressIndicator(
-                                          value: (_tasks.isEmpty
+                                          value: (_todayTotalCount == 0
                                                   ? 0.0
-                                                  : (_completedCount / _tasks.length))
+                                                  : (_completedTodayCount / _todayTotalCount))
                                               .clamp(0.0, 1.0),
                                           minHeight: 8,
                                           backgroundColor: isDark
@@ -1440,7 +1467,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                       ),
                                       const SizedBox(height: 8),
                                       Text(
-                                        '$_completedCount done · $_activeCount remaining',
+                                        '$_completedTodayCount done today · $_activeCount remaining',
                                         style: TextStyle(
                                           fontFamily: 'Sniglet',
                                           fontSize: 12,

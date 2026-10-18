@@ -6,6 +6,7 @@ import {
   getRefreshToken,
   clearRefreshTokenCookie,
 } from "@/lib/auth";
+import { invalidateTaskCache } from "@/lib/taskCache";
 
 export async function POST(request: Request) {
   try {
@@ -26,6 +27,7 @@ export async function POST(request: Request) {
         await connectDB();
 
         if (payload?.userId) {
+          invalidateTaskCache(payload.userId);
           await User.findByIdAndUpdate(payload.userId, {
             $pull: { refreshTokens: token },
           });
