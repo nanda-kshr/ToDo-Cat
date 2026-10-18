@@ -16,4 +16,7 @@ class ApiConfig {
   // Task endpoints
   static const String tasks = '$baseUrl/api/tasks';
   static String taskById(String id) => '$baseUrl/api/tasks/$id';
+
+  // Analytics endpoint
+  static const String analytics = '$baseUrl/api/analytics';
 }

@@ -135,6 +135,9 @@ class QuickAddActivity : Activity() {
                 appWidgetManager.notifyAppWidgetViewDataChanged(id, R.id.widget_list_view)
             }
 
+            // Real-time notification to running app
+            MainActivity.notifyTasksUpdated(updatedJsonString)
+
             Toast.makeText(this, "Task added!", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             e.printStackTrace()

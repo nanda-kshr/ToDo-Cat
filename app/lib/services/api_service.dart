@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../config/api_config.dart';
 import '../models/user.dart';
 import '../models/task.dart';
+import '../models/analytics.dart';
 
 class ApiException implements Exception {
   final String message;
@@ -15,6 +16,24 @@ class ApiException implements Exception {
 
   @override
   String toString() => message;
+}
+
+class PaginatedTasks {
+  final List<Task> tasks;
+  final int page;
+  final int limit;
+  final int total;
+  final int totalPages;
+
+  PaginatedTasks({
+    required this.tasks,
+    required this.page,
+    required this.limit,
+    required this.total,
+    required this.totalPages,
+  });
+
+  bool get hasMore => page < totalPages;
 }
 
 class ApiService {
@@ -305,16 +324,32 @@ class ApiService {
 
   // --- Tasks API ---
 
-  Future<List<Task>> fetchTasks() async {
+  Future<PaginatedTasks> fetchTasks({int page = 1, int limit = 50}) async {
     try {
+      final baseUri = Uri.parse(ApiConfig.tasks);
+      final uri = baseUri.replace(
+        queryParameters: {
+          ...baseUri.queryParameters,
+          'page': page.toString(),
+          'limit': limit.toString(),
+        },
+      );
       final response = await _authenticatedRequest(
-        (headers) => http.get(Uri.parse(ApiConfig.tasks), headers: headers),
+        (headers) => http.get(uri, headers: headers),
       );
 
       final data = jsonDecode(response.body);
       if (response.statusCode >= 200 && response.statusCode < 300) {
         final List<dynamic> list = data['tasks'] ?? [];
-        return list.map((json) => Task.fromJson(json)).toList();
+        final tasks = list.map((json) => Task.fromJson(json)).toList();
+        final pagination = data['pagination'] as Map<String, dynamic>?;
+        return PaginatedTasks(
+          tasks: tasks,
+          page: pagination?['page'] as int? ?? page,
+          limit: pagination?['limit'] as int? ?? limit,
+          total: pagination?['total'] as int? ?? tasks.length,
+          totalPages: pagination?['totalPages'] as int? ?? 1,
+        );
       } else {
         throw ApiException(
           data['message'] ?? 'Failed to load tasks',
@@ -433,5 +468,44 @@ class ApiService {
 
   Future<Task> toggleTask(Task task) async {
     return updateTask(task.id, completed: !task.completed);
+  }
+
+  // --- Analytics API ---
+
+  Future<TaskAnalytics> fetchAnalytics({
+    String? period,
+    String? from,
+    String? to,
+    String? dateField,
+  }) async {
+    try {
+      final baseUri = Uri.parse(ApiConfig.analytics);
+      final queryParams = <String, String>{};
+      if (period != null && period.isNotEmpty) queryParams['period'] = period;
+      if (from != null && from.isNotEmpty) queryParams['from'] = from;
+      if (to != null && to.isNotEmpty) queryParams['to'] = to;
+      if (dateField != null && dateField.isNotEmpty) queryParams['dateField'] = dateField;
+
+      final uri = queryParams.isEmpty
+          ? baseUri
+          : baseUri.replace(queryParameters: queryParams);
+
+      final response = await _authenticatedRequest(
+        (headers) => http.get(uri, headers: headers),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return TaskAnalytics.fromJson(data as Map<String, dynamic>);
+      } else {
+        throw ApiException(
+          data['message'] ?? 'Failed to load analytics',
+          response.statusCode,
+        );
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Network error fetching analytics: $e');
+    }
   }
 }

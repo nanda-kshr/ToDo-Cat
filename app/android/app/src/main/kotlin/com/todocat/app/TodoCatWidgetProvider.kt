@@ -89,7 +89,7 @@ class TodoCatWidgetProvider : HomeWidgetProvider() {
             return RemoteViews(context.packageName, layoutId).apply {
                 setOnClickPendingIntent(R.id.widget_cat_root, openAppPendingIntent)
 
-                val ratioText = if (totalCount > 0) "$pendingCount/$totalCount" else "0/0"
+                val ratioText = if (totalCount > 0) "$completedCount/$totalCount" else "0/0"
                 setTextViewText(R.id.widget_cat_ratio, ratioText)
                 setTextViewText(R.id.widget_cat_ratio_label, "tasks")
 
@@ -143,7 +143,7 @@ class TodoCatWidgetProvider : HomeWidgetProvider() {
 
                 if (hasProgress) {
                     val max = totalCount.coerceAtLeast(1)
-                    val current = pendingCount.coerceIn(0, max)
+                    val current = completedCount.coerceIn(0, max)
                     setProgressBar(R.id.widget_cat_progress, max, current, false)
                 }
 

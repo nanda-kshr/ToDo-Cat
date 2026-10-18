@@ -6,6 +6,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -243,12 +245,59 @@ class FloatingCatService : Service() {
     private fun saveTasksToStorage(json: String) {
         tasksJsonString = json
         try {
-            val prefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-            prefs.edit()
+            var activeCount = 0
+            var totalCount = 0
+            if (json.isNotEmpty()) {
+                val arr = JSONArray(json)
+                totalCount = arr.length()
+                for (i in 0 until arr.length()) {
+                    if (!arr.getJSONObject(i).optBoolean("completed", false)) {
+                        activeCount++
+                    }
+                }
+            }
+            val speed = if (totalCount == 0 || activeCount == 0) 0 else ((activeCount / 5.0) * 100).toInt().coerceIn(0, 100)
+            val completedCount = (totalCount - activeCount).coerceAtLeast(0)
+
+            val flutterPrefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+            flutterPrefs.edit()
                 .putString("flutter.tasks_json", json)
                 .putString("tasks_json", json)
-                .apply()
-        } catch (_: Exception) {}
+                .putInt("flutter.pending_count", activeCount)
+                .putInt("flutter.total_count", totalCount)
+                .commit()
+
+            val homePrefs = getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+            homePrefs.edit()
+                .putString("tasks_json", json)
+                .putInt("pending_count", activeCount)
+                .putInt("total_count", totalCount)
+                .putInt("speed_percent", speed)
+                .commit()
+
+            // Update home widgets
+            val appWidgetManager = AppWidgetManager.getInstance(applicationContext)
+            val listWidgetIds = appWidgetManager.getAppWidgetIds(
+                ComponentName(applicationContext, TodoCatListWidgetProvider::class.java)
+            )
+            listWidgetIds.forEach { id ->
+                TodoCatListWidgetProvider.updateListWidget(applicationContext, appWidgetManager, id, activeCount, completedCount)
+            }
+            val catWidgetIds = appWidgetManager.getAppWidgetIds(
+                ComponentName(applicationContext, TodoCatWidgetProvider::class.java)
+            )
+            catWidgetIds.forEach { id ->
+                TodoCatWidgetProvider.updateCatWidget(applicationContext, appWidgetManager, id, activeCount, completedCount, speed, totalCount)
+            }
+            listWidgetIds.forEach { id ->
+                appWidgetManager.notifyAppWidgetViewDataChanged(id, R.id.widget_list_view)
+            }
+
+            // Real-time notification to running app
+            MainActivity.notifyTasksUpdated(json)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun calculateInterval(speed: Int) {
@@ -975,6 +1024,10 @@ class FloatingCatService : Service() {
                 val item = jsonArray.getJSONObject(i)
                 if (item.optString("id") == taskId) {
                     item.put("completed", newCompleted)
+                    val nowIso = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
+                        timeZone = java.util.TimeZone.getTimeZone("UTC")
+                    }.format(java.util.Date())
+                    item.put("updatedAt", nowIso)
                 }
                 if (!item.optBoolean("completed", false)) {
                     activeCount++
@@ -1003,11 +1056,17 @@ class FloatingCatService : Service() {
                 JSONArray()
             }
 
+            val nowIso = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
+                timeZone = java.util.TimeZone.getTimeZone("UTC")
+            }.format(java.util.Date())
+
             val newTask = JSONObject().apply {
                 put("id", UUID.randomUUID().toString())
                 put("title", title)
                 put("completed", false)
                 put("priority", "medium")
+                put("createdAt", nowIso)
+                put("updatedAt", nowIso)
             }
 
             // Prepend new task

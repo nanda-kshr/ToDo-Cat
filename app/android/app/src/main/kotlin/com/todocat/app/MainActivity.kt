@@ -11,10 +11,24 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "com.todocat.app/floating_cat"
 
+    companion object {
+        private var methodChannel: MethodChannel? = null
+
+        fun notifyTasksUpdated(tasksJson: String) {
+            methodChannel?.let { ch ->
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    ch.invokeMethod("onTasksUpdated", mapOf("tasksJson" to tasksJson))
+                }
+            }
+        }
+    }
+
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
 
-        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+        val channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
+        methodChannel = channel
+        channel.setMethodCallHandler { call, result ->
             when (call.method) {
                 "hasOverlayPermission" -> {
                     val hasPerm = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -102,5 +116,10 @@ class MainActivity : FlutterActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+    }
+
+    override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
+        methodChannel = null
+        super.cleanUpFlutterEngine(flutterEngine)
     }
 }

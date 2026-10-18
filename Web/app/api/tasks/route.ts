@@ -15,26 +15,42 @@ export async function GET(request: Request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const cachedTasks = getCachedTasks(payload.userId);
-    if (cachedTasks) {
-      return NextResponse.json(
-        { tasks: cachedTasks },
-        { headers: { "X-Cache": "HIT" } }
-      );
+    const { searchParams } = new URL(request.url);
+    const page = Math.max(1, parseInt(searchParams.get("page") || "1", 10) || 1);
+    const limit = Math.max(1, parseInt(searchParams.get("limit") || "50", 10) || 50);
+
+    let tasks = getCachedTasks(payload.userId);
+    let cacheHit = true;
+
+    if (!tasks) {
+      cacheHit = false;
+      await connectDB();
+      const dbTasks = await Task.find({ userId: payload.userId }).sort({
+        completed: 1,
+        dueDate: 1,
+        createdAt: -1,
+      });
+
+      setCachedTasks(payload.userId, dbTasks);
+      tasks = getCachedTasks(payload.userId) || JSON.parse(JSON.stringify(dbTasks));
     }
 
-    await connectDB();
-    const tasks = await Task.find({ userId: payload.userId }).sort({
-      completed: 1,
-      dueDate: 1,
-      createdAt: -1,
-    });
-
-    setCachedTasks(payload.userId, tasks);
+    const total = tasks ? tasks.length : 0;
+    const totalPages = Math.ceil(total / limit) || 1;
+    const startIndex = (page - 1) * limit;
+    const paginatedTasks = tasks ? tasks.slice(startIndex, startIndex + limit) : [];
 
     return NextResponse.json(
-      { tasks },
-      { headers: { "X-Cache": "MISS" } }
+      {
+        tasks: paginatedTasks,
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+        },
+      },
+      { headers: { "X-Cache": cacheHit ? "HIT" : "MISS" } }
     );
   } catch (error: unknown) {
     if ((error as { digest?: string })?.digest?.startsWith("NEXT_")) {

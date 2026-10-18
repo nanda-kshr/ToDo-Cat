@@ -6,6 +6,7 @@ import 'package:home_widget/home_widget.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/task.dart';
 import '../models/user.dart';
+import '../models/analytics.dart';
 import '../services/api_service.dart';
 import '../services/widget_service.dart';
 import '../services/floating_cat_service.dart';
@@ -28,38 +29,210 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _loading = true;
   String? _error;
 
+  int _currentPage = 1;
+  bool _hasMore = true;
+  bool _isLoadingMore = false;
+  final ScrollController _scrollController = ScrollController();
+
   int _currentTab = 0; // 0 = Home, 1 = Stats
   String _filter = 'all'; // all, active, completed
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
+  TaskAnalytics? _analytics;
+  bool _loadingAnalytics = false;
+  String? _analyticsError;
+  String _statsPeriod = '7d'; // 'today', '7d', '30d', 'this_month'
+
   bool _isFloatingOverlayRunning = false;
   StreamSubscription<Uri?>? _widgetClickSubscription;
+
+  Future<void> _loadAnalytics({String? period}) async {
+    final selectedPeriod = period ?? _statsPeriod;
+    setState(() {
+      _loadingAnalytics = true;
+      _analyticsError = null;
+      _statsPeriod = selectedPeriod;
+    });
+
+    try {
+      final res = await _apiService.fetchAnalytics(period: selectedPeriod);
+      if (mounted) {
+        setState(() {
+          _analytics = res;
+          _loadingAnalytics = false;
+          _analyticsError = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loadingAnalytics = false;
+          _analyticsError = e.toString();
+        });
+      }
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _scrollController.addListener(_onScroll);
+    FloatingCatService.initialize();
+    FloatingCatService.onTasksUpdated = _onExternalTasksUpdated;
     _loadCachedTasks().then((_) => _loadData());
     _checkFloatingOverlayStatus();
     _initWidgetLaunchHandling();
   }
 
-  Future<void> _loadCachedTasks() async {
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.position.pixels;
+    if (currentScroll >= maxScroll - 200 && !_isLoadingMore && _hasMore && !_loading) {
+      _loadMoreTasks();
+    }
+  }
+
+  Future<void> _loadMoreTasks() async {
+    if (_isLoadingMore || !_hasMore) return;
+    setState(() => _isLoadingMore = true);
+
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString('tasks_json');
-      if (raw != null && raw.isNotEmpty) {
-        final List<dynamic> localList = jsonDecode(raw);
-        final loaded = localList
-            .map((e) => Task.fromJson(e as Map<String, dynamic>))
-            .toList();
-        if (mounted && loaded.isNotEmpty && _tasks.isEmpty) {
+      final nextPage = _currentPage + 1;
+      final res = await _apiService.fetchTasks(page: nextPage, limit: 50);
+      if (mounted) {
+        final existingIds = _tasks.map((t) => t.id).toSet();
+        final newTasks = res.tasks.where((t) => !existingIds.contains(t.id)).toList();
+        setState(() {
+          _currentPage = nextPage;
+          _tasks = [..._tasks, ...newTasks];
+          _hasMore = res.hasMore;
+          _isLoadingMore = false;
+        });
+        _syncWidget();
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoadingMore = false);
+      }
+    }
+  }
+
+  void _onExternalTasksUpdated(String raw) {
+    if (!mounted) return;
+    _applyLocalTasksJson(raw);
+  }
+
+  Future<void> _applyLocalTasksJson(String raw) async {
+    try {
+      final List<dynamic> localList = jsonDecode(raw);
+      final loaded = localList
+          .map((e) => Task.fromJson(e as Map<String, dynamic>))
+          .toList();
+      if (loaded.isEmpty && _tasks.isNotEmpty) return;
+
+      if (_tasks.isEmpty) {
+        if (mounted) {
           setState(() {
             _tasks = loaded;
             _loading = false;
           });
         }
+      } else {
+        final localMap = {for (var t in loaded) t.id: t};
+        final existingIds = _tasks.map((t) => t.id).toSet();
+        final newTasks = loaded.where((t) => !existingIds.contains(t.id)).toList();
+        final merged = [
+          ...newTasks,
+          ..._tasks.map((t) {
+            if (localMap.containsKey(t.id)) {
+              final lt = localMap[t.id]!;
+              return t.copyWith(
+                completed: lt.completed,
+                updatedAt: lt.updatedAt ?? t.updatedAt,
+              );
+            }
+            return t;
+          }),
+        ];
+        if (mounted) {
+          setState(() {
+            _tasks = merged;
+          });
+        }
+      }
+
+      _syncOfflineTasksToServer();
+    } catch (_) {}
+  }
+
+  Future<void> _loadCachedTasks() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.reload();
+      final raw = prefs.getString('tasks_json');
+      if (raw != null && raw.isNotEmpty) {
+        await _applyLocalTasksJson(raw);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _syncOfflineTasksToServer([List<Task>? serverTasks]) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.reload();
+      final raw = prefs.getString('tasks_json');
+      if (raw == null || raw.isEmpty) return;
+
+      final List<dynamic> localList = jsonDecode(raw);
+      final targetList = serverTasks ?? _tasks;
+      final serverTaskMap = {for (var t in targetList) t.id: t};
+      final serverTitles = targetList.map((t) => t.title).toSet();
+      bool hasChanges = false;
+
+      for (final item in localList) {
+        final title = item['title'] as String?;
+        final id = item['id'] as String?;
+        final completed = item['completed'] as bool? ?? false;
+        if (title != null &&
+            title.isNotEmpty &&
+            id != null &&
+            id.contains('-') &&
+            !serverTitles.contains(title)) {
+          final created = await _apiService.createTask(title: title);
+          if (serverTasks != null) {
+            serverTasks.insert(0, created);
+          } else {
+            final idx = _tasks.indexWhere((t) => t.id == id);
+            if (idx != -1) {
+              _tasks[idx] = created;
+            } else {
+              _tasks.insert(0, created);
+            }
+          }
+          serverTitles.add(title);
+          hasChanges = true;
+        } else if (id != null && serverTaskMap.containsKey(id)) {
+          final serverTask = serverTaskMap[id]!;
+          if (serverTask.completed != completed) {
+            await _apiService.updateTask(id, completed: completed);
+            final idx = (serverTasks ?? _tasks).indexWhere((t) => t.id == id);
+            if (idx != -1) {
+              (serverTasks ?? _tasks)[idx] = (serverTasks ?? _tasks)[idx].copyWith(
+                completed: completed,
+                updatedAt: DateTime.now(),
+              );
+            }
+            hasChanges = true;
+          }
+        }
+      }
+
+      if (hasChanges && serverTasks == null && mounted) {
+        setState(() {});
+        _syncWidget();
       }
     } catch (_) {}
   }
@@ -83,6 +256,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    FloatingCatService.onTasksUpdated = null;
     _searchController.dispose();
     _widgetClickSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
@@ -115,53 +291,25 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     try {
       final user = await _apiService.getMe();
-      final tasks = await _apiService.fetchTasks();
+      final res = await _apiService.fetchTasks(page: 1, limit: 50);
+      final tasks = res.tasks;
 
       // Sync offline tasks created or updated via widget or floating cat
-      try {
-        final prefs = await SharedPreferences.getInstance();
-        final raw = prefs.getString('tasks_json');
-        if (raw != null) {
-          final List<dynamic> localList = jsonDecode(raw);
-          final serverTaskMap = {for (var t in tasks) t.id: t};
-          final serverTitles = tasks.map((t) => t.title).toSet();
-          for (final item in localList) {
-            final title = item['title'] as String?;
-            final id = item['id'] as String?;
-            final completed = item['completed'] as bool? ?? false;
-            if (title != null &&
-                title.isNotEmpty &&
-                id != null &&
-                id.contains('-') &&
-                !serverTitles.contains(title)) {
-              final created = await _apiService.createTask(title: title);
-              tasks.insert(0, created);
-              serverTitles.add(title);
-            } else if (id != null && serverTaskMap.containsKey(id)) {
-              final serverTask = serverTaskMap[id]!;
-              if (serverTask.completed != completed) {
-                await _apiService.updateTask(id, completed: completed);
-                final idx = tasks.indexWhere((t) => t.id == id);
-                if (idx != -1) {
-                  tasks[idx] = tasks[idx].copyWith(
-                    completed: completed,
-                    updatedAt: DateTime.now(),
-                  );
-                }
-              }
-            }
-          }
-        }
-      } catch (_) {}
+      await _syncOfflineTasksToServer(tasks);
 
       if (mounted) {
         setState(() {
           _user = user;
           _tasks = tasks;
+          _currentPage = 1;
+          _hasMore = res.hasMore;
           _loading = false;
           _error = null;
         });
         _syncWidget();
+        if (_currentTab == 1) {
+          _loadAnalytics();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -1339,6 +1487,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
 
     final filtered = _filteredTasks;
+    final todayTasks = filtered.where((t) => !t.completed || _isToday(t.updatedAt ?? t.createdAt)).toList();
+    final earlierTasks = filtered.where((t) => t.completed && !_isToday(t.updatedAt ?? t.createdAt)).toList();
     final completionPercent = _todayTotalCount == 0
         ? 0
         : ((_completedTodayCount / _todayTotalCount) * 100).round();
@@ -1425,212 +1575,375 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       onRefresh: _loadData,
                       color: isDark ? Colors.white : const Color(0xFF4B5563),
                       backgroundColor: cardBg,
-                      child: ListView(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        children: [
-                          // Status Banner Card: Running Cat on Left + Progress & % on Right
-                          Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: cardBg,
-                              borderRadius: BorderRadius.circular(24),
-                              border: Border.all(color: cardBorder),
-                            ),
-                            child: Row(
-                              children: [
-                                // Left: Running Cat (Grey + White monochrome)
-                                CatAnimation(
-                                  speedPercent: _catSpeed,
-                                  size: 88,
-                                  showContainer: false,
-                                ),
-                                const SizedBox(width: 16),
-
-                                // Right: Active Count, Percentage, Progress Bar, Done / Remaining
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Text(
-                                        '$_activeCount Active Tasks',
-                                        style: TextStyle(
-                                          fontFamily: 'Sniglet',
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: textPrimary,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        '$completionPercent%',
-                                        style: TextStyle(
-                                          fontFamily: 'Sniglet',
-                                          fontSize: 32,
-                                          fontWeight: FontWeight.w700,
-                                          color: textPrimary,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      ClipRRect(
-                                        borderRadius: BorderRadius.circular(8),
-                                        child: LinearProgressIndicator(
-                                          value: (_todayTotalCount == 0
-                                                  ? 0.0
-                                                  : (_completedTodayCount / _todayTotalCount))
-                                              .clamp(0.0, 1.0),
-                                          minHeight: 8,
-                                          backgroundColor: isDark
-                                              ? const Color(0xFF282828)
-                                              : const Color(0xFFE5E7EB),
-                                          valueColor: AlwaysStoppedAnimation<Color>(
-                                            isDark ? Colors.white : const Color(0xFF4B5563),
+                      child: CustomScrollView(
+                        controller: _scrollController,
+                        physics: const BouncingScrollPhysics(
+                          parent: AlwaysScrollableScrollPhysics(),
+                        ),
+                        slivers: [
+                          // Controls Header (Status Banner, Filter Tabs, Search Bar)
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                            sliver: SliverToBoxAdapter(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Status Banner Card: Running Cat on Left + Progress & % on Right
+                                  Container(
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: cardBg,
+                                      borderRadius: BorderRadius.circular(24),
+                                      border: Border.all(color: cardBorder),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        // Left: Running Cat (Grey + White monochrome) isolated in RepaintBoundary
+                                        RepaintBoundary(
+                                          child: CatAnimation(
+                                            speedPercent: _catSpeed,
+                                            size: 88,
+                                            showContainer: false,
                                           ),
                                         ),
+                                        const SizedBox(width: 16),
+
+                                        // Right: Active Count, Percentage, Progress Bar, Done / Remaining
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Text(
+                                                '$_activeCount Active Tasks',
+                                                style: TextStyle(
+                                                  fontFamily: 'Sniglet',
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: textPrimary,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                              const SizedBox(height: 2),
+                                              Text(
+                                                '$completionPercent%',
+                                                style: TextStyle(
+                                                  fontFamily: 'Sniglet',
+                                                  fontSize: 32,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: textPrimary,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              ClipRRect(
+                                                borderRadius: BorderRadius.circular(8),
+                                                child: LinearProgressIndicator(
+                                                  value: (_todayTotalCount == 0
+                                                          ? 0.0
+                                                          : (_completedTodayCount / _todayTotalCount))
+                                                      .clamp(0.0, 1.0),
+                                                  minHeight: 8,
+                                                  backgroundColor: isDark
+                                                      ? const Color(0xFF282828)
+                                                      : const Color(0xFFE5E7EB),
+                                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                                    isDark ? Colors.white : const Color(0xFF4B5563),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                '$_completedTodayCount done today · $_activeCount remaining',
+                                                style: TextStyle(
+                                                  fontFamily: 'Sniglet',
+                                                  fontSize: 12,
+                                                  color: textSecondary,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+
+                                  // Filter Tabs (All, Active, Completed Pills)
+                                  Row(
+                                    children: [
+                                      _buildFilterTab(
+                                        id: 'all',
+                                        label: 'All',
+                                        count: _tasks.length,
+                                        isDark: isDark,
+                                        cardBg: cardBg,
+                                        cardBorder: cardBorder,
+                                        textPrimary: textPrimary,
+                                        textSecondary: textSecondary,
                                       ),
-                                      const SizedBox(height: 8),
+                                      const SizedBox(width: 8),
+                                      _buildFilterTab(
+                                        id: 'active',
+                                        label: 'Active',
+                                        count: _activeCount,
+                                        isDark: isDark,
+                                        cardBg: cardBg,
+                                        cardBorder: cardBorder,
+                                        textPrimary: textPrimary,
+                                        textSecondary: textSecondary,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      _buildFilterTab(
+                                        id: 'completed',
+                                        label: 'Completed',
+                                        count: _completedCount,
+                                        isDark: isDark,
+                                        cardBg: cardBg,
+                                        cardBorder: cardBorder,
+                                        textPrimary: textPrimary,
+                                        textSecondary: textSecondary,
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Search Bar (Rounded Pill)
+                                  Container(
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: cardBg,
+                                      borderRadius: BorderRadius.circular(24),
+                                      border: Border.all(color: cardBorder),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.search, size: 20, color: textSecondary),
+                                        const SizedBox(width: 10),
+                                        Expanded(
+                                          child: TextField(
+                                            controller: _searchController,
+                                            onChanged: (val) => setState(() => _searchQuery = val),
+                                            style: TextStyle(
+                                              fontFamily: 'Sniglet',
+                                              color: textPrimary,
+                                              fontSize: 14,
+                                            ),
+                                            decoration: InputDecoration(
+                                              hintText: 'Search tasks...',
+                                              hintStyle: TextStyle(
+                                                fontFamily: 'Sniglet',
+                                                color: textSecondary,
+                                                fontSize: 14,
+                                              ),
+                                              border: InputBorder.none,
+                                              isDense: true,
+                                              contentPadding: EdgeInsets.zero,
+                                            ),
+                                          ),
+                                        ),
+                                        if (_searchQuery.isNotEmpty)
+                                          InkWell(
+                                            onTap: () {
+                                              _searchController.clear();
+                                              setState(() => _searchQuery = '');
+                                            },
+                                            child: Icon(Icons.close, size: 18, color: textSecondary),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          // Task List or Empty State
+                          if (filtered.isEmpty)
+                            SliverPadding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              sliver: SliverToBoxAdapter(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 48),
+                                  alignment: Alignment.center,
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.checklist_rtl,
+                                        size: 42,
+                                        color: isDark ? Colors.white24 : const Color(0xFFD1D5DB),
+                                      ),
+                                      const SizedBox(height: 10),
                                       Text(
-                                        '$_completedTodayCount done today · $_activeCount remaining',
+                                        _searchQuery.isNotEmpty
+                                            ? 'No tasks found for "$_searchQuery"'
+                                            : 'No tasks here yet',
                                         style: TextStyle(
                                           fontFamily: 'Sniglet',
-                                          fontSize: 12,
                                           color: textSecondary,
+                                          fontSize: 14,
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Filter Tabs (All, Active, Completed Pills)
-                          Row(
-                            children: [
-                              _buildFilterTab(
-                                id: 'all',
-                                label: 'All',
-                                count: _tasks.length,
-                                isDark: isDark,
-                                cardBg: cardBg,
-                                cardBorder: cardBorder,
-                                textPrimary: textPrimary,
-                                textSecondary: textSecondary,
-                              ),
-                              const SizedBox(width: 8),
-                              _buildFilterTab(
-                                id: 'active',
-                                label: 'Active',
-                                count: _activeCount,
-                                isDark: isDark,
-                                cardBg: cardBg,
-                                cardBorder: cardBorder,
-                                textPrimary: textPrimary,
-                                textSecondary: textSecondary,
-                              ),
-                              const SizedBox(width: 8),
-                              _buildFilterTab(
-                                id: 'completed',
-                                label: 'Completed',
-                                count: _completedCount,
-                                isDark: isDark,
-                                cardBg: cardBg,
-                                cardBorder: cardBorder,
-                                textPrimary: textPrimary,
-                                textSecondary: textSecondary,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Search Bar (Rounded Pill)
-                          Container(
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: cardBg,
-                              borderRadius: BorderRadius.circular(24),
-                              border: Border.all(color: cardBorder),
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
-                            child: Row(
-                              children: [
-                                Icon(Icons.search, size: 20, color: textSecondary),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: TextField(
-                                    controller: _searchController,
-                                    onChanged: (val) => setState(() => _searchQuery = val),
-                                    style: TextStyle(
-                                      fontFamily: 'Sniglet',
-                                      color: textPrimary,
-                                      fontSize: 14,
-                                    ),
-                                    decoration: InputDecoration(
-                                      hintText: 'Search tasks...',
-                                      hintStyle: TextStyle(
-                                        fontFamily: 'Sniglet',
-                                        color: textSecondary,
-                                        fontSize: 14,
-                                      ),
-                                      border: InputBorder.none,
-                                      isDense: true,
-                                      contentPadding: EdgeInsets.zero,
-                                    ),
-                                  ),
-                                ),
-                                if (_searchQuery.isNotEmpty)
-                                  InkWell(
-                                    onTap: () {
-                                      _searchController.clear();
-                                      setState(() => _searchQuery = '');
-                                    },
-                                    child: Icon(Icons.close, size: 18, color: textSecondary),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 14),
-
-                          // Task List
-                          if (filtered.isEmpty)
-                            Container(
-                              padding: const EdgeInsets.symmetric(vertical: 48),
-                              alignment: Alignment.center,
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    Icons.checklist_rtl,
-                                    size: 42,
-                                    color: isDark ? Colors.white24 : const Color(0xFFD1D5DB),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    _searchQuery.isNotEmpty
-                                        ? 'No tasks found for "$_searchQuery"'
-                                        : 'No tasks here yet',
-                                    style: TextStyle(
-                                      fontFamily: 'Sniglet',
-                                      color: textSecondary,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
                               ),
                             )
-                          else
-                            ...filtered.map((task) => _buildTaskCard(task, isDark, cardBg, cardBorder, textPrimary, textSecondary)),
+                          else ...[
+                            // 1. Today's Tasks Section Header
+                            if (earlierTasks.isNotEmpty && todayTasks.isNotEmpty)
+                              SliverPadding(
+                                padding: const EdgeInsets.fromLTRB(20, 4, 16, 8),
+                                sliver: SliverToBoxAdapter(
+                                  child: Row(
+                                    children: [
+                                      Text(
+                                        'Today',
+                                        style: TextStyle(
+                                          fontFamily: 'Sniglet',
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: textSecondary,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF3F4F6),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(color: cardBorder),
+                                        ),
+                                        child: Text(
+                                          '${todayTasks.length}',
+                                          style: TextStyle(
+                                            fontFamily: 'Sniglet',
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: textSecondary,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
 
-                          // Grass illustration at the end of the task list
-                          const SizedBox(height: 24),
-                          SvgPicture.asset(
-                            'assets/grass.svg',
-                            width: double.infinity,
-                            fit: BoxFit.fitWidth,
+                            // 1. Today's Tasks List (Lazy recycled items)
+                            SliverPadding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              sliver: SliverList.builder(
+                                itemCount: todayTasks.length,
+                                itemBuilder: (context, index) => _buildTaskCard(
+                                  todayTasks[index],
+                                  isDark,
+                                  cardBg,
+                                  cardBorder,
+                                  textPrimary,
+                                  textSecondary,
+                                ),
+                              ),
+                            ),
+
+                            // 2. Completed Till Yesterday Section Header
+                            if (earlierTasks.isNotEmpty) ...[
+                              SliverPadding(
+                                padding: const EdgeInsets.fromLTRB(20, 16, 16, 8),
+                                sliver: SliverToBoxAdapter(
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.history,
+                                        size: 15,
+                                        color: textSecondary,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Completed Earlier',
+                                        style: TextStyle(
+                                          fontFamily: 'Sniglet',
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: textSecondary,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF3F4F6),
+                                          borderRadius: BorderRadius.circular(10),
+                                          border: Border.all(color: cardBorder),
+                                        ),
+                                        child: Text(
+                                          '${earlierTasks.length}',
+                                          style: TextStyle(
+                                            fontFamily: 'Sniglet',
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: textSecondary,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              // 2. Completed Till Yesterday Tasks List (Lazy recycled items)
+                              SliverPadding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                sliver: SliverList.builder(
+                                  itemCount: earlierTasks.length,
+                                  itemBuilder: (context, index) => _buildTaskCard(
+                                    earlierTasks[index],
+                                    isDark,
+                                    cardBg,
+                                    cardBorder,
+                                    textPrimary,
+                                    textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+
+                          // Footer with loading indicator and grass illustration
+                          SliverPadding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            sliver: SliverToBoxAdapter(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (_isLoadingMore)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      child: Center(
+                                        child: SizedBox(
+                                          width: 24,
+                                          height: 24,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2.5,
+                                            color: isDark ? Colors.white : const Color(0xFF4B5563),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  const SizedBox(height: 24),
+                                  RepaintBoundary(
+                                    child: SvgPicture.asset(
+                                      'assets/grass.svg',
+                                      width: double.infinity,
+                                      fit: BoxFit.fitWidth,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 72),
+                                ],
+                              ),
+                            ),
                           ),
-                          const SizedBox(height: 72),
                         ],
                       ),
                     ),
@@ -1689,7 +2002,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final activeColor = isDark ? Colors.white : const Color(0xFF4B5563);
     return Expanded(
       child: InkWell(
-        onTap: () => setState(() => _currentTab = index),
+        onTap: () {
+          setState(() => _currentTab = index);
+          if (index == 1 && _analytics == null) {
+            _loadAnalytics();
+          }
+        },
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -1781,6 +2099,242 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  // --- TASK DETAILS MODAL ---
+  void _showTaskDetailsModal(Task task) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final dialogBg = isDark ? const Color(0xFF181818) : Colors.white;
+    final textPrimary = isDark ? Colors.white : const Color(0xFF4B5563);
+    final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+    final cardBg = isDark ? const Color(0xFF222222) : const Color(0xFFF4F4F5);
+    final cardBorder = isDark ? const Color(0xFF2E2E2E) : const Color(0xFFE4E4E7);
+    final formattedDueDate = _formatDueDate(task.dueDate);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: dialogBg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final currentTask = _tasks.firstWhere(
+              (t) => t.id == task.id,
+              orElse: () => task,
+            );
+
+            return SafeArea(
+              top: false,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(left: 22, right: 22, top: 4, bottom: 28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Header: Priority, Category & Close
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            _buildTaskPriorityBadge(currentTask.priority, isDark),
+                            if (currentTask.category.isNotEmpty && currentTask.category != 'General') ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: cardBg,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: cardBorder),
+                                ),
+                                child: Text(
+                                  currentTask.category,
+                                  style: TextStyle(
+                                    fontFamily: 'Sniglet',
+                                    fontSize: 12,
+                                    color: textSecondary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                        InkWell(
+                          onTap: () => Navigator.pop(ctx),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE4E4E7),
+                            ),
+                            child: Icon(Icons.close, size: 18, color: textSecondary),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Title
+                    Text(
+                      currentTask.title,
+                      style: TextStyle(
+                        fontFamily: 'Sniglet',
+                        fontSize: 22,
+                        fontWeight: FontWeight.w600,
+                        color: currentTask.completed ? textSecondary : textPrimary,
+                        decoration: currentTask.completed ? TextDecoration.lineThrough : null,
+                      ),
+                    ),
+
+                    // Description (if present)
+                    if (currentTask.description.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: cardBg,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: cardBorder),
+                        ),
+                        child: Text(
+                          currentTask.description,
+                          style: TextStyle(
+                            fontFamily: 'Sniglet',
+                            fontSize: 14,
+                            color: textSecondary,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    const SizedBox(height: 16),
+
+                    // Status and Info Card
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: cardBorder),
+                      ),
+                      child: Column(
+                        children: [
+                          // Toggle Status Row
+                          InkWell(
+                            onTap: () async {
+                              await _toggleTask(currentTask);
+                              setModalState(() {});
+                            },
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(7),
+                                    color: currentTask.completed
+                                        ? (isDark ? Colors.white : const Color(0xFF4B5563))
+                                        : Colors.transparent,
+                                    border: Border.all(
+                                      color: currentTask.completed
+                                          ? Colors.transparent
+                                          : (isDark ? const Color(0xFF3F3F46) : const Color(0xFFD4D4D8)),
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: currentTask.completed
+                                      ? Icon(
+                                          Icons.check,
+                                          size: 15,
+                                          color: isDark ? Colors.black : Colors.white,
+                                        )
+                                      : null,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  currentTask.completed ? 'Completed' : 'Mark as completed',
+                                  style: TextStyle(
+                                    fontFamily: 'Sniglet',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Due Date row if present
+                          if (formattedDueDate.isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Divider(color: cardBorder, height: 1),
+                            ),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.calendar_today_outlined,
+                                  size: 16,
+                                  color: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  'Due $formattedDueDate',
+                                  style: TextStyle(
+                                    fontFamily: 'Sniglet',
+                                    fontSize: 13,
+                                    color: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Delete Task Button
+                    OutlinedButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        await _deleteTask(currentTask.id);
+                      },
+                      icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFDC2626)),
+                      label: const Text(
+                        'Delete Task',
+                        style: TextStyle(
+                          fontFamily: 'Sniglet',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFFDC2626),
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFFFCA5A5)),
+                        backgroundColor: isDark ? const Color(0xFF2A1515) : const Color(0xFFFEF2F2),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   // --- TASK CARD TILE ---
   Widget _buildTaskCard(
     Task task,
@@ -1806,15 +2360,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         child: const Icon(Icons.delete_outline, color: Colors.white, size: 24),
       ),
       onDismissed: (_) => _deleteTask(task.id),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        decoration: BoxDecoration(
-          color: cardBg,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: cardBorder),
-        ),
-        child: Row(
+      child: InkWell(
+        onTap: () => _showTaskDetailsModal(task),
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: cardBorder),
+          ),
+          child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Squircle Checkbox
@@ -1903,7 +2460,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildTaskPriorityBadge(String priority, bool isDark) {
@@ -1948,7 +2506,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  // --- STATS VIEW (Stats tab) ---
+  // --- STATS VIEW (Stats tab using GET /api/analytics) ---
   Widget _buildStatsView(
     bool isDark,
     Color cardBg,
@@ -1956,125 +2514,501 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     Color textPrimary,
     Color textSecondary,
   ) {
-    final completionRate = _tasks.isEmpty
-        ? 0
-        : ((_completedCount / _tasks.length) * 100).round();
-
-    final highCount = _tasks.where((t) => t.priority == 'high' && !t.completed).length;
-    final medCount = _tasks.where((t) => t.priority == 'medium' && !t.completed).length;
-    final lowCount = _tasks.where((t) => t.priority == 'low' && !t.completed).length;
-
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      children: [
-        Text(
-          'Productivity Overview',
-          style: TextStyle(
-            fontFamily: 'Sniglet',
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: textPrimary,
-          ),
+    if (_loadingAnalytics && _analytics == null) {
+      return Center(
+        child: CircularProgressIndicator(
+          color: isDark ? Colors.white : const Color(0xFF4B5563),
         ),
-        const SizedBox(height: 14),
+      );
+    }
 
-        // Big Metric Card
-        Container(
-          padding: const EdgeInsets.all(18),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: cardBorder),
-          ),
+    if (_analyticsError != null && _analytics == null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              Icon(
+                Icons.analytics_outlined,
+                size: 48,
+                color: isDark ? Colors.white38 : const Color(0xFF9CA3AF),
+              ),
+              const SizedBox(height: 12),
               Text(
-                'Completion Rate',
+                _analyticsError!,
+                textAlign: TextAlign.center,
                 style: TextStyle(fontFamily: 'Sniglet', color: textSecondary, fontSize: 13),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => _loadAnalytics(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isDark ? Colors.white : const Color(0xFF4B5563),
+                  foregroundColor: isDark ? Colors.black : Colors.white,
+                ),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final data = _analytics;
+    if (data == null) {
+      return const SizedBox();
+    }
+
+    final summary = data.summary;
+    final byPriority = data.byPriority;
+    final high = byPriority['high'] ?? PriorityStats(total: 0, completed: 0, pending: 0);
+    final med = byPriority['medium'] ?? PriorityStats(total: 0, completed: 0, pending: 0);
+    final low = byPriority['low'] ?? PriorityStats(total: 0, completed: 0, pending: 0);
+
+    final due = data.dueStatus;
+    final categories = data.byCategory;
+    final trends = data.completionTrend;
+    final maxTrend = trends.isEmpty
+        ? 1
+        : trends.map((t) => t.completed).reduce((a, b) => a > b ? a : b).clamp(1, 9999);
+
+    return RefreshIndicator(
+      onRefresh: () => _loadAnalytics(),
+      color: isDark ? Colors.white : const Color(0xFF4B5563),
+      backgroundColor: cardBg,
+      child: ListView(
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
               Text(
-                '$completionRate%',
+                'Productivity Overview',
                 style: TextStyle(
                   fontFamily: 'Sniglet',
-                  fontSize: 36,
-                  fontWeight: FontWeight.w900,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                   color: textPrimary,
                 ),
               ),
-              const SizedBox(height: 10),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8),
-                child: LinearProgressIndicator(
-                  value: (_tasks.isEmpty ? 0.0 : (_completedCount / _tasks.length)).clamp(0.0, 1.0),
-                  minHeight: 10,
-                  backgroundColor: isDark ? const Color(0xFF282828) : const Color(0xFFE5E7EB),
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    isDark ? Colors.white : const Color(0xFF4B5563),
+              if (_loadingAnalytics)
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: isDark ? Colors.white : const Color(0xFF4B5563),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '$_completedCount completed',
-                    style: TextStyle(fontFamily: 'Sniglet', color: textSecondary, fontSize: 12),
-                  ),
-                  Text(
-                    '$_activeCount pending',
-                    style: TextStyle(fontFamily: 'Sniglet', color: textSecondary, fontSize: 12),
-                  ),
-                ],
-              ),
             ],
           ),
-        ),
-        const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
-        // 3 Cards: Total, Completed, Pending
-        Row(
-          children: [
-            _buildStatMetricCard('Total', '${_tasks.length}', isDark, cardBg, cardBorder, textPrimary, textSecondary),
-            const SizedBox(width: 8),
-            _buildStatMetricCard('Done', '$_completedCount', isDark, cardBg, cardBorder, textPrimary, textSecondary),
-            const SizedBox(width: 8),
-            _buildStatMetricCard('Active', '$_activeCount', isDark, cardBg, cardBorder, textPrimary, textSecondary),
+          // Period Filters Row
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildPeriodFilterTab(
+                  period: 'today',
+                  label: 'Today',
+                  isDark: isDark,
+                  cardBg: cardBg,
+                  cardBorder: cardBorder,
+                  textPrimary: textPrimary,
+                  textSecondary: textSecondary,
+                ),
+                const SizedBox(width: 8),
+                _buildPeriodFilterTab(
+                  period: '7d',
+                  label: '7 Days',
+                  isDark: isDark,
+                  cardBg: cardBg,
+                  cardBorder: cardBorder,
+                  textPrimary: textPrimary,
+                  textSecondary: textSecondary,
+                ),
+                const SizedBox(width: 8),
+                _buildPeriodFilterTab(
+                  period: '30d',
+                  label: '30 Days',
+                  isDark: isDark,
+                  cardBg: cardBg,
+                  cardBorder: cardBorder,
+                  textPrimary: textPrimary,
+                  textSecondary: textSecondary,
+                ),
+                const SizedBox(width: 8),
+                _buildPeriodFilterTab(
+                  period: 'this_month',
+                  label: 'This Month',
+                  isDark: isDark,
+                  cardBg: cardBg,
+                  cardBorder: cardBorder,
+                  textPrimary: textPrimary,
+                  textSecondary: textSecondary,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Hero Metric Card: Completion Rate
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: cardBorder),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Completion Rate',
+                  style: TextStyle(fontFamily: 'Sniglet', color: textSecondary, fontSize: 13),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${summary.completionRate}%',
+                  style: TextStyle(
+                    fontFamily: 'Sniglet',
+                    fontSize: 36,
+                    fontWeight: FontWeight.w900,
+                    color: textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: (summary.total == 0 ? 0.0 : (summary.completed / summary.total)).clamp(0.0, 1.0),
+                    minHeight: 10,
+                    backgroundColor: isDark ? const Color(0xFF282828) : const Color(0xFFE5E7EB),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      isDark ? Colors.white : const Color(0xFF4B5563),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      '${summary.completed} completed',
+                      style: TextStyle(fontFamily: 'Sniglet', color: textSecondary, fontSize: 12),
+                    ),
+                    Text(
+                      '${summary.pending} pending',
+                      style: TextStyle(fontFamily: 'Sniglet', color: textSecondary, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // 3 Metric Cards: Total, Done, Active
+          Row(
+            children: [
+              _buildStatMetricCard('Total', '${summary.total}', isDark, cardBg, cardBorder, textPrimary, textSecondary),
+              const SizedBox(width: 8),
+              _buildStatMetricCard('Done', '${summary.completed}', isDark, cardBg, cardBorder, textPrimary, textSecondary),
+              const SizedBox(width: 8),
+              _buildStatMetricCard('Active', '${summary.pending}', isDark, cardBg, cardBorder, textPrimary, textSecondary),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Due Status Breakdown
+          Text(
+            'Due Status',
+            style: TextStyle(
+              fontFamily: 'Sniglet',
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: textPrimary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: cardBorder),
+            ),
+            child: Row(
+              children: [
+                _buildDueStatusItem('Overdue', due.overdue, isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626), textPrimary, textSecondary),
+                _buildDueStatusItem('Due Today', due.dueToday, isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706), textPrimary, textSecondary),
+                _buildDueStatusItem('Upcoming', due.upcoming, isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A), textPrimary, textSecondary),
+                _buildDueStatusItem('No Due Date', due.noDueDate, textSecondary, textPrimary, textSecondary),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Priority Breakdown
+          Text(
+            'Tasks by Priority',
+            style: TextStyle(
+              fontFamily: 'Sniglet',
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: textPrimary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: cardBg,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: cardBorder),
+            ),
+            child: Column(
+              children: [
+                _buildPriorityStatRow('High Priority', '${high.total}', '${high.completed} done · ${high.pending} pending', isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626), textPrimary, textSecondary),
+                Divider(color: cardBorder, height: 20),
+                _buildPriorityStatRow('Medium Priority', '${med.total}', '${med.completed} done · ${med.pending} pending', isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706), textPrimary, textSecondary),
+                Divider(color: cardBorder, height: 20),
+                _buildPriorityStatRow('Low Priority', '${low.total}', '${low.completed} done · ${low.pending} pending', isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A), textPrimary, textSecondary),
+              ],
+            ),
+          ),
+
+          // Category Breakdown
+          if (categories.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              'By Category',
+              style: TextStyle(
+                fontFamily: 'Sniglet',
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: textPrimary,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: cardBorder),
+              ),
+              child: Column(
+                children: categories.map((cat) => _buildCategoryRow(cat, isDark, cardBorder, textPrimary, textSecondary)).toList(),
+              ),
+            ),
           ],
-        ),
-        const SizedBox(height: 16),
 
-        // Priority Breakdown
-        Text(
-          'Pending by Priority',
+          // Completion Trend
+          if (trends.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Text(
+              'Daily Completion Trend',
+              style: TextStyle(
+                fontFamily: 'Sniglet',
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: textPrimary,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+              decoration: BoxDecoration(
+                color: cardBg,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: cardBorder),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: trends.map((t) => _buildTrendBar(t, maxTrend, isDark, textSecondary, textPrimary)).toList(),
+              ),
+            ),
+          ],
+
+          // Grass illustration at bottom of stats
+          const SizedBox(height: 24),
+          RepaintBoundary(
+            child: SvgPicture.asset(
+              'assets/grass.svg',
+              width: double.infinity,
+              fit: BoxFit.fitWidth,
+            ),
+          ),
+          const SizedBox(height: 48),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPeriodFilterTab({
+    required String period,
+    required String label,
+    required bool isDark,
+    required Color cardBg,
+    required Color cardBorder,
+    required Color textPrimary,
+    required Color textSecondary,
+  }) {
+    final isSelected = _statsPeriod == period;
+    return InkWell(
+      onTap: () {
+        if (_statsPeriod != period) {
+          _loadAnalytics(period: period);
+        }
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isDark ? Colors.white : const Color(0xFF4B5563))
+              : cardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? Colors.transparent : cardBorder,
+          ),
+        ),
+        child: Text(
+          label,
           style: TextStyle(
             fontFamily: 'Sniglet',
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: textPrimary,
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+            color: isSelected
+                ? (isDark ? Colors.black : Colors.white)
+                : textSecondary,
           ),
         ),
-        const SizedBox(height: 10),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: cardBorder),
+      ),
+    );
+  }
+
+  Widget _buildDueStatusItem(String label, int count, Color color, Color textPrimary, Color textSecondary) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            '$count',
+            style: TextStyle(
+              fontFamily: 'Sniglet',
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: count > 0 ? color : textSecondary,
+            ),
           ),
-          child: Column(
+          const SizedBox(height: 2),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Sniglet',
+              fontSize: 11,
+              color: textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryRow(CategoryStats cat, bool isDark, Color cardBorder, Color textPrimary, Color textSecondary) {
+    final rate = cat.total == 0 ? 0.0 : (cat.completed / cat.total).clamp(0.0, 1.0);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildPriorityStatRow('High Priority', '$highCount', isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626), textPrimary),
-              Divider(color: cardBorder, height: 20),
-              _buildPriorityStatRow('Medium Priority', '$medCount', isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706), textPrimary),
-              Divider(color: cardBorder, height: 20),
-              _buildPriorityStatRow('Low Priority', '$lowCount', isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A), textPrimary),
+              Text(
+                cat.category,
+                style: TextStyle(
+                  fontFamily: 'Sniglet',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: textPrimary,
+                ),
+              ),
+              Text(
+                '${cat.completed}/${cat.total} done',
+                style: TextStyle(
+                  fontFamily: 'Sniglet',
+                  fontSize: 12,
+                  color: textSecondary,
+                ),
+              ),
             ],
           ),
-        ),
-      ],
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: rate,
+              minHeight: 6,
+              backgroundColor: isDark ? const Color(0xFF282828) : const Color(0xFFE5E7EB),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                isDark ? Colors.white : const Color(0xFF4B5563),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrendBar(CompletionTrendPoint point, int maxVal, bool isDark, Color textSecondary, Color textPrimary) {
+    final parts = point.date.split('-');
+    final label = parts.length >= 3 ? '${parts[1]}/${parts[2]}' : point.date;
+    final compH = maxVal > 0 ? ((point.completed / maxVal) * 44).clamp(4.0, 44.0) : 4.0;
+    final isDone = point.completed > 0;
+
+    return Expanded(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Text(
+            '${point.completed}',
+            style: TextStyle(
+              fontFamily: 'Sniglet',
+              fontSize: 10,
+              fontWeight: isDone ? FontWeight.bold : FontWeight.normal,
+              color: isDone ? textPrimary : textSecondary.withValues(alpha: 0.5),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            height: compH,
+            width: 14,
+            decoration: BoxDecoration(
+              color: isDone
+                  ? (isDark ? Colors.white : const Color(0xFF4B5563))
+                  : (isDark ? const Color(0xFF282828) : const Color(0xFFE5E7EB)),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Sniglet',
+              fontSize: 10,
+              color: textSecondary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -2121,7 +3055,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildPriorityStatRow(String label, String count, Color dotColor, Color textPrimary) {
+  Widget _buildPriorityStatRow(String label, String count, String subtext, Color dotColor, Color textPrimary, Color textSecondary) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -2133,9 +3067,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               decoration: BoxDecoration(shape: BoxShape.circle, color: dotColor),
             ),
             const SizedBox(width: 10),
-            Text(
-              label,
-              style: TextStyle(fontFamily: 'Sniglet', fontSize: 14, color: textPrimary),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(fontFamily: 'Sniglet', fontSize: 14, color: textPrimary, fontWeight: FontWeight.w600),
+                ),
+                Text(
+                  subtext,
+                  style: TextStyle(fontFamily: 'Sniglet', fontSize: 11, color: textSecondary),
+                ),
+              ],
             ),
           ],
         ),
@@ -2143,7 +3086,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           count,
           style: TextStyle(
             fontFamily: 'Sniglet',
-            fontSize: 14,
+            fontSize: 16,
             fontWeight: FontWeight.bold,
             color: textPrimary,
           ),

@@ -5,6 +5,25 @@ class FloatingCatService {
   static const MethodChannel _channel =
       MethodChannel('com.todocat.app/floating_cat');
 
+  static void Function(String tasksJson)? onTasksUpdated;
+  static bool _initialized = false;
+
+  static void initialize() {
+    if (_initialized) return;
+    _initialized = true;
+    _channel.setMethodCallHandler((call) async {
+      if (call.method == 'onTasksUpdated') {
+        final args = call.arguments;
+        if (args is Map) {
+          final tasksJson = args['tasksJson'] as String?;
+          if (tasksJson != null && onTasksUpdated != null) {
+            onTasksUpdated!(tasksJson);
+          }
+        }
+      }
+    });
+  }
+
   static bool get isSupported => Platform.isAndroid;
 
   static Future<bool> hasPermission() async {
