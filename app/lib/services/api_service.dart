@@ -236,7 +236,6 @@ class ApiService {
     if (!_googleInitialized) {
       await GoogleSignIn.instance.initialize(
         serverClientId: ApiConfig.googleClientId,
-        clientId: ApiConfig.googleClientId,
       );
       _googleInitialized = true;
     }
