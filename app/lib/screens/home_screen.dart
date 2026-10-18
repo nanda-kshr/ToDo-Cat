@@ -33,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _hasMore = true;
   bool _isLoadingMore = false;
   final ScrollController _scrollController = ScrollController();
+  final ScrollController _statsScrollController = ScrollController();
 
   int _currentTab = 0; // 0 = Home, 1 = Stats
   String _filter = 'all'; // all, active, completed
@@ -40,6 +41,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   String _searchQuery = '';
 
   TaskAnalytics? _analytics;
+  TaskAnalytics? _localAnalytics;
   bool _loadingAnalytics = false;
   String? _analyticsError;
   String _statsPeriod = '7d'; // 'today', '7d', '30d', 'this_month'
@@ -81,7 +83,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _scrollController.addListener(_onScroll);
     FloatingCatService.initialize();
     FloatingCatService.onTasksUpdated = _onExternalTasksUpdated;
-    _loadCachedTasks().then((_) => _loadData());
+    _loadCachedTasks().then((_) {
+      _loadData();
+      _loadAnalytics();
+    });
     _checkFloatingOverlayStatus();
     _initWidgetLaunchHandling();
   }
@@ -258,6 +263,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _statsScrollController.dispose();
     FloatingCatService.onTasksUpdated = null;
     _searchController.dispose();
     _widgetClickSubscription?.cancel();
@@ -270,6 +276,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       _loadCachedTasks();
       _loadData(showLoading: false);
+      _loadAnalytics();
       _checkFloatingOverlayStatus();
     }
   }
@@ -1569,17 +1576,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                   ),
                 )
-              : _currentTab == 1
-                  ? _buildStatsView(isDark, cardBg, cardBorder, textPrimary, textSecondary)
-                  : RefreshIndicator(
+              : IndexedStack(
+                  index: _currentTab,
+                  children: [
+                    RefreshIndicator(
                       onRefresh: _loadData,
                       color: isDark ? Colors.white : const Color(0xFF4B5563),
                       backgroundColor: cardBg,
                       child: CustomScrollView(
                         controller: _scrollController,
-                        physics: const BouncingScrollPhysics(
-                          parent: AlwaysScrollableScrollPhysics(),
-                        ),
+                        physics: const AlwaysScrollableScrollPhysics(),
                         slivers: [
                           // Controls Header (Status Banner, Filter Tabs, Search Bar)
                           SliverPadding(
@@ -1932,11 +1938,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                       ),
                                     ),
                                   const SizedBox(height: 24),
-                                  RepaintBoundary(
-                                    child: SvgPicture.asset(
-                                      'assets/grass.svg',
-                                      width: double.infinity,
-                                      fit: BoxFit.fitWidth,
+                                  IgnorePointer(
+                                    child: RepaintBoundary(
+                                      child: SvgPicture.asset(
+                                        'assets/grass.svg',
+                                        width: double.infinity,
+                                        fit: BoxFit.fitWidth,
+                                      ),
                                     ),
                                   ),
                                   const SizedBox(height: 72),
@@ -1947,17 +1955,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ],
                       ),
                     ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showCreateTaskDialog,
-        backgroundColor: isDark ? Colors.white : const Color(0xFF4B5563),
-        foregroundColor: isDark ? Colors.black : Colors.white,
-        elevation: 4,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add, size: 28),
-      ),
+                    _buildStatsView(isDark, cardBg, cardBorder, textPrimary, textSecondary),
+                  ],
+                ),
+      floatingActionButton: _currentTab == 1
+          ? null
+          : FloatingActionButton(
+              onPressed: _showCreateTaskDialog,
+              backgroundColor: isDark ? Colors.white : const Color(0xFF4B5563),
+              foregroundColor: isDark ? Colors.black : Colors.white,
+              elevation: 4,
+              shape: const CircleBorder(),
+              child: const Icon(Icons.add, size: 28),
+            ),
       // Bottom Navigation Bar (Home, Stats)
       bottomNavigationBar: Container(
-        height: 62,
+        height: 62 + MediaQuery.of(context).padding.bottom,
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
         decoration: BoxDecoration(
           color: cardBg,
           border: Border(
@@ -2004,7 +2018,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: InkWell(
         onTap: () {
           setState(() => _currentTab = index);
-          if (index == 1 && _analytics == null) {
+          if (index == 1) {
             _loadAnalytics();
           }
         },
@@ -2506,7 +2520,154 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  // --- STATS VIEW (Stats tab using GET /api/analytics) ---
+  // --- STATS VIEW (Stats tab using GET /api/analytics with local fallback) ---
+  TaskAnalytics _buildLocalAnalytics(String period) {
+    final now = DateTime.now();
+    final startOfToday = DateTime(now.year, now.month, now.day);
+    final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
+
+    DateTime? startDate;
+    DateTime? endDate;
+
+    if (period == 'today') {
+      startDate = startOfToday;
+      endDate = endOfToday;
+    } else if (period == '7d') {
+      startDate = startOfToday.subtract(const Duration(days: 6));
+      endDate = endOfToday;
+    } else if (period == '30d') {
+      startDate = startOfToday.subtract(const Duration(days: 29));
+      endDate = endOfToday;
+    } else if (period == 'this_month') {
+      startDate = DateTime(now.year, now.month, 1);
+      endDate = endOfToday;
+    }
+
+    final filtered = _tasks.where((t) {
+      if (startDate != null || endDate != null) {
+        final d = t.createdAt ?? t.updatedAt ?? now;
+        if (startDate != null && d.isBefore(startDate)) return false;
+        if (endDate != null && d.isAfter(endDate)) return false;
+      }
+      return true;
+    }).toList();
+
+    final total = filtered.length;
+    final completed = filtered.where((t) => t.completed).length;
+    final pending = total - completed;
+    final completionRate = total == 0 ? 0 : ((completed / total) * 100).round();
+
+    final byPriority = <String, PriorityStats>{
+      'high': PriorityStats(total: 0, completed: 0, pending: 0),
+      'medium': PriorityStats(total: 0, completed: 0, pending: 0),
+      'low': PriorityStats(total: 0, completed: 0, pending: 0),
+    };
+    for (final t in filtered) {
+      final p = t.priority.toLowerCase();
+      final key = byPriority.containsKey(p) ? p : 'medium';
+      final cur = byPriority[key]!;
+      byPriority[key] = PriorityStats(
+        total: cur.total + 1,
+        completed: cur.completed + (t.completed ? 1 : 0),
+        pending: cur.pending + (t.completed ? 0 : 1),
+      );
+    }
+
+    final catMap = <String, CategoryStats>{};
+    for (final t in filtered) {
+      final cat = t.category.trim().isEmpty ? 'General' : t.category.trim();
+      final cur = catMap[cat] ?? CategoryStats(category: cat, total: 0, completed: 0, pending: 0);
+      catMap[cat] = CategoryStats(
+        category: cat,
+        total: cur.total + 1,
+        completed: cur.completed + (t.completed ? 1 : 0),
+        pending: cur.pending + (t.completed ? 0 : 1),
+      );
+    }
+
+    int overdue = 0;
+    int dueToday = 0;
+    int upcoming = 0;
+    int noDueDate = 0;
+
+    for (final t in filtered) {
+      if (t.dueDate == null) {
+        noDueDate++;
+      } else {
+        final due = t.dueDate!;
+        if (due.isBefore(startOfToday)) {
+          if (!t.completed) overdue++;
+        } else if (due.isBefore(endOfToday)) {
+          if (!t.completed) dueToday++;
+        } else {
+          if (!t.completed) upcoming++;
+        }
+      }
+    }
+
+    final trendPoints = <CompletionTrendPoint>[];
+    for (int i = 6; i >= 0; i--) {
+      final day = startOfToday.subtract(Duration(days: i));
+      final dateKey = '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+      int dayComp = 0;
+      int dayCreated = 0;
+      for (final t in _tasks) {
+        if (t.createdAt != null &&
+            t.createdAt!.year == day.year &&
+            t.createdAt!.month == day.month &&
+            t.createdAt!.day == day.day) {
+          dayCreated++;
+        }
+        if (t.completed) {
+          final up = t.updatedAt ?? t.createdAt;
+          if (up != null &&
+              up.year == day.year &&
+              up.month == day.month &&
+              up.day == day.day) {
+            dayComp++;
+          }
+        }
+      }
+      trendPoints.add(CompletionTrendPoint(date: dateKey, completed: dayComp, created: dayCreated));
+    }
+
+    return TaskAnalytics(
+      summary: AnalyticsSummary(
+        total: total,
+        completed: completed,
+        pending: pending,
+        completionRate: completionRate,
+      ),
+      byPriority: byPriority,
+      byCategory: catMap.values.toList(),
+      dueStatus: DueStatus(
+        overdue: overdue,
+        dueToday: dueToday,
+        upcoming: upcoming,
+        noDueDate: noDueDate,
+      ),
+      completionTrend: trendPoints,
+      period: period,
+    );
+  }
+
+  int _lastAnalyticsTasksHash = 0;
+
+  TaskAnalytics _getLocalAnalytics(String period) {
+    final currentHash = Object.hash(
+      _tasks.length,
+      period,
+      _tasks.isNotEmpty ? _tasks.first.updatedAt : null,
+      _tasks.isNotEmpty ? _tasks.last.id : null,
+    );
+    if (_localAnalytics != null && _localAnalytics!.period == period && _lastAnalyticsTasksHash == currentHash) {
+      return _localAnalytics!;
+    }
+    _lastAnalyticsTasksHash = currentHash;
+    _localAnalytics = _buildLocalAnalytics(period);
+    return _localAnalytics!;
+  }
+
   Widget _buildStatsView(
     bool isDark,
     Color cardBg,
@@ -2514,7 +2675,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     Color textPrimary,
     Color textSecondary,
   ) {
-    if (_loadingAnalytics && _analytics == null) {
+    if (_analytics == null && !_loadingAnalytics && _analyticsError == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadAnalytics();
+      });
+    }
+
+    if (_loadingAnalytics && _analytics == null && _tasks.isEmpty) {
       return Center(
         child: CircularProgressIndicator(
           color: isDark ? Colors.white : const Color(0xFF4B5563),
@@ -2522,7 +2689,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
     }
 
-    if (_analyticsError != null && _analytics == null) {
+    if (_analyticsError != null && _analytics == null && _tasks.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -2555,10 +2722,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
     }
 
-    final data = _analytics;
-    if (data == null) {
-      return const SizedBox();
-    }
+    final data = _analytics ?? _getLocalAnalytics(_statsPeriod);
 
     final summary = data.summary;
     final byPriority = data.byPriority;
@@ -2573,15 +2737,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ? 1
         : trends.map((t) => t.completed).reduce((a, b) => a > b ? a : b).clamp(1, 9999);
 
-    return RefreshIndicator(
-      onRefresh: () => _loadAnalytics(),
-      color: isDark ? Colors.white : const Color(0xFF4B5563),
-      backgroundColor: cardBg,
-      child: ListView(
-        physics: const BouncingScrollPhysics(
-          parent: AlwaysScrollableScrollPhysics(),
-        ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    return SingleChildScrollView(
+      controller: _statsScrollController,
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2595,65 +2756,82 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   color: textPrimary,
                 ),
               ),
-              if (_loadingAnalytics)
-                SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: isDark ? Colors.white : const Color(0xFF4B5563),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_loadingAnalytics)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: isDark ? Colors.white : const Color(0xFF4B5563),
+                        ),
+                      ),
+                    ),
+                  InkWell(
+                    onTap: () => _loadAnalytics(),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Icon(
+                        Icons.refresh_rounded,
+                        size: 20,
+                        color: textSecondary,
+                      ),
+                    ),
                   ),
-                ),
+                ],
+              ),
             ],
           ),
           const SizedBox(height: 14),
 
-          // Period Filters Row
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildPeriodFilterTab(
-                  period: 'today',
-                  label: 'Today',
-                  isDark: isDark,
-                  cardBg: cardBg,
-                  cardBorder: cardBorder,
-                  textPrimary: textPrimary,
-                  textSecondary: textSecondary,
-                ),
-                const SizedBox(width: 8),
-                _buildPeriodFilterTab(
-                  period: '7d',
-                  label: '7 Days',
-                  isDark: isDark,
-                  cardBg: cardBg,
-                  cardBorder: cardBorder,
-                  textPrimary: textPrimary,
-                  textSecondary: textSecondary,
-                ),
-                const SizedBox(width: 8),
-                _buildPeriodFilterTab(
-                  period: '30d',
-                  label: '30 Days',
-                  isDark: isDark,
-                  cardBg: cardBg,
-                  cardBorder: cardBorder,
-                  textPrimary: textPrimary,
-                  textSecondary: textSecondary,
-                ),
-                const SizedBox(width: 8),
-                _buildPeriodFilterTab(
-                  period: 'this_month',
-                  label: 'This Month',
-                  isDark: isDark,
-                  cardBg: cardBg,
-                  cardBorder: cardBorder,
-                  textPrimary: textPrimary,
-                  textSecondary: textSecondary,
-                ),
-              ],
-            ),
+          // Period Filters Row (Clean, responsive row without nested scroll view)
+          Row(
+            children: [
+              _buildPeriodFilterTab(
+                period: 'today',
+                label: 'Today',
+                isDark: isDark,
+                cardBg: cardBg,
+                cardBorder: cardBorder,
+                textPrimary: textPrimary,
+                textSecondary: textSecondary,
+              ),
+              const SizedBox(width: 6),
+              _buildPeriodFilterTab(
+                period: '7d',
+                label: '7 Days',
+                isDark: isDark,
+                cardBg: cardBg,
+                cardBorder: cardBorder,
+                textPrimary: textPrimary,
+                textSecondary: textSecondary,
+              ),
+              const SizedBox(width: 6),
+              _buildPeriodFilterTab(
+                period: '30d',
+                label: '30 Days',
+                isDark: isDark,
+                cardBg: cardBg,
+                cardBorder: cardBorder,
+                textPrimary: textPrimary,
+                textSecondary: textSecondary,
+              ),
+              const SizedBox(width: 6),
+              _buildPeriodFilterTab(
+                period: 'this_month',
+                label: 'Month',
+                isDark: isDark,
+                cardBg: cardBg,
+                cardBorder: cardBorder,
+                textPrimary: textPrimary,
+                textSecondary: textSecondary,
+              ),
+            ],
           ),
           const SizedBox(height: 14),
 
@@ -2836,16 +3014,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           ],
 
-          // Grass illustration at bottom of stats
           const SizedBox(height: 24),
-          RepaintBoundary(
-            child: SvgPicture.asset(
-              'assets/grass.svg',
-              width: double.infinity,
-              fit: BoxFit.fitWidth,
-            ),
-          ),
-          const SizedBox(height: 48),
         ],
       ),
     );
@@ -2861,33 +3030,36 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     required Color textSecondary,
   }) {
     final isSelected = _statsPeriod == period;
-    return InkWell(
-      onTap: () {
-        if (_statsPeriod != period) {
-          _loadAnalytics(period: period);
-        }
-      },
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? (isDark ? Colors.white : const Color(0xFF4B5563))
-              : cardBg,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? Colors.transparent : cardBorder,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Sniglet',
-            fontSize: 13,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          if (_statsPeriod != period) {
+            _loadAnalytics(period: period);
+          }
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
             color: isSelected
-                ? (isDark ? Colors.black : Colors.white)
-                : textSecondary,
+                ? (isDark ? Colors.white : const Color(0xFF4B5563))
+                : cardBg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected ? Colors.transparent : cardBorder,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Sniglet',
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              color: isSelected
+                  ? (isDark ? Colors.black : Colors.white)
+                  : textSecondary,
+            ),
           ),
         ),
       ),
