@@ -3,7 +3,6 @@ package com.todocat.app
 import android.content.Context
 import android.content.Intent
 import android.graphics.Color
-import android.graphics.Paint
 import android.text.SpannableString
 import android.text.style.StrikethroughSpan
 import android.widget.RemoteViews
@@ -12,11 +11,15 @@ import org.json.JSONArray
 
 class TodoCatWidgetService : RemoteViewsService() {
     override fun onGetViewFactory(intent: Intent): RemoteViewsFactory {
-        return TodoCatListRemoteViewsFactory(applicationContext)
+        val isDark = intent.getBooleanExtra("is_dark", false)
+        return TodoCatListRemoteViewsFactory(applicationContext, isDark)
     }
 }
 
-class TodoCatListRemoteViewsFactory(private val context: Context) : RemoteViewsService.RemoteViewsFactory {
+class TodoCatListRemoteViewsFactory(
+    private val context: Context,
+    private var isDark: Boolean = false
+) : RemoteViewsService.RemoteViewsFactory {
 
     private data class WidgetTask(
         val id: String,
@@ -40,6 +43,8 @@ class TodoCatListRemoteViewsFactory(private val context: Context) : RemoteViewsS
         try {
             val homePrefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
             val flutterPrefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+
+            isDark = homePrefs.getBoolean("is_dark", isDark)
 
             val jsonString = homePrefs.getString("tasks_json", null)
                 ?: flutterPrefs.getString("flutter.tasks_json", null)
@@ -81,15 +86,16 @@ class TodoCatListRemoteViewsFactory(private val context: Context) : RemoteViewsS
             val span = SpannableString(task.title)
             span.setSpan(StrikethroughSpan(), 0, span.length, 0)
             views.setTextViewText(R.id.widget_item_title, span)
-            views.setTextColor(R.id.widget_item_title, Color.parseColor("#737373"))
+            val completedColor = if (isDark) Color.parseColor("#737373") else Color.parseColor("#9CA3AF")
+            views.setTextColor(R.id.widget_item_title, completedColor)
             views.setInt(R.id.widget_item_check, "setBackgroundResource", R.drawable.widget_checkbox_checked_bg)
         } else {
             views.setTextViewText(R.id.widget_item_title, task.title)
-            views.setTextColor(R.id.widget_item_title, Color.WHITE)
-            views.setInt(R.id.widget_item_check, "setBackgroundResource", R.drawable.widget_checkbox_bg)
+            val activeColor = if (isDark) Color.WHITE else Color.parseColor("#4B5563")
+            views.setTextColor(R.id.widget_item_title, activeColor)
+            val checkBg = if (isDark) R.drawable.widget_checkbox_bg else R.drawable.widget_checkbox_bg_light
+            views.setInt(R.id.widget_item_check, "setBackgroundResource", checkBg)
         }
-
-
 
         // Click Fill-In Intent
         val fillInIntent = Intent().apply {

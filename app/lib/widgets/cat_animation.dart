@@ -25,23 +25,14 @@ class _CatAnimationState extends State<CatAnimation>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
-  int get _effectiveSpeed {
-    if (widget.speedPercent <= 0 && widget.idleRunWhenSleeping) {
-      return 15;
-    }
-    return widget.speedPercent;
-  }
+  bool get _isSleeping => widget.speedPercent <= 0 && !widget.idleRunWhenSleeping;
 
   Duration _getDuration() {
-    final speed = _effectiveSpeed;
-    if (speed <= 0) {
-      return const Duration(milliseconds: 1600);
+    if (_isSleeping) {
+      return const Duration(milliseconds: 1800);
     }
+    final speed = widget.speedPercent <= 0 ? 15 : widget.speedPercent;
     final clamped = speed.clamp(1, 100);
-    // At clamped = 100 (100% speed, task 5): 0.25s (35ms/frame, max sprint)
-    // At clamped = 50 (50% speed): 1.15s (164ms/frame, steady run)
-    // At clamped = 20 (task 1 min speed): 2.00s (285ms/frame, slow leisurely walk/trot)
-    // At clamped = 1: 2.35s (335ms/frame, ultra slow)
     final sec = (2.40 - (clamped / 100.0) * 2.15).clamp(0.25, 2.40);
     return Duration(milliseconds: (sec * 1000).round());
   }
@@ -52,26 +43,21 @@ class _CatAnimationState extends State<CatAnimation>
     _controller = AnimationController(
       vsync: this,
       duration: _getDuration(),
-    );
-
-    if (_effectiveSpeed > 0) {
-      _controller.repeat();
-    }
+    )..repeat();
   }
 
   @override
   void didUpdateWidget(covariant CatAnimation oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final oldEffective = oldWidget.speedPercent <= 0 && oldWidget.idleRunWhenSleeping ? 15 : oldWidget.speedPercent;
-    final newEffective = _effectiveSpeed;
-    if (oldEffective != newEffective) {
-      if (newEffective > 0) {
-        _controller.duration = _getDuration();
-        _controller.repeat();
-      } else {
-        _controller.stop();
+    if (oldWidget.speedPercent != widget.speedPercent ||
+        oldWidget.idleRunWhenSleeping != widget.idleRunWhenSleeping) {
+      final wasSleeping = oldWidget.speedPercent <= 0 && !oldWidget.idleRunWhenSleeping;
+      final nowSleeping = _isSleeping;
+      _controller.duration = _getDuration();
+      if (wasSleeping != nowSleeping) {
         _controller.reset();
       }
+      _controller.repeat();
       setState(() {});
     }
   }
@@ -84,31 +70,35 @@ class _CatAnimationState extends State<CatAnimation>
 
   @override
   Widget build(BuildContext context) {
-    final isSleeping = _effectiveSpeed <= 0;
+    final isSleeping = _isSleeping;
     final radius = (widget.size * 0.22).clamp(6.0, 12.0);
     final pad = (widget.size * 0.08).clamp(2.0, 5.0);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final useWhite = widget.isWhite ?? ThemeService.instance.isCatWhite(context);
     final assetDir = useWhite ? 'assets/runners/cat_white' : 'assets/runners/cat';
+
     final catImage = Center(
-      child: isSleeping
-          ? Image.asset(
-              '$assetDir/cat_0.png',
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          if (isSleeping) {
+            final frame = (_controller.value * 6).floor().clamp(0, 5);
+            return Image.asset(
+              '$assetDir/cat_sleep_$frame.png',
               fit: BoxFit.contain,
               filterQuality: FilterQuality.none,
-            )
-          : AnimatedBuilder(
-              animation: _controller,
-              builder: (context, _) {
-                final frame = (_controller.value * 7).floor().clamp(0, 6);
-                return Image.asset(
-                  '$assetDir/cat_$frame.png',
-                  fit: BoxFit.contain,
-                  filterQuality: FilterQuality.none,
-                );
-              },
-            ),
+            );
+          } else {
+            final frame = (_controller.value * 7).floor().clamp(0, 6);
+            return Image.asset(
+              '$assetDir/cat_$frame.png',
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.none,
+            );
+          }
+        },
+      ),
     );
 
     if (!widget.showContainer) {

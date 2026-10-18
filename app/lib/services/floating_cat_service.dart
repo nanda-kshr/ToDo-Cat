@@ -29,6 +29,7 @@ class FloatingCatService {
     required String speedMessage,
     String? tasksJson,
     bool? isCatWhite,
+    bool? isDark,
   }) async {
     if (!isSupported) return false;
     try {
@@ -37,6 +38,7 @@ class FloatingCatService {
         'speedMessage': speedMessage,
         'tasksJson': ?tasksJson,
         'isCatWhite': ?isCatWhite,
+        'isDark': ?isDark,
       });
       return res ?? false;
     } catch (_) {
@@ -49,6 +51,7 @@ class FloatingCatService {
     required String speedMessage,
     String? tasksJson,
     bool? isCatWhite,
+    bool? isDark,
   }) async {
     if (!isSupported) return;
     try {
@@ -57,6 +60,7 @@ class FloatingCatService {
         'speedMessage': speedMessage,
         'tasksJson': ?tasksJson,
         'isCatWhite': ?isCatWhite,
+        'isDark': ?isDark,
       });
     } catch (_) {}
   }

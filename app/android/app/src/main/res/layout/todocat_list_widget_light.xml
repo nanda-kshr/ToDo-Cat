@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_list_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background_light"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <!-- Header: Title, Stats, and Minimal Add Button -->
+    <LinearLayout
+        android:id="@+id/widget_list_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingBottom="6dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/widget_list_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="TodoCat"
+                android:fontFamily="sans-serif-rounded"
+                android:textColor="#4B5563"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widget_list_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0 pending • 0 completed"
+                android:fontFamily="sans-serif-rounded"
+                android:textColor="#9CA3AF"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <!-- Minimal Circular Add Task Button -->
+        <ImageView
+            android:id="@+id/widget_list_btn_add"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:background="@drawable/widget_add_btn_bg_light"
+            android:src="@drawable/ic_widget_add_grey"
+            android:scaleType="centerInside"
+            android:padding="6dp"
+            android:contentDescription="Add Task" />
+    </LinearLayout>
+
+    <!-- Header Divider (Soft, subtle) -->
+    <ImageView
+        android:id="@+id/widget_list_divider"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:src="@drawable/widget_divider_light" />
+
+    <!-- Content Frame: Scrollable Tasks List + Empty View -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="4dp">
+
+        <ListView
+            android:id="@+id/widget_list_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:divider="@null"
+            android:dividerHeight="0dp" />
+
+        <TextView
+            android:id="@+id/widget_list_empty"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            android:fontFamily="sans-serif-rounded"
+            android:text="No tasks pending!\nTap + to create one."
+            android:textColor="#9CA3AF"
+            android:textSize="13sp" />
+    </FrameLayout>
+
+</LinearLayout>

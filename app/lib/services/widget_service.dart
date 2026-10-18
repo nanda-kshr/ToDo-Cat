@@ -12,6 +12,8 @@ class WidgetService {
     required int totalCount,
     required int speedPercent,
     required String speedMessage,
+    bool? isDark,
+    bool? isCatWhite,
     List<Task>? tasks,
   }) async {
     try {
@@ -20,10 +22,20 @@ class WidgetService {
       await HomeWidget.saveWidgetData<int>('speed_percent', speedPercent);
       await HomeWidget.saveWidgetData<String>('speed_message', speedMessage);
 
+      if (isDark != null) {
+        await HomeWidget.saveWidgetData<bool>('is_dark', isDark);
+      }
+      if (isCatWhite != null) {
+        await HomeWidget.saveWidgetData<bool>('is_cat_white', isCatWhite);
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      if (isDark != null) await prefs.setBool('is_dark', isDark);
+      if (isCatWhite != null) await prefs.setBool('is_cat_white', isCatWhite);
+
       if (tasks != null) {
         final tasksJson = jsonEncode(tasks.map((t) => t.toJson()).toList());
         await HomeWidget.saveWidgetData<String>('tasks_json', tasksJson);
-        final prefs = await SharedPreferences.getInstance();
         await prefs.setString('tasks_json', tasksJson);
       }
 

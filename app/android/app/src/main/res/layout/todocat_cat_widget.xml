@@ -1,130 +1,223 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_cat_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_background"
-    android:gravity="center"
-    android:orientation="vertical"
-    android:padding="12dp">
+    android:background="@drawable/widget_cat_background">
 
-    <!-- Flexible Cat Container -->
-    <FrameLayout
+    <!-- Grass Background Illustration at bottom -->
+    <ImageView
+        android:id="@+id/widget_cat_grass_bg"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_height="match_parent"
+        android:scaleType="fitEnd"
+        android:src="@drawable/widget_cat_grass" />
 
-        <!-- Running Cat Flipper -->
-        <ViewFlipper
-            android:id="@+id/widget_cat_flipper"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_gravity="center"
-            android:autoStart="true"
-            android:flipInterval="100">
-
-            <ImageView
-                android:id="@+id/widget_cat_frame_0"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="fitCenter"
-                android:src="@drawable/cat_white_0" />
-
-            <ImageView
-                android:id="@+id/widget_cat_frame_1"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="fitCenter"
-                android:src="@drawable/cat_white_1" />
-
-            <ImageView
-                android:id="@+id/widget_cat_frame_2"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="fitCenter"
-                android:src="@drawable/cat_white_2" />
-
-            <ImageView
-                android:id="@+id/widget_cat_frame_3"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="fitCenter"
-                android:src="@drawable/cat_white_3" />
-
-            <ImageView
-                android:id="@+id/widget_cat_frame_4"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="fitCenter"
-                android:src="@drawable/cat_white_4" />
-
-            <ImageView
-                android:id="@+id/widget_cat_frame_5"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="fitCenter"
-                android:src="@drawable/cat_white_5" />
-
-            <ImageView
-                android:id="@+id/widget_cat_frame_6"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="fitCenter"
-                android:src="@drawable/cat_white_6" />
-        </ViewFlipper>
-
-        <!-- Sleeping/Relaxed Cat when 0 tasks -->
-        <ImageView
-            android:id="@+id/widget_cat_sleeping"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_gravity="center"
-            android:scaleType="fitCenter"
-            android:src="@drawable/cat_white_0"
-            android:visibility="gone" />
-    </FrameLayout>
-
-    <!-- Colored Counts Row -->
+    <!-- Main Vertical Arrangement -->
     <LinearLayout
-        android:id="@+id/widget_cat_counts_row"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:gravity="center"
-        android:orientation="horizontal">
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingStart="12dp"
+        android:paddingTop="12dp"
+        android:paddingEnd="12dp"
+        android:paddingBottom="4dp">
 
-        <!-- Pending Count Badge (Amber / Orange) -->
-        <TextView
-            android:id="@+id/widget_cat_pending_count"
+        <!-- 1. System Time -->
+        <TextClock
+            android:id="@+id/widget_cat_time"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:background="@drawable/widget_count_badge_pending"
-            android:fontFamily="@font/sniglet"
-            android:paddingStart="8dp"
-            android:paddingTop="3dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="3dp"
-            android:text="0 pending"
-            android:textColor="#F59E0B"
-            android:textSize="12sp"
+            android:fontFamily="sans-serif-rounded"
+            android:format12Hour="h:mm a"
+            android:format24Hour="HH:mm"
+            android:includeFontPadding="false"
+            android:textColor="#4B5563"
+            android:textSize="22sp"
             android:textStyle="bold" />
 
-        <!-- Completed Count Badge (Emerald Green) -->
-        <TextView
-            android:id="@+id/widget_cat_completed_count"
+        <!-- 2. System Date -->
+        <TextClock
+            android:id="@+id/widget_cat_date"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="6dp"
-            android:background="@drawable/widget_count_badge_completed"
-            android:fontFamily="@font/sniglet"
-            android:paddingStart="8dp"
-            android:paddingTop="3dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="3dp"
-            android:text="0 done"
-            android:textColor="#10B981"
-            android:textSize="12sp"
+            android:layout_marginTop="1dp"
+            android:fontFamily="sans-serif-rounded"
+            android:format12Hour="EEE, MMM d"
+            android:format24Hour="EEE, MMM d"
+            android:includeFontPadding="false"
+            android:textColor="#9CA3AF"
+            android:textSize="11sp"
             android:textStyle="bold" />
+
+        <!-- 3. Tasks Ratio (e.g. 6/10 tasks) -->
+        <LinearLayout
+            android:id="@+id/widget_cat_ratio_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/widget_cat_ratio"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-rounded"
+                android:includeFontPadding="false"
+                android:text="6/10"
+                android:textColor="#4B5563"
+                android:textSize="13sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widget_cat_ratio_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:fontFamily="sans-serif-rounded"
+                android:includeFontPadding="false"
+                android:text="tasks"
+                android:textColor="#9CA3AF"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- 4. Progress Bar -->
+        <ProgressBar
+            android:id="@+id/widget_cat_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="5dp"
+            android:layout_marginStart="18dp"
+            android:layout_marginTop="5dp"
+            android:layout_marginEnd="18dp"
+            android:max="100"
+            android:progress="60"
+            android:progressDrawable="@drawable/widget_cat_progress" />
+
+        <!-- 5. Cat Container (running/sleeping on grass) -->
+        <FrameLayout
+            android:id="@+id/widget_cat_container"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="2dp">
+
+            <!-- Running Cat Flipper (Frames 0-6) -->
+            <ViewFlipper
+                android:id="@+id/widget_cat_flipper"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_gravity="center"
+                android:autoStart="true"
+                android:flipInterval="100">
+
+                <ImageView
+                    android:id="@+id/widget_cat_frame_0"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/cat_white_0" />
+
+                <ImageView
+                    android:id="@+id/widget_cat_frame_1"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/cat_white_1" />
+
+                <ImageView
+                    android:id="@+id/widget_cat_frame_2"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/cat_white_2" />
+
+                <ImageView
+                    android:id="@+id/widget_cat_frame_3"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/cat_white_3" />
+
+                <ImageView
+                    android:id="@+id/widget_cat_frame_4"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/cat_white_4" />
+
+                <ImageView
+                    android:id="@+id/widget_cat_frame_5"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/cat_white_5" />
+
+                <ImageView
+                    android:id="@+id/widget_cat_frame_6"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/cat_white_6" />
+            </ViewFlipper>
+
+            <!-- Sleeping Cat when 0 tasks (Frames 0-5) -->
+            <ViewFlipper
+                android:id="@+id/widget_cat_sleeping"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_gravity="center"
+                android:autoStart="true"
+                android:flipInterval="350"
+                android:visibility="gone">
+
+                <ImageView
+                    android:id="@+id/widget_cat_sleep_0"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/cat_white_sleep_0" />
+
+                <ImageView
+                    android:id="@+id/widget_cat_sleep_1"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/cat_white_sleep_1" />
+
+                <ImageView
+                    android:id="@+id/widget_cat_sleep_2"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/cat_white_sleep_2" />
+
+                <ImageView
+                    android:id="@+id/widget_cat_sleep_3"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/cat_white_sleep_3" />
+
+                <ImageView
+                    android:id="@+id/widget_cat_sleep_4"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/cat_white_sleep_4" />
+
+                <ImageView
+                    android:id="@+id/widget_cat_sleep_5"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/cat_white_sleep_5" />
+            </ViewFlipper>
+        </FrameLayout>
+
     </LinearLayout>
 
-</LinearLayout>
+</FrameLayout>

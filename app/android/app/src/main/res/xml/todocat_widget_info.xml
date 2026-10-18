@@ -4,7 +4,7 @@
     android:initialKeyguardLayout="@layout/todocat_cat_widget"
     android:initialLayout="@layout/todocat_cat_widget"
     android:previewLayout="@layout/todocat_cat_widget"
-    android:previewImage="@drawable/cat_white_0"
+    android:previewImage="@drawable/widget_cat_preview"
     android:minWidth="100dp"
     android:minHeight="100dp"
     android:targetCellWidth="2"

@@ -39,12 +39,16 @@ class MainActivity : FlutterActivity() {
                     val speedMessage = call.argument<String>("speedMessage") ?: "TodoCat is running"
                     val tasksJson = call.argument<String>("tasksJson")
                     val isCatWhite = call.argument<Boolean>("isCatWhite")
+                    val isDark = call.argument<Boolean>("isDark")
                     val intent = Intent(this, FloatingCatService::class.java).apply {
                         action = FloatingCatService.ACTION_START
                         putExtra(FloatingCatService.EXTRA_SPEED_PERCENT, speedPercent)
                         putExtra(FloatingCatService.EXTRA_SPEED_MESSAGE, speedMessage)
                         if (isCatWhite != null) {
                             putExtra(FloatingCatService.EXTRA_IS_WHITE, isCatWhite)
+                        }
+                        if (isDark != null) {
+                            putExtra(FloatingCatService.EXTRA_IS_DARK, isDark)
                         }
                         if (tasksJson != null) {
                             putExtra(FloatingCatService.EXTRA_TASKS_JSON, tasksJson)
@@ -62,12 +66,16 @@ class MainActivity : FlutterActivity() {
                     val speedMessage = call.argument<String>("speedMessage") ?: "TodoCat is running"
                     val tasksJson = call.argument<String>("tasksJson")
                     val isCatWhite = call.argument<Boolean>("isCatWhite")
+                    val isDark = call.argument<Boolean>("isDark")
                     val intent = Intent(this, FloatingCatService::class.java).apply {
                         action = FloatingCatService.ACTION_UPDATE
                         putExtra(FloatingCatService.EXTRA_SPEED_PERCENT, speedPercent)
                         putExtra(FloatingCatService.EXTRA_SPEED_MESSAGE, speedMessage)
                         if (isCatWhite != null) {
                             putExtra(FloatingCatService.EXTRA_IS_WHITE, isCatWhite)
+                        }
+                        if (isDark != null) {
+                            putExtra(FloatingCatService.EXTRA_IS_DARK, isDark)
                         }
                         if (tasksJson != null) {
                             putExtra(FloatingCatService.EXTRA_TASKS_JSON, tasksJson)

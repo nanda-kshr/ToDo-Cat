@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="widget_cat_bg">#1E1B29</color>
+    <color name="widget_cat_pill_bg">#2B263C</color>
+    <color name="widget_cat_card_bg">#282337</color>
+    <color name="widget_cat_primary_text">#FFFFFF</color>
+    <color name="widget_cat_secondary_text">#B0A9C5</color>
+    <color name="widget_cat_progress_track">#322B4A</color>
+    <color name="widget_cat_progress_fill">#8C6EFE</color>
+</resources>

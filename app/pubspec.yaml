@@ -66,6 +66,7 @@ flutter:
   assets:
     - assets/logo.svg
     - assets/logo.png
+    - assets/grass.svg
     - assets/runners/cat/
     - assets/runners/cat_white/
 
@@ -73,8 +74,6 @@ flutter:
     - family: Sniglet
       fonts:
         - asset: assets/fonts/Sniglet-Regular.ttf
-        - asset: assets/fonts/Sniglet-ExtraBold.ttf
-          weight: 700
 
 flutter_launcher_icons:
   android: true

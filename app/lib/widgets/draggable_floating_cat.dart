@@ -81,7 +81,6 @@ class _DraggableFloatingCatState extends State<DraggableFloatingCat> {
           child: CatAnimation(
             speedPercent: widget.speedPercent,
             size: _catSize,
-            idleRunWhenSleeping: true,
           ),
         ),
       ),

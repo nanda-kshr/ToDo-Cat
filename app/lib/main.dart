@@ -35,18 +35,18 @@ class TodoCatApp extends StatelessWidget {
             brightness: Brightness.light,
             scaffoldBackgroundColor: const Color(0xFFF9FAFB),
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF111827),
+              primary: Color(0xFF4B5563),
               onPrimary: Colors.white,
               surface: Colors.white,
-              onSurface: Color(0xFF111827),
+              onSurface: Color(0xFF4B5563),
             ),
             appBarTheme: const AppBarTheme(
               backgroundColor: Colors.white,
               elevation: 0,
-              iconTheme: IconThemeData(color: Color(0xFF111827)),
+              iconTheme: IconThemeData(color: Color(0xFF4B5563)),
               titleTextStyle: TextStyle(
                 fontFamily: 'Sniglet',
-                color: Color(0xFF111827),
+                color: Color(0xFF4B5563),
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -149,7 +149,7 @@ class _AuthGateState extends State<AuthGate> with SingleTickerProviderStateMixin
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : const Color(0xFF111827),
+                          color: isDark ? Colors.white : const Color(0xFF4B5563),
                           letterSpacing: -0.5,
                         ),
                       ),
@@ -159,7 +159,7 @@ class _AuthGateState extends State<AuthGate> with SingleTickerProviderStateMixin
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
-                          color: isDark ? Colors.white70 : const Color(0xFF111827),
+                          color: isDark ? Colors.white70 : const Color(0xFF4B5563),
                         ),
                       ),
                     ],
