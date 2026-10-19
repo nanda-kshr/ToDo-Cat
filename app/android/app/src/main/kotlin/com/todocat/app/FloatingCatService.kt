@@ -18,6 +18,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.PixelFormat
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Handler
@@ -120,21 +121,18 @@ class FloatingCatService : Service() {
         R.drawable.cat_white_sleep_3, R.drawable.cat_white_sleep_4, R.drawable.cat_white_sleep_5
     )
 
-    private val blackCatDrawables by lazy {
-        blackCatFrames.mapNotNull { androidx.core.content.ContextCompat.getDrawable(this, it) }.toTypedArray()
+    private fun loadDrawables(frames: IntArray): Array<Drawable> {
+        val list = ArrayList<Drawable>(frames.size)
+        for (id in frames) {
+            androidx.core.content.ContextCompat.getDrawable(this, id)?.let { list.add(it) }
+        }
+        return list.toTypedArray()
     }
 
-    private val whiteCatDrawables by lazy {
-        whiteCatFrames.mapNotNull { androidx.core.content.ContextCompat.getDrawable(this, it) }.toTypedArray()
-    }
-
-    private val blackCatSleepDrawables by lazy {
-        blackCatSleepFrames.mapNotNull { androidx.core.content.ContextCompat.getDrawable(this, it) }.toTypedArray()
-    }
-
-    private val whiteCatSleepDrawables by lazy {
-        whiteCatSleepFrames.mapNotNull { androidx.core.content.ContextCompat.getDrawable(this, it) }.toTypedArray()
-    }
+    private val blackCatDrawables: Array<Drawable> by lazy { loadDrawables(blackCatFrames) }
+    private val whiteCatDrawables: Array<Drawable> by lazy { loadDrawables(whiteCatFrames) }
+    private val blackCatSleepDrawables: Array<Drawable> by lazy { loadDrawables(blackCatSleepFrames) }
+    private val whiteCatSleepDrawables: Array<Drawable> by lazy { loadDrawables(whiteCatSleepFrames) }
 
     private val frameRunnable = object : Runnable {
         override fun run() {
