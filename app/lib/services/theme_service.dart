@@ -66,10 +66,16 @@ class ThemeService {
     } catch (_) {}
   }
 
+  bool isDarkMode(BuildContext context) {
+    if (themeMode.value == ThemeMode.dark) return true;
+    if (themeMode.value == ThemeMode.light) return false;
+    final platformBrightness = WidgetsBinding.instance.platformDispatcher.platformBrightness;
+    return platformBrightness == Brightness.dark;
+  }
+
   bool isCatWhite(BuildContext context) {
     if (catColorVariant.value == 'white') return true;
     if (catColorVariant.value == 'black') return false;
-    final brightness = Theme.of(context).brightness;
-    return brightness == Brightness.dark;
+    return isDarkMode(context);
   }
 }

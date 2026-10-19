@@ -137,7 +137,7 @@ class TaskSyncService {
   }) {
     final tasksJson = jsonEncode(tasks.map((t) => t.toJson()).toList());
     final isWhite = ThemeService.instance.isCatWhite(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = ThemeService.instance.isDarkMode(context);
     final speedMessage = activeCount == 0 ? 'All caught up' : '$activeCount tasks pending';
 
     WidgetService.updateWidget(

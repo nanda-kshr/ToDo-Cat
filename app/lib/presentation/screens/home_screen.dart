@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
 import '../../core/utils/date_utils.dart';
@@ -8,6 +9,7 @@ import '../../models/user.dart';
 import '../../services/api_service.dart';
 import '../../services/floating_cat_service.dart';
 import '../../services/task_sync_service.dart';
+import '../../services/theme_service.dart';
 import '../../services/widget_service.dart';
 import 'home/widgets/create_task_modal.dart';
 import 'home/widgets/home_bottom_bar.dart';
@@ -390,28 +392,31 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
-  Future<void> _toggleFloatingCat() async {
+  Future<bool> _toggleFloatingCat() async {
     if (!FloatingCatService.isSupported) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Floating cat overlay is supported on Android devices')),
-      );
-      return;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Floating cat overlay is supported on Android devices')),
+        );
+      }
+      return false;
     }
 
     if (_isFloatingOverlayRunning) {
+      setState(() => _isFloatingOverlayRunning = false);
       await FloatingCatService.stop();
+      _syncWidget();
       if (mounted) {
-        setState(() => _isFloatingOverlayRunning = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Floating Cat closed')),
         );
       }
-      return;
+      return false;
     }
 
     final hasPerm = await FloatingCatService.hasPermission();
     if (!hasPerm && mounted) {
-      final isDark = Theme.of(context).brightness == Brightness.dark;
+      final isDark = ThemeService.instance.isDarkMode(context);
       final proceed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -444,22 +449,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (proceed == true) {
         await FloatingCatService.requestPermission();
       }
-      return;
+      return false;
     }
 
-    if (!mounted) return;
-    _syncWidget();
+    if (!mounted) return false;
+    setState(() => _isFloatingOverlayRunning = true);
+
+    final isDark = ThemeService.instance.isDarkMode(context);
+    final isWhite = ThemeService.instance.isCatWhite(context);
     final counts = _counts;
-    await FloatingCatService.start(
+    final tasksJson = jsonEncode(_tasks.map((t) => t.toJson()).toList());
+    final speedMessage = counts.active == 0 ? 'All caught up' : '${counts.active} tasks pending';
+
+    final started = await FloatingCatService.start(
       speedPercent: counts.catSpeed,
-      speedMessage: counts.active == 0 ? 'All caught up' : '${counts.active} tasks pending',
-      tasksJson: '',
-      isCatWhite: false,
-      isDark: false,
+      speedMessage: speedMessage,
+      tasksJson: tasksJson,
+      isCatWhite: isWhite,
+      isDark: isDark,
     );
+
+    if (!started) {
+      if (mounted) setState(() => _isFloatingOverlayRunning = false);
+      return false;
+    }
+
     _syncWidget();
     if (mounted) {
-      setState(() => _isFloatingOverlayRunning = true);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Floating Cat active! Tap to expand tasks, drag to bottom to remove.'),
@@ -467,6 +483,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
       );
     }
+    return true;
   }
 
   Future<void> _pinWidget({bool isCatWidget = false}) async {

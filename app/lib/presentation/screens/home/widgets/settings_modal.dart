@@ -6,11 +6,14 @@ Future<void> showSettingsModal(
   BuildContext context, {
   required User? user,
   required bool isFloatingOverlayRunning,
-  required Future<void> Function() onToggleFloatingCat,
+  required Future<bool> Function() onToggleFloatingCat,
   required VoidCallback onShowWidgetChoice,
   required VoidCallback onLogout,
   required VoidCallback onThemeChanged,
 }) {
+  bool localFloatingRunning = isFloatingOverlayRunning;
+  bool isToggling = false;
+
   final isDark = Theme.of(context).brightness == Brightness.dark;
   final dialogBg = isDark ? const Color(0xFF181818) : Colors.white;
   final textPrimary = isDark ? Colors.white : const Color(0xFF4B5563);
@@ -102,8 +105,8 @@ Future<void> showSettingsModal(
                               : textSecondary,
                         ),
                         isSelected: currentMode == ThemeMode.system,
-                        onTap: () {
-                          ThemeService.instance.setThemeMode(ThemeMode.system);
+                        onTap: () async {
+                          await ThemeService.instance.setThemeMode(ThemeMode.system);
                           setDialogState(() {});
                           onThemeChanged();
                         },
@@ -125,8 +128,8 @@ Future<void> showSettingsModal(
                               : textSecondary,
                         ),
                         isSelected: currentMode == ThemeMode.light,
-                        onTap: () {
-                          ThemeService.instance.setThemeMode(ThemeMode.light);
+                        onTap: () async {
+                          await ThemeService.instance.setThemeMode(ThemeMode.light);
                           setDialogState(() {});
                           onThemeChanged();
                         },
@@ -148,8 +151,8 @@ Future<void> showSettingsModal(
                               : textSecondary,
                         ),
                         isSelected: currentMode == ThemeMode.dark,
-                        onTap: () {
-                          ThemeService.instance.setThemeMode(ThemeMode.dark);
+                        onTap: () async {
+                          await ThemeService.instance.setThemeMode(ThemeMode.dark);
                           setDialogState(() {});
                           onThemeChanged();
                         },
@@ -189,8 +192,8 @@ Future<void> showSettingsModal(
                           errorBuilder: (context, error, stackTrace) => const Icon(Icons.pets, size: 24),
                         ),
                         isSelected: currentCatVariant == 'auto',
-                        onTap: () {
-                          ThemeService.instance.setCatColorVariant('auto');
+                        onTap: () async {
+                          await ThemeService.instance.setCatColorVariant('auto');
                           setDialogState(() {});
                           onThemeChanged();
                         },
@@ -212,8 +215,8 @@ Future<void> showSettingsModal(
                           errorBuilder: (context, error, stackTrace) => const Icon(Icons.pets, size: 24),
                         ),
                         isSelected: currentCatVariant == 'black',
-                        onTap: () {
-                          ThemeService.instance.setCatColorVariant('black');
+                        onTap: () async {
+                          await ThemeService.instance.setCatColorVariant('black');
                           setDialogState(() {});
                           onThemeChanged();
                         },
@@ -235,8 +238,8 @@ Future<void> showSettingsModal(
                           errorBuilder: (context, error, stackTrace) => const Icon(Icons.pets, size: 24),
                         ),
                         isSelected: currentCatVariant == 'white',
-                        onTap: () {
-                          ThemeService.instance.setCatColorVariant('white');
+                        onTap: () async {
+                          await ThemeService.instance.setCatColorVariant('white');
                           setDialogState(() {});
                           onThemeChanged();
                         },
@@ -279,14 +282,23 @@ Future<void> showSettingsModal(
                         ),
                       ),
                       Switch(
-                        value: isFloatingOverlayRunning,
+                        value: localFloatingRunning,
                         activeTrackColor: isDark ? Colors.white : const Color(0xFF4B5563),
                         activeThumbColor: isDark ? Colors.black : Colors.white,
                         inactiveTrackColor: isDark ? const Color(0xFF2E2E2E) : const Color(0xFFE4E4E7),
-                        onChanged: (_) async {
-                          await onToggleFloatingCat();
-                          setDialogState(() {});
-                        },
+                        onChanged: isToggling
+                            ? null
+                            : (targetVal) async {
+                                setDialogState(() {
+                                  localFloatingRunning = targetVal;
+                                  isToggling = true;
+                                });
+                                final actual = await onToggleFloatingCat();
+                                setDialogState(() {
+                                  localFloatingRunning = actual;
+                                  isToggling = false;
+                                });
+                              },
                       ),
                     ],
                   ),
