@@ -7,4 +7,5 @@
     <color name="widget_cat_secondary_text">#B0A9C5</color>
     <color name="widget_cat_progress_track">#322B4A</color>
     <color name="widget_cat_progress_fill">#8C6EFE</color>
+    <color name="splash_background">#0A0A0A</color>
 </resources>

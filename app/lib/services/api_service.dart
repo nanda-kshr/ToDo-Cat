@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import '../config/api_config.dart';
+import '../core/config/api_config.dart';
 import '../models/user.dart';
 import '../models/task.dart';
 import '../models/analytics.dart';
@@ -40,6 +40,8 @@ class ApiService {
   static final ApiService _instance = ApiService._internal();
   factory ApiService() => _instance;
   ApiService._internal();
+
+  final http.Client _client = http.Client();
 
   static const String _tokenKey = 'todocat_access_token';
   static const String _refreshTokenKey = 'todocat_refresh_token';
@@ -108,7 +110,7 @@ class ApiService {
         return false;
       }
 
-      final response = await http.post(
+      final response = await _client.post(
         Uri.parse(ApiConfig.refresh),
         headers: {
           'Content-Type': 'application/json',
@@ -162,7 +164,7 @@ class ApiService {
 
   Future<User> login(String email, String password) async {
     try {
-      final response = await http.post(
+      final response = await _client.post(
         Uri.parse(ApiConfig.login),
         headers: await _getHeaders(),
         body: jsonEncode({
@@ -194,7 +196,7 @@ class ApiService {
 
   Future<User> register(String email, String password, {String? name}) async {
     try {
-      final response = await http.post(
+      final response = await _client.post(
         Uri.parse(ApiConfig.register),
         headers: await _getHeaders(),
         body: jsonEncode({
@@ -228,7 +230,7 @@ class ApiService {
   Future<User> getMe() async {
     try {
       final response = await _authenticatedRequest(
-        (headers) => http.get(Uri.parse(ApiConfig.me), headers: headers),
+        (headers) => _client.get(Uri.parse(ApiConfig.me), headers: headers),
       );
 
       final data = jsonDecode(response.body);
@@ -267,7 +269,7 @@ class ApiService {
           await GoogleSignIn.instance.authenticate();
       final String? idToken = account.authentication.idToken;
 
-      final response = await http.post(
+      final response = await _client.post(
         Uri.parse(ApiConfig.googleAuth),
         headers: await _getHeaders(),
         body: jsonEncode({
@@ -308,7 +310,7 @@ class ApiService {
 
   Future<void> logout() async {
     try {
-      await http.post(
+      await _client.post(
         Uri.parse(ApiConfig.logout),
         headers: await _getHeaders(),
       );
@@ -335,7 +337,7 @@ class ApiService {
         },
       );
       final response = await _authenticatedRequest(
-        (headers) => http.get(uri, headers: headers),
+        (headers) => _client.get(uri, headers: headers),
       );
 
       final data = jsonDecode(response.body);
@@ -371,7 +373,7 @@ class ApiService {
   }) async {
     try {
       final response = await _authenticatedRequest(
-        (headers) => http.post(
+        (headers) => _client.post(
           Uri.parse(ApiConfig.tasks),
           headers: headers,
           body: jsonEncode({
@@ -420,7 +422,7 @@ class ApiService {
       if (category != null) body['category'] = category.trim();
 
       final response = await _authenticatedRequest(
-        (headers) => http.patch(
+        (headers) => _client.patch(
           Uri.parse(ApiConfig.taskById(id)),
           headers: headers,
           body: jsonEncode(body),
@@ -445,7 +447,7 @@ class ApiService {
   Future<bool> deleteTask(String id) async {
     try {
       final response = await _authenticatedRequest(
-        (headers) => http.delete(
+        (headers) => _client.delete(
           Uri.parse(ApiConfig.taskById(id)),
           headers: headers,
         ),
@@ -491,7 +493,7 @@ class ApiService {
           : baseUri.replace(queryParameters: queryParams);
 
       final response = await _authenticatedRequest(
-        (headers) => http.get(uri, headers: headers),
+        (headers) => _client.get(uri, headers: headers),
       );
 
       final data = jsonDecode(response.body);

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
+import '../../services/api_service.dart';
 import '../widgets/app_logo.dart';
-import '../widgets/google_logo.dart';
 import 'home_screen.dart';
+import 'login/widgets/auth_mode_toggle.dart';
+import 'login/widgets/auth_text_field.dart';
+import 'login/widgets/google_sign_in_button.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -138,80 +140,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // Sign In / Sign Up Selector Buttons
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF171717),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF262626)),
-                    ),
-                    padding: const EdgeInsets.all(4),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: InkWell(
-                            onTap: () {
-                              if (_isSignUp) {
-                                setState(() {
-                                  _isSignUp = false;
-                                  _errorMessage = null;
-                                });
-                              }
-                            },
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              decoration: BoxDecoration(
-                                color: !_isSignUp ? Colors.white : Colors.transparent,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                'Sign In',
-                                style: TextStyle(
-                                  color: !_isSignUp
-                                      ? const Color(0xFF0A0A0A)
-                                      : const Color(0xFFA3A3A3),
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: InkWell(
-                            onTap: () {
-                              if (!_isSignUp) {
-                                setState(() {
-                                  _isSignUp = true;
-                                  _errorMessage = null;
-                                });
-                              }
-                            },
-                            borderRadius: BorderRadius.circular(8),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              decoration: BoxDecoration(
-                                color: _isSignUp ? Colors.white : Colors.transparent,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                'Sign Up',
-                                style: TextStyle(
-                                  color: _isSignUp
-                                      ? const Color(0xFF0A0A0A)
-                                      : const Color(0xFFA3A3A3),
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  // Sign In / Sign Up Selector
+                  AuthModeToggle(
+                    isSignUp: _isSignUp,
+                    onModeChanged: (val) {
+                      setState(() {
+                        _isSignUp = val;
+                        _errorMessage = null;
+                      });
+                    },
                   ),
                   const SizedBox(height: 20),
 
@@ -251,28 +188,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   // Name Field (only if Sign Up)
                   if (_isSignUp) ...[
-                    TextFormField(
+                    AuthTextField(
                       controller: _nameController,
-                      style: const TextStyle(color: Colors.white, fontSize: 14),
-                      decoration: _inputDecoration(
-                        labelText: 'Name (Optional)',
-                        hintText: 'Your nickname or name',
-                        prefixIcon: Icons.person_outline,
-                      ),
+                      labelText: 'Name (Optional)',
+                      hintText: 'Your nickname or name',
+                      prefixIcon: Icons.person_outline,
                     ),
                     const SizedBox(height: 16),
                   ],
 
                   // Email Field
-                  TextFormField(
+                  AuthTextField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                    decoration: _inputDecoration(
-                      labelText: 'Email',
-                      hintText: 'name@example.com',
-                      prefixIcon: Icons.mail_outline,
-                    ),
+                    labelText: 'Email',
+                    hintText: 'name@example.com',
+                    prefixIcon: Icons.mail_outline,
                     validator: (val) {
                       if (val == null || val.trim().isEmpty) {
                         return 'Email is required';
@@ -286,15 +217,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 16),
 
                   // Password Field
-                  TextFormField(
+                  AuthTextField(
                     controller: _passwordController,
                     obscureText: true,
-                    style: const TextStyle(color: Colors.white, fontSize: 14),
-                    decoration: _inputDecoration(
-                      labelText: 'Password',
-                      hintText: '••••••••',
-                      prefixIcon: Icons.lock_outline,
-                    ),
+                    labelText: 'Password',
+                    hintText: '••••••••',
+                    prefixIcon: Icons.lock_outline,
                     validator: (val) {
                       if (val == null || val.length < 6) {
                         return 'Password must be at least 6 characters';
@@ -360,41 +288,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 16),
 
                   // Continue with Google Button
-                  OutlinedButton(
+                  GoogleSignInButton(
+                    loading: _googleLoading,
                     onPressed: (_loading || _googleLoading) ? null : _submitGoogle,
-                    style: OutlinedButton.styleFrom(
-                      backgroundColor: const Color(0xFF171717),
-                      foregroundColor: Colors.white,
-                      side: const BorderSide(color: Color(0xFF262626)),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: _googleLoading
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              GoogleLogo(size: 18),
-                              SizedBox(width: 10),
-                              Text(
-                                'Continue with Google',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
                   ),
                   const SizedBox(height: 16),
 
@@ -421,39 +317,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  InputDecoration _inputDecoration({
-    required String labelText,
-    required String hintText,
-    required IconData prefixIcon,
-  }) {
-    return InputDecoration(
-      labelText: labelText,
-      hintText: hintText,
-      labelStyle: const TextStyle(color: Color(0xFFA3A3A3), fontSize: 13),
-      hintStyle: const TextStyle(color: Color(0xFF525252), fontSize: 13),
-      prefixIcon: Icon(prefixIcon, color: const Color(0xFFA3A3A3), size: 18),
-      filled: true,
-      fillColor: const Color(0xFF171717),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF262626)),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF262626)),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF525252)),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFFF43F5E)),
       ),
     );
   }

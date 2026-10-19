@@ -1,6 +1,5 @@
 package com.todocat.app
 
-import android.app.Activity
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
@@ -10,6 +9,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import android.app.Activity
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
@@ -20,18 +20,26 @@ class QuickAddActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_quick_add)
 
+        window.setLayout(
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+            android.view.ViewGroup.LayoutParams.MATCH_PARENT
+        )
+
+        val root = findViewById<android.view.View>(R.id.quick_add_root)
+        val card = findViewById<android.view.View>(R.id.quick_add_card)
         val input = findViewById<EditText>(R.id.quick_add_input)
         val btnCancel = findViewById<TextView>(R.id.quick_add_btn_cancel)
         val btnSubmit = findViewById<TextView>(R.id.quick_add_btn_submit)
 
-        btnCancel.setOnClickListener {
-            finish()
-        }
+        root.setOnClickListener { finish() }
+        card.setOnClickListener { /* Intercept touches so clicks don't dismiss the dialog */ }
 
-        btnSubmit.setOnClickListener {
-            submitTask(input.text.toString().trim())
-        }
+        val homePrefs = getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+        val isDark = intent.getBooleanExtra("is_dark", homePrefs.getBoolean("is_dark", false))
+        if (!isDark) applyLightTheme()
 
+        btnCancel.setOnClickListener { finish() }
+        btnSubmit.setOnClickListener { submitTask(input.text.toString().trim()) }
         input.setOnEditorActionListener { _, _, _ ->
             submitTask(input.text.toString().trim())
             true
@@ -45,104 +53,115 @@ class QuickAddActivity : Activity() {
         }, 150)
     }
 
+    private fun applyLightTheme() {
+        val card = findViewById<android.view.View>(R.id.quick_add_card)
+        val title = findViewById<TextView>(R.id.quick_add_title)
+        val subtitle = findViewById<TextView>(R.id.quick_add_subtitle)
+        val input = findViewById<EditText>(R.id.quick_add_input)
+        val btnCancel = findViewById<TextView>(R.id.quick_add_btn_cancel)
+        val btnSubmit = findViewById<TextView>(R.id.quick_add_btn_submit)
+
+        val density = resources.displayMetrics.density
+
+        card.background = android.graphics.drawable.GradientDrawable().apply {
+            setColor(android.graphics.Color.WHITE)
+            cornerRadius = 24 * density
+            setStroke((1 * density).toInt(), android.graphics.Color.parseColor("#E5E7EB"))
+        }
+
+        title.setTextColor(android.graphics.Color.parseColor("#111827"))
+        subtitle.setTextColor(android.graphics.Color.parseColor("#6B7280"))
+
+        input.background = android.graphics.drawable.GradientDrawable().apply {
+            setColor(android.graphics.Color.parseColor("#F3F4F6"))
+            cornerRadius = 14 * density
+        }
+        input.setTextColor(android.graphics.Color.parseColor("#111827"))
+        input.setHintTextColor(android.graphics.Color.parseColor("#9CA3AF"))
+
+        btnCancel.setTextColor(android.graphics.Color.parseColor("#6B7280"))
+
+        btnSubmit.background = android.graphics.drawable.GradientDrawable().apply {
+            setColor(android.graphics.Color.parseColor("#111827"))
+            cornerRadius = 18 * density
+        }
+        btnSubmit.setTextColor(android.graphics.Color.WHITE)
+    }
+
     private fun submitTask(title: String) {
         if (title.isEmpty()) {
             Toast.makeText(this, "Please enter a task", Toast.LENGTH_SHORT).show()
             return
         }
+        doSubmit(title)
+        finish()
+    }
 
-        try {
-            val homePrefs = getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
-            val flutterPrefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+    private fun doSubmit(title: String) {
+        val homePrefs = getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+        val flutterPrefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
 
-            val rawJson = homePrefs.getString("tasks_json", null)
-                ?: flutterPrefs.getString("flutter.tasks_json", null)
-                ?: flutterPrefs.getString("tasks_json", null)
+        val rawJson = homePrefs.getString("tasks_json", null)
+            ?: flutterPrefs.getString("flutter.tasks_json", null)
+            ?: flutterPrefs.getString("tasks_json", null)
 
-            val jsonArray = if (!rawJson.isNullOrEmpty()) {
-                JSONArray(rawJson)
-            } else {
-                JSONArray()
-            }
+        val existingArray = if (!rawJson.isNullOrEmpty()) JSONArray(rawJson) else JSONArray()
 
-            // Create new Task JSON
-            val newTask = JSONObject().apply {
-                put("id", UUID.randomUUID().toString())
-                put("title", title)
-                put("completed", false)
-                put("priority", "medium")
-                put("created_at", System.currentTimeMillis())
-            }
+        val nowIso = TaskUtils.nowIso()
+        val newTask = JSONObject()
+        newTask.put("id", UUID.randomUUID().toString())
+        newTask.put("title", title)
+        newTask.put("completed", false)
+        newTask.put("priority", "medium")
+        newTask.put("createdAt", nowIso)
+        newTask.put("updatedAt", nowIso)
 
-            // Put new task at the top (index 0)
-            val updatedArray = JSONArray()
-            updatedArray.put(newTask)
-            for (i in 0 until jsonArray.length()) {
-                updatedArray.put(jsonArray.get(i))
-            }
+        val updatedArray = TaskUtils.prependTask(existingArray, newTask)
+        val updatedJsonString = updatedArray.toString()
 
-            val updatedJsonString = updatedArray.toString()
-            val totalCount = updatedArray.length()
-            var pendingCount = 0
-            for (i in 0 until updatedArray.length()) {
-                val item = updatedArray.getJSONObject(i)
-                if (!item.optBoolean("completed", false)) {
-                    pendingCount++
-                }
-            }
+        val (pendingCount, totalCount) = TaskUtils.countTasks(updatedArray)
+        val completedCount = totalCount - pendingCount
+        val speedPercent = TaskUtils.calcSpeedPercent(pendingCount, totalCount)
 
-            val speedPercent = if (pendingCount == 0) 0 else ((pendingCount / 5.0) * 100).toInt().coerceIn(0, 100)
+        homePrefs.edit()
+            .putString("tasks_json", updatedJsonString)
+            .putInt("pending_count", pendingCount)
+            .putInt("total_count", totalCount)
+            .putInt("speed_percent", speedPercent)
+            .apply()
 
-            // Save to HomeWidgetPreferences
-            homePrefs.edit().apply {
-                putString("tasks_json", updatedJsonString)
-                putInt("pending_count", pendingCount)
-                putInt("total_count", totalCount)
-                putInt("speed_percent", speedPercent)
-                apply()
-            }
+        flutterPrefs.edit()
+            .putString("flutter.tasks_json", updatedJsonString)
+            .putString("tasks_json", updatedJsonString)
+            .putInt("flutter.pending_count", pendingCount)
+            .putInt("flutter.total_count", totalCount)
+            .apply()
 
-            // Save to FlutterSharedPreferences so Flutter loads it on launch
-            flutterPrefs.edit().apply {
-                putString("flutter.tasks_json", updatedJsonString)
-                putString("tasks_json", updatedJsonString)
-                putInt("flutter.pending_count", pendingCount)
-                putInt("flutter.total_count", totalCount)
-                apply()
-            }
+        val appWidgetManager = AppWidgetManager.getInstance(applicationContext)
 
-            // Trigger Widget Updates
-            val appWidgetManager = AppWidgetManager.getInstance(applicationContext)
-
-            // 1. Update Tasks List Widgets
-            val listWidgetIds = appWidgetManager.getAppWidgetIds(
-                ComponentName(applicationContext, TodoCatListWidgetProvider::class.java)
+        val listWidgetIds = appWidgetManager.getAppWidgetIds(
+            ComponentName(applicationContext, TodoCatListWidgetProvider::class.java)
+        )
+        for (id in listWidgetIds) {
+            TodoCatListWidgetProvider.updateListWidget(
+                applicationContext, appWidgetManager, id, pendingCount, completedCount
             )
-            listWidgetIds.forEach { id ->
-                TodoCatListWidgetProvider.updateListWidget(applicationContext, appWidgetManager, id, pendingCount, totalCount - pendingCount)
-            }
-
-            // 2. Update Running Cat Widgets
-            val catWidgetIds = appWidgetManager.getAppWidgetIds(
-                ComponentName(applicationContext, TodoCatWidgetProvider::class.java)
-            )
-            catWidgetIds.forEach { id ->
-                TodoCatWidgetProvider.updateCatWidget(applicationContext, appWidgetManager, id, pendingCount, totalCount - pendingCount, speedPercent)
-            }
-
-            // Notify ListView to refresh
-            listWidgetIds.forEach { id ->
-                appWidgetManager.notifyAppWidgetViewDataChanged(id, R.id.widget_list_view)
-            }
-
-            // Real-time notification to running app
-            MainActivity.notifyTasksUpdated(updatedJsonString)
-
-            Toast.makeText(this, "Task added!", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
 
-        finish()
+        val catWidgetIds = appWidgetManager.getAppWidgetIds(
+            ComponentName(applicationContext, TodoCatWidgetProvider::class.java)
+        )
+        for (id in catWidgetIds) {
+            TodoCatWidgetProvider.updateCatWidget(
+                applicationContext, appWidgetManager, id, pendingCount, completedCount, speedPercent
+            )
+        }
+
+        for (id in listWidgetIds) {
+            appWidgetManager.notifyAppWidgetViewDataChanged(id, R.id.widget_list_view)
+        }
+
+        MainActivity.notifyTasksUpdated(updatedJsonString)
+        Toast.makeText(this, "Task added!", Toast.LENGTH_SHORT).show()
     }
 }

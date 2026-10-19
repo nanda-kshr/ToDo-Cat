@@ -1,5 +1,6 @@
 package com.todocat.app
 
+import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.NotificationChannel
@@ -7,9 +8,11 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.appwidget.AppWidgetManager
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.graphics.Paint
@@ -24,6 +27,7 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
+import android.view.animation.OvershootInterpolator
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
@@ -97,61 +101,91 @@ class FloatingCatService : Service() {
     }
 
     private val blackCatFrames = intArrayOf(
-        R.drawable.cat_0,
-        R.drawable.cat_1,
-        R.drawable.cat_2,
-        R.drawable.cat_3,
-        R.drawable.cat_4,
-        R.drawable.cat_5,
-        R.drawable.cat_6
+        R.drawable.cat_0, R.drawable.cat_1, R.drawable.cat_2, R.drawable.cat_3,
+        R.drawable.cat_4, R.drawable.cat_5, R.drawable.cat_6
     )
 
     private val whiteCatFrames = intArrayOf(
-        R.drawable.cat_white_0,
-        R.drawable.cat_white_1,
-        R.drawable.cat_white_2,
-        R.drawable.cat_white_3,
-        R.drawable.cat_white_4,
-        R.drawable.cat_white_5,
-        R.drawable.cat_white_6
+        R.drawable.cat_white_0, R.drawable.cat_white_1, R.drawable.cat_white_2, R.drawable.cat_white_3,
+        R.drawable.cat_white_4, R.drawable.cat_white_5, R.drawable.cat_white_6
     )
 
     private val blackCatSleepFrames = intArrayOf(
-        R.drawable.cat_sleep_0,
-        R.drawable.cat_sleep_1,
-        R.drawable.cat_sleep_2,
-        R.drawable.cat_sleep_3,
-        R.drawable.cat_sleep_4,
-        R.drawable.cat_sleep_5
+        R.drawable.cat_sleep_0, R.drawable.cat_sleep_1, R.drawable.cat_sleep_2,
+        R.drawable.cat_sleep_3, R.drawable.cat_sleep_4, R.drawable.cat_sleep_5
     )
 
     private val whiteCatSleepFrames = intArrayOf(
-        R.drawable.cat_white_sleep_0,
-        R.drawable.cat_white_sleep_1,
-        R.drawable.cat_white_sleep_2,
-        R.drawable.cat_white_sleep_3,
-        R.drawable.cat_white_sleep_4,
-        R.drawable.cat_white_sleep_5
+        R.drawable.cat_white_sleep_0, R.drawable.cat_white_sleep_1, R.drawable.cat_white_sleep_2,
+        R.drawable.cat_white_sleep_3, R.drawable.cat_white_sleep_4, R.drawable.cat_white_sleep_5
     )
+
+    private val blackCatDrawables by lazy {
+        blackCatFrames.mapNotNull { androidx.core.content.ContextCompat.getDrawable(this, it) }.toTypedArray()
+    }
+
+    private val whiteCatDrawables by lazy {
+        whiteCatFrames.mapNotNull { androidx.core.content.ContextCompat.getDrawable(this, it) }.toTypedArray()
+    }
+
+    private val blackCatSleepDrawables by lazy {
+        blackCatSleepFrames.mapNotNull { androidx.core.content.ContextCompat.getDrawable(this, it) }.toTypedArray()
+    }
+
+    private val whiteCatSleepDrawables by lazy {
+        whiteCatSleepFrames.mapNotNull { androidx.core.content.ContextCompat.getDrawable(this, it) }.toTypedArray()
+    }
 
     private val frameRunnable = object : Runnable {
         override fun run() {
             if (speedPercent <= 0) {
-                val sleepFrames = if (isCatWhite) whiteCatSleepFrames else blackCatSleepFrames
-                val resId = sleepFrames[currentFrameIndex % sleepFrames.size]
-                imageView?.setImageResource(resId)
-                headerCatView?.setImageResource(resId)
-                currentFrameIndex = (currentFrameIndex + 1) % sleepFrames.size
+                val sleepDrawables = if (isCatWhite) whiteCatSleepDrawables else blackCatSleepDrawables
+                if (sleepDrawables.isNotEmpty()) {
+                    val drawable = sleepDrawables[currentFrameIndex % sleepDrawables.size]
+                    imageView?.setImageDrawable(drawable)
+                    if (isExpanded) {
+                        headerCatView?.setImageDrawable(drawable)
+                    }
+                    currentFrameIndex = (currentFrameIndex + 1) % sleepDrawables.size
+                }
                 handler.postDelayed(this, 300L)
                 return
             }
 
-            val frames = if (isCatWhite) whiteCatFrames else blackCatFrames
-            val resId = frames[currentFrameIndex % frames.size]
-            imageView?.setImageResource(resId)
-            headerCatView?.setImageResource(resId)
-            currentFrameIndex = (currentFrameIndex + 1) % frames.size
+            val frames = if (isCatWhite) whiteCatDrawables else blackCatDrawables
+            if (frames.isNotEmpty()) {
+                val drawable = frames[currentFrameIndex % frames.size]
+                imageView?.setImageDrawable(drawable)
+                if (isExpanded) {
+                    headerCatView?.setImageDrawable(drawable)
+                }
+                currentFrameIndex = (currentFrameIndex + 1) % frames.size
+            }
             handler.postDelayed(this, frameIntervalMs)
+        }
+    }
+
+    private var isScreenOn = true
+
+    private val screenReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_SCREEN_OFF -> {
+                    isScreenOn = false
+                    handler.removeCallbacks(frameRunnable)
+                }
+                Intent.ACTION_SCREEN_ON -> {
+                    isScreenOn = true
+                    restartAnimationLoop()
+                }
+            }
+        }
+    }
+
+    private fun restartAnimationLoop() {
+        handler.removeCallbacks(frameRunnable)
+        if (isScreenOn) {
+            handler.post(frameRunnable)
         }
     }
 
@@ -161,6 +195,12 @@ class FloatingCatService : Service() {
         super.onCreate()
         isRunning = true
         createNotificationChannel()
+
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+            addAction(Intent.ACTION_SCREEN_ON)
+        }
+        registerReceiver(screenReceiver, filter)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -173,15 +213,15 @@ class FloatingCatService : Service() {
 
         speedPercent = intent?.getIntExtra(EXTRA_SPEED_PERCENT, speedPercent) ?: speedPercent
         speedMessage = intent?.getStringExtra(EXTRA_SPEED_MESSAGE) ?: speedMessage
-        if (intent?.hasExtra(EXTRA_IS_WHITE) == true) {
-            isCatWhite = intent.getBooleanExtra(EXTRA_IS_WHITE, false)
+        isCatWhite = if (intent?.hasExtra(EXTRA_IS_WHITE) == true) {
+            intent.getBooleanExtra(EXTRA_IS_WHITE, false)
         } else {
-            isCatWhite = checkCatWhitePreference()
+            checkCatWhitePreference()
         }
-        if (intent?.hasExtra(EXTRA_IS_DARK) == true) {
-            isDarkTheme = intent.getBooleanExtra(EXTRA_IS_DARK, true)
+        isDarkTheme = if (intent?.hasExtra(EXTRA_IS_DARK) == true) {
+            intent.getBooleanExtra(EXTRA_IS_DARK, true)
         } else {
-            isDarkTheme = checkIsDarkMode()
+            checkIsDarkMode()
         }
         val newTasks = intent?.getStringExtra(EXTRA_TASKS_JSON)
         if (!newTasks.isNullOrEmpty()) {
@@ -195,12 +235,11 @@ class FloatingCatService : Service() {
 
         if (floatingContainer == null) {
             initFloatingViews()
-        } else {
+        } else if (isExpanded) {
             updateExpandedUi()
         }
 
-        handler.removeCallbacks(frameRunnable)
-        handler.post(frameRunnable)
+        restartAnimationLoop()
 
         return START_STICKY
     }
@@ -210,72 +249,66 @@ class FloatingCatService : Service() {
             val prefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
             tasksJsonString = prefs.getString("flutter.tasks_json", null)
                 ?: prefs.getString("tasks_json", null)
-        } catch (_: Exception) {}
+        } catch (e: Exception) {
+            TaskUtils.logError("FloatingCatService", "loadTasksFromStorage failed", e)
+        }
     }
 
     private fun checkCatWhitePreference(): Boolean {
-        try {
+        return try {
             val prefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
             val variant = prefs.getString("flutter.cat_color_variant", "auto") ?: "auto"
-            if (variant == "white") return true
-            if (variant == "black") return false
-            val themeMode = prefs.getString("flutter.theme_mode", "system") ?: "system"
-            if (themeMode == "dark") return true
-            if (themeMode == "light") return false
-            val nightModeFlags = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
-            return nightModeFlags == android.content.res.Configuration.UI_MODE_NIGHT_YES
-        } catch (_: Exception) {
-            return false
+            when (variant) {
+                "white" -> true
+                "black" -> false
+                else -> checkIsDarkMode()
+            }
+        } catch (e: Exception) {
+            TaskUtils.logError("FloatingCatService", "checkCatWhitePreference failed", e)
+            false
         }
     }
 
     private fun checkIsDarkMode(): Boolean {
-        try {
+        return try {
             val prefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
             val themeMode = prefs.getString("flutter.theme_mode", "system") ?: "system"
-            if (themeMode == "dark") return true
-            if (themeMode == "light") return false
-            val nightModeFlags = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
-            return nightModeFlags == android.content.res.Configuration.UI_MODE_NIGHT_YES
-        } catch (_: Exception) {
-            return true
+            when (themeMode) {
+                "dark" -> true
+                "light" -> false
+                else -> {
+                    val nightModeFlags = resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK
+                    nightModeFlags == android.content.res.Configuration.UI_MODE_NIGHT_YES
+                }
+            }
+        } catch (e: Exception) {
+            TaskUtils.logError("FloatingCatService", "checkIsDarkMode failed", e)
+            true
         }
     }
 
     private fun saveTasksToStorage(json: String) {
         tasksJsonString = json
         try {
-            var activeCount = 0
-            var totalCount = 0
-            if (json.isNotEmpty()) {
-                val arr = JSONArray(json)
-                totalCount = arr.length()
-                for (i in 0 until arr.length()) {
-                    if (!arr.getJSONObject(i).optBoolean("completed", false)) {
-                        activeCount++
-                    }
-                }
-            }
-            val speed = if (totalCount == 0 || activeCount == 0) 0 else ((activeCount / 5.0) * 100).toInt().coerceIn(0, 100)
+            val jsonArray = if (json.isNotEmpty()) JSONArray(json) else JSONArray()
+            val (activeCount, totalCount) = TaskUtils.countTasks(jsonArray)
             val completedCount = (totalCount - activeCount).coerceAtLeast(0)
+            val speed = TaskUtils.calcSpeedPercent(activeCount, totalCount)
 
-            val flutterPrefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-            flutterPrefs.edit()
+            getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE).edit()
                 .putString("flutter.tasks_json", json)
                 .putString("tasks_json", json)
                 .putInt("flutter.pending_count", activeCount)
                 .putInt("flutter.total_count", totalCount)
-                .commit()
+                .apply()
 
-            val homePrefs = getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
-            homePrefs.edit()
+            getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE).edit()
                 .putString("tasks_json", json)
                 .putInt("pending_count", activeCount)
                 .putInt("total_count", totalCount)
                 .putInt("speed_percent", speed)
-                .commit()
+                .apply()
 
-            // Update home widgets
             val appWidgetManager = AppWidgetManager.getInstance(applicationContext)
             val listWidgetIds = appWidgetManager.getAppWidgetIds(
                 ComponentName(applicationContext, TodoCatListWidgetProvider::class.java)
@@ -293,10 +326,9 @@ class FloatingCatService : Service() {
                 appWidgetManager.notifyAppWidgetViewDataChanged(id, R.id.widget_list_view)
             }
 
-            // Real-time notification to running app
             MainActivity.notifyTasksUpdated(json)
         } catch (e: Exception) {
-            e.printStackTrace()
+            TaskUtils.logError("FloatingCatService", "saveTasksToStorage failed", e)
         }
     }
 
@@ -307,6 +339,23 @@ class FloatingCatService : Service() {
         } else {
             (330 - (clamped * 2.95).toLong()).coerceIn(35L, 330L)
         }
+    }
+
+    // --- Safe screen bounds helper (avoids duplicating status/nav bar calc) ---
+    private data class ScreenBounds(val minX: Int, val maxX: Int, val minY: Int, val maxY: Int)
+
+    private fun getScreenBounds(density: Float, catSizePx: Int): ScreenBounds {
+        val dm = resources.displayMetrics
+        val statusBarId = resources.getIdentifier("status_bar_height", "dimen", "android")
+        val statusBarHeight = if (statusBarId > 0) resources.getDimensionPixelSize(statusBarId) else (28 * density).toInt()
+        val navBarId = resources.getIdentifier("navigation_bar_height", "dimen", "android")
+        val navBarHeight = if (navBarId > 0) resources.getDimensionPixelSize(navBarId) else (48 * density).toInt()
+        return ScreenBounds(
+            minX = (10 * density).toInt(),
+            maxX = dm.widthPixels - catSizePx - (10 * density).toInt(),
+            minY = statusBarHeight + (8 * density).toInt(),
+            maxY = dm.heightPixels - catSizePx - navBarHeight - (8 * density).toInt()
+        )
     }
 
     private fun createNotificationChannel() {
@@ -331,19 +380,13 @@ class FloatingCatService : Service() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
         }
         val openAppPendingIntent = PendingIntent.getActivity(
-            this,
-            0,
-            openAppIntent,
+            this, 0, openAppIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val stopIntent = Intent(this, FloatingCatService::class.java).apply {
-            action = ACTION_STOP
-        }
         val stopPendingIntent = PendingIntent.getService(
-            this,
-            1,
-            stopIntent,
+            this, 1,
+            Intent(this, FloatingCatService::class.java).apply { action = ACTION_STOP },
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
@@ -360,16 +403,12 @@ class FloatingCatService : Service() {
 
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                startForeground(
-                    NOTIFICATION_ID,
-                    notification,
-                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-                )
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
             } else {
                 startForeground(NOTIFICATION_ID, notification)
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            TaskUtils.logError("FloatingCatService", "startForeground failed", e)
         }
     }
 
@@ -388,11 +427,9 @@ class FloatingCatService : Service() {
             WindowManager.LayoutParams.TYPE_PHONE
         }
 
-        // --- 1. Floating Window Params (Collapsed initially) ---
+        // --- 1. Floating Window Params ---
         val catParams = WindowManager.LayoutParams(
-            catSizePx,
-            catSizePx,
-            layoutType,
+            catSizePx, catSizePx, layoutType,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
         ).apply {
@@ -401,11 +438,10 @@ class FloatingCatService : Service() {
             y = (200 * density).toInt()
         }
 
-        // --- 2. Sleek Minimal Dismiss Target View at bottom center ---
+        // --- 2. Dismiss Target View ---
         val dismissSizePx = (52 * density).toInt()
         val dismissParams = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT,
-            WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
             layoutType,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE,
             PixelFormat.TRANSLUCENT
@@ -420,11 +456,7 @@ class FloatingCatService : Service() {
         }
 
         val dismissCircle = FrameLayout(this).apply {
-            background = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#80171717")) // Sleek translucent dark
-                setStroke((1.5f * density).toInt(), Color.parseColor("#40FFFFFF"))
-            }
+            background = buildDismissCircleBg(density, active = false)
         }
         dismissTargetCircle = dismissCircle
 
@@ -436,11 +468,8 @@ class FloatingCatService : Service() {
             typeface = snigletFont ?: Typeface.DEFAULT_BOLD
         }
         dismissCircle.addView(dismissIcon, FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            Gravity.CENTER
+            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT, Gravity.CENTER
         ))
-
         dismissContainer.addView(dismissCircle, FrameLayout.LayoutParams(dismissSizePx, dismissSizePx))
         dismissTargetView = dismissContainer
         wm.addView(dismissContainer, dismissParams)
@@ -449,54 +478,49 @@ class FloatingCatService : Service() {
         val root = FrameLayout(this)
         floatingContainer = root
 
-        // Outside Backdrop (intercepts touches outside expanded card)
         val backdrop = View(this).apply {
             visibility = View.GONE
             alpha = 0f
             setBackgroundColor(Color.parseColor("#4D000000"))
-            setOnClickListener {
-                collapse(wm, catParams, density)
-            }
+            setOnClickListener { collapse(wm, catParams, density) }
         }
         outsideBackdropView = backdrop
         root.addView(backdrop, FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.MATCH_PARENT
+            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
         ))
 
-        // Collapsed View: Pure transparent background!
         val colView = FrameLayout(this).apply {
             background = null
             elevation = 0f
         }
+        val initialCatRes = if (speedPercent <= 0) {
+            (if (isCatWhite) whiteCatSleepFrames else blackCatSleepFrames)[0]
+        } else {
+            (if (isCatWhite) whiteCatFrames else blackCatFrames)[0]
+        }
         val iv = ImageView(this).apply {
-            val frames = if (isCatWhite) whiteCatFrames else blackCatFrames
-            val sleepFrames = if (isCatWhite) whiteCatSleepFrames else blackCatSleepFrames
-            val initialRes = if (speedPercent <= 0) sleepFrames[0] else frames[0]
-            setImageResource(initialRes)
+            setImageResource(initialCatRes)
             background = null
         }
         imageView = iv
         colView.addView(iv, FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.MATCH_PARENT,
-            FrameLayout.LayoutParams.MATCH_PARENT
+            FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT
         ))
         collapsedView = colView
         root.addView(colView, FrameLayout.LayoutParams(catSizePx, catSizePx))
 
-        // Expanded View: Sleek rounded tasks card centered inside root
         val expView = buildExpandedView(density, wm, catParams)
         expView.visibility = View.GONE
         expandedView = expView
         root.addView(expView, FrameLayout.LayoutParams(
-            FrameLayout.LayoutParams.WRAP_CONTENT,
-            FrameLayout.LayoutParams.WRAP_CONTENT,
-            Gravity.CENTER
+            FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER
         ))
 
         root.isFocusableInTouchMode = true
         root.setOnKeyListener { _, keyCode, event ->
-            if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.action == android.view.KeyEvent.ACTION_UP && isExpanded) {
+            if (keyCode == android.view.KeyEvent.KEYCODE_BACK
+                && event.action == android.view.KeyEvent.ACTION_UP
+                && isExpanded) {
                 collapse(wm, catParams, density)
                 true
             } else {
@@ -504,12 +528,13 @@ class FloatingCatService : Service() {
             }
         }
 
-        // --- 4. Drag & Tap Logic for Collapsed View ---
+        // --- 4. Drag & Tap Logic ---
         var initialX = 0
         var initialY = 0
         var initialTouchX = 0f
         var initialTouchY = 0f
         var isDragging = false
+        var snapAnimator: ValueAnimator? = null
 
         colView.setOnTouchListener { _, event ->
             val dm = resources.displayMetrics
@@ -518,6 +543,8 @@ class FloatingCatService : Service() {
 
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
+                    snapAnimator?.cancel()
+                    snapAnimator = null
                     initialX = catParams.x
                     initialY = catParams.y
                     initialTouchX = event.rawX
@@ -540,25 +567,12 @@ class FloatingCatService : Service() {
                         catParams.y = initialY + deltaY.toInt()
                         wm.updateViewLayout(root, catParams)
 
-                        // Check if cat is near the bottom center dismiss target
-                        val isOver = event.rawY > (screenH - 140 * density) &&
-                                abs(event.rawX - screenW / 2) < (70 * density)
-
-                        if (isOver) {
-                            dismissCircle.background = GradientDrawable().apply {
-                                shape = GradientDrawable.OVAL
-                                setColor(Color.parseColor("#CC991B1B")) // Refined crimson
-                                setStroke((1.5f * density).toInt(), Color.parseColor("#F87171"))
-                            }
-                            dismissCircle.animate().scaleX(1.10f).scaleY(1.10f).setDuration(120).start()
-                        } else {
-                            dismissCircle.background = GradientDrawable().apply {
-                                shape = GradientDrawable.OVAL
-                                setColor(Color.parseColor("#80171717"))
-                                setStroke((1.5f * density).toInt(), Color.parseColor("#40FFFFFF"))
-                            }
-                            dismissCircle.animate().scaleX(1.0f).scaleY(1.0f).setDuration(120).start()
-                        }
+                        val isOver = isOverDismissTarget(event.rawX, event.rawY, screenW, screenH, density)
+                        dismissCircle.background = buildDismissCircleBg(density, active = isOver)
+                        dismissCircle.animate()
+                            .scaleX(if (isOver) 1.10f else 1.0f)
+                            .scaleY(if (isOver) 1.10f else 1.0f)
+                            .setDuration(120).start()
                     }
                     true
                 }
@@ -568,18 +582,37 @@ class FloatingCatService : Service() {
                     }.start()
 
                     if (isDragging) {
-                        val isOver = event.rawY > (screenH - 140 * density) &&
-                                abs(event.rawX - screenW / 2) < (70 * density)
-                        if (isOver) {
+                        if (isOverDismissTarget(event.rawX, event.rawY, screenW, screenH, density)) {
                             Toast.makeText(this, "Floating Cat closed", Toast.LENGTH_SHORT).show()
                             stopSelf()
                             return@setOnTouchListener true
+                        }
+
+                        val bounds = getScreenBounds(density, catSizePx)
+                        val targetX = catParams.x.coerceIn(bounds.minX, bounds.maxX)
+                        val targetY = catParams.y.coerceIn(bounds.minY, bounds.maxY)
+
+                        if (catParams.x != targetX || catParams.y != targetY) {
+                            val startX = catParams.x
+                            val startY = catParams.y
+                            snapAnimator = ValueAnimator.ofFloat(0f, 1f).apply {
+                                duration = 260
+                                interpolator = OvershootInterpolator(1.1f)
+                                addUpdateListener { va ->
+                                    val fraction = va.animatedValue as Float
+                                    catParams.x = (startX + (targetX - startX) * fraction).toInt()
+                                    catParams.y = (startY + (targetY - startY) * fraction).toInt()
+                                    try {
+                                        wm.updateViewLayout(root, catParams)
+                                    } catch (_: Exception) {}
+                                }
+                                start()
+                            }
                         }
                     } else {
                         val totalDeltaX = abs(event.rawX - initialTouchX)
                         val totalDeltaY = abs(event.rawY - initialTouchY)
                         if (totalDeltaX < 12 && totalDeltaY < 12) {
-                            // TAP DETECTED -> Expand Tasks Panel!
                             expand(wm, catParams, density)
                         }
                     }
@@ -592,6 +625,23 @@ class FloatingCatService : Service() {
         wm.addView(root, catParams)
     }
 
+    private fun isOverDismissTarget(rawX: Float, rawY: Float, screenW: Int, screenH: Int, density: Float): Boolean {
+        return rawY > (screenH - 140 * density) && abs(rawX - screenW / 2) < (70 * density)
+    }
+
+    private fun buildDismissCircleBg(density: Float, active: Boolean): GradientDrawable {
+        return GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            if (active) {
+                setColor(Color.parseColor("#CC991B1B"))
+                setStroke((1.5f * density).toInt(), Color.parseColor("#F87171"))
+            } else {
+                setColor(Color.parseColor("#80171717"))
+                setStroke((1.5f * density).toInt(), Color.parseColor("#40FFFFFF"))
+            }
+        }
+    }
+
     private fun buildExpandedView(
         density: Float,
         wm: WindowManager,
@@ -599,26 +649,22 @@ class FloatingCatService : Service() {
     ): LinearLayout {
         return LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor("#171717"))
-                cornerRadius = 18 * density
-                setStroke((1 * density).toInt(), Color.parseColor("#2E2E2E"))
-            }
+            // Initial background respects current theme — updateExpandedUi() will also apply on every open
+            background = buildCardBackground(density)
             val pad = (14 * density).toInt()
             setPadding(pad, pad, pad, pad)
             elevation = 12 * density
-            setOnClickListener {
-                // Consume click inside the card so backdrop doesn't receive it
-            }
+            setOnClickListener { /* Consume click so backdrop doesn't receive it */ }
 
             // Header Row: [Mini Cat, Title + Stats Subtitle, Collapse Button]
             val headerRow = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
 
+                val initialHeaderRes = if (isCatWhite) R.drawable.cat_white_0 else R.drawable.cat_0
                 val catIv = ImageView(context).apply {
                     scaleType = ImageView.ScaleType.FIT_CENTER
-                    setImageResource(R.drawable.cat_0)
+                    setImageResource(initialHeaderRes)
                 }
                 headerCatView = catIv
                 addView(catIv, LinearLayout.LayoutParams((32 * density).toInt(), (32 * density).toInt()))
@@ -647,16 +693,13 @@ class FloatingCatService : Service() {
                 }
                 addView(titleCol, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
 
-                // Minimize / Close icon button
                 val closeBtn = TextView(context).apply {
                     text = "✕"
                     setTextColor(if (isDarkTheme) Color.parseColor("#A3A3A3") else Color.parseColor("#6B7280"))
                     textSize = 16f
                     typeface = Typeface.DEFAULT_BOLD
                     setPadding((8 * density).toInt(), (4 * density).toInt(), (8 * density).toInt(), (4 * density).toInt())
-                    setOnClickListener {
-                        collapse(wm, catParams, density)
-                    }
+                    setOnClickListener { collapse(wm, catParams, density) }
                 }
                 closeButtonView = closeBtn
                 addView(closeBtn)
@@ -668,34 +711,21 @@ class FloatingCatService : Service() {
                 setBackgroundColor(if (isDarkTheme) Color.parseColor("#262626") else Color.parseColor("#E5E7EB"))
             }
             dividerView = div
-            val divParams = LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                (1 * density).toInt()
-            ).apply {
+            addView(div, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (1 * density).toInt()).apply {
                 topMargin = (10 * density).toInt()
                 bottomMargin = (10 * density).toInt()
-            }
-            addView(div, divParams)
+            })
 
-            // Scrollable Tasks List Container
-            val scrollView = ScrollView(context).apply {
-                isFillViewport = true
-            }
-            val taskListCol = LinearLayout(context).apply {
-                orientation = LinearLayout.VERTICAL
-            }
+            // Scrollable Tasks List
+            val scrollView = ScrollView(context).apply { isFillViewport = true }
+            val taskListCol = LinearLayout(context).apply { orientation = LinearLayout.VERTICAL }
             tasksContainer = taskListCol
             scrollView.addView(taskListCol, FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.WRAP_CONTENT
+                FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.WRAP_CONTENT
             ))
-            addView(scrollView, LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                0,
-                1f
-            ))
+            addView(scrollView, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
 
-            // Inline Quick Add Task Row: [EditText, Add Icon Button]
+            // Quick Add Row
             val quickAddRow = LinearLayout(context).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
@@ -717,7 +747,6 @@ class FloatingCatService : Service() {
                 quickAddInput = input
                 addView(input, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
 
-                // Circular Add Icon with vector plus
                 val addBtn = ImageView(context).apply {
                     setImageResource(R.drawable.ic_widget_add)
                     setColorFilter(if (isDarkTheme) Color.BLACK else Color.WHITE)
@@ -736,13 +765,9 @@ class FloatingCatService : Service() {
                     }
                 }
                 quickAddBtn = addBtn
-                val addParams = LinearLayout.LayoutParams(
-                    (36 * density).toInt(),
-                    (36 * density).toInt()
-                ).apply {
+                addView(addBtn, LinearLayout.LayoutParams((36 * density).toInt(), (36 * density).toInt()).apply {
                     marginStart = (8 * density).toInt()
-                }
-                addView(addBtn, addParams)
+                })
             }
             addView(quickAddRow)
 
@@ -769,11 +794,18 @@ class FloatingCatService : Service() {
         }
     }
 
+    private fun buildCardBackground(density: Float): GradientDrawable {
+        return GradientDrawable().apply {
+            setColor(Color.parseColor(if (isDarkTheme) "#171717" else "#FFFFFF"))
+            cornerRadius = 18 * density
+            setStroke((1 * density).toInt(), Color.parseColor(if (isDarkTheme) "#2E2E2E" else "#E5E7EB"))
+        }
+    }
+
     private fun expand(wm: WindowManager, catParams: WindowManager.LayoutParams, density: Float) {
         if (isExpanded) return
         isExpanded = true
 
-        // Save collapsed position to restore when closed
         collapsedX = catParams.x
         collapsedY = catParams.y
 
@@ -786,12 +818,12 @@ class FloatingCatService : Service() {
         catParams.x = 0
         catParams.y = 0
         catParams.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+        catParams.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
 
         expandedView?.layoutParams = FrameLayout.LayoutParams(w, h, Gravity.CENTER)
 
         outsideBackdropView?.visibility = View.VISIBLE
         outsideBackdropView?.alpha = 0f
-
         collapsedView?.visibility = View.GONE
 
         expandedView?.visibility = View.VISIBLE
@@ -802,15 +834,9 @@ class FloatingCatService : Service() {
         updateExpandedUi()
         wm.updateViewLayout(floatingContainer, catParams)
 
-        outsideBackdropView?.animate()
-            ?.alpha(1f)
-            ?.setDuration(220)
-            ?.start()
-
+        outsideBackdropView?.animate()?.alpha(1f)?.setDuration(220)?.start()
         expandedView?.animate()
-            ?.alpha(1f)
-            ?.scaleX(1f)
-            ?.scaleY(1f)
+            ?.alpha(1f)?.scaleX(1f)?.scaleY(1f)
             ?.setDuration(250)
             ?.setInterpolator(android.view.animation.DecelerateInterpolator(1.8f))
             ?.start()
@@ -820,24 +846,20 @@ class FloatingCatService : Service() {
         if (!isExpanded) return
         isExpanded = false
 
-        outsideBackdropView?.animate()
-            ?.alpha(0f)
-            ?.setDuration(160)
-            ?.start()
+        outsideBackdropView?.animate()?.alpha(0f)?.setDuration(160)?.start()
 
         expandedView?.animate()
-            ?.alpha(0f)
-            ?.scaleX(0.75f)
-            ?.scaleY(0.75f)
+            ?.alpha(0f)?.scaleX(0.75f)?.scaleY(0.75f)
             ?.setDuration(160)
             ?.setInterpolator(android.view.animation.AccelerateInterpolator())
             ?.withEndAction {
-                val dm = resources.displayMetrics
                 val catSizePx = (56 * density).toInt()
+                val bounds = getScreenBounds(density, catSizePx)
+
                 catParams.width = catSizePx
                 catParams.height = catSizePx
-                catParams.x = collapsedX.coerceIn(0, (dm.widthPixels - catSizePx).coerceAtLeast(0))
-                catParams.y = collapsedY.coerceIn(0, (dm.heightPixels - catSizePx).coerceAtLeast(0))
+                catParams.x = collapsedX.coerceIn(bounds.minX, bounds.maxX)
+                catParams.y = collapsedY.coerceIn(bounds.minY, bounds.maxY)
                 catParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
 
                 outsideBackdropView?.visibility = View.GONE
@@ -853,17 +875,24 @@ class FloatingCatService : Service() {
             ?.start()
     }
 
+    private fun buildEmptyTaskView(density: Float): TextView {
+        return TextView(this).apply {
+            text = "No tasks yet!\nType above to add a new task."
+            setTextColor(if (isDarkTheme) Color.parseColor("#737373") else Color.parseColor("#9CA3AF"))
+            textSize = 14f
+            snigletFont?.let { typeface = it }
+            gravity = Gravity.CENTER
+            setPadding(0, (30 * density).toInt(), 0, (30 * density).toInt())
+        }
+    }
+
     private fun updateExpandedUi() {
         val container = tasksContainer ?: return
         val density = resources.displayMetrics.density
         container.removeAllViews()
 
-        // Dynamic theme styling
-        expandedView?.background = GradientDrawable().apply {
-            setColor(Color.parseColor(if (isDarkTheme) "#171717" else "#FFFFFF"))
-            cornerRadius = 18 * density
-            setStroke((1 * density).toInt(), Color.parseColor(if (isDarkTheme) "#2E2E2E" else "#E5E7EB"))
-        }
+        // Apply theme to all card elements
+        expandedView?.background = buildCardBackground(density)
         titleTextView?.setTextColor(if (isDarkTheme) Color.WHITE else Color.parseColor("#111827"))
         speedBadgeText?.setTextColor(if (isDarkTheme) Color.parseColor("#9CA3AF") else Color.parseColor("#6B7280"))
         closeButtonView?.setTextColor(if (isDarkTheme) Color.parseColor("#A3A3A3") else Color.parseColor("#6B7280"))
@@ -885,49 +914,21 @@ class FloatingCatService : Service() {
         }
         openAppButton?.setTextColor(if (isDarkTheme) Color.WHITE else Color.parseColor("#111827"))
 
-        var pendingCount = 0
-        var totalCount = 0
         val raw = tasksJsonString
-        if (!raw.isNullOrEmpty()) {
-            try {
-                val arr = JSONArray(raw)
-                totalCount = arr.length()
-                for (j in 0 until arr.length()) {
-                    if (!arr.getJSONObject(j).optBoolean("completed", false)) {
-                        pendingCount++
-                    }
-                }
-            } catch (_: Exception) {}
-        }
-        val completedCount = (totalCount - pendingCount).coerceAtLeast(0)
-        val statsText = if (totalCount == 0) "All caught up" else "$pendingCount pending • $completedCount completed"
-        speedBadgeText?.text = statsText
-
         if (raw.isNullOrEmpty()) {
-            val emptyTv = TextView(this).apply {
-                text = "No tasks yet!\nType above to add a new task."
-                setTextColor(if (isDarkTheme) Color.parseColor("#737373") else Color.parseColor("#9CA3AF"))
-                textSize = 14f
-                snigletFont?.let { typeface = it }
-                gravity = Gravity.CENTER
-                setPadding(0, (30 * density).toInt(), 0, (30 * density).toInt())
-            }
-            container.addView(emptyTv)
+            container.addView(buildEmptyTaskView(density))
+            speedBadgeText?.text = "All caught up"
             return
         }
 
         try {
             val jsonArray = JSONArray(raw)
+            val (pendingCount, totalCount) = TaskUtils.countTasks(jsonArray)
+            val completedCount = (totalCount - pendingCount).coerceAtLeast(0)
+            speedBadgeText?.text = if (totalCount == 0) "All caught up" else "$pendingCount pending • $completedCount completed"
+
             if (jsonArray.length() == 0) {
-                val emptyTv = TextView(this).apply {
-                    text = "No tasks yet!\nType above to add a new task."
-                    setTextColor(if (isDarkTheme) Color.parseColor("#737373") else Color.parseColor("#9CA3AF"))
-                    textSize = 14f
-                    snigletFont?.let { typeface = it }
-                    gravity = Gravity.CENTER
-                    setPadding(0, (30 * density).toInt(), 0, (30 * density).toInt())
-                }
-                container.addView(emptyTv)
+                container.addView(buildEmptyTaskView(density))
                 return
             }
 
@@ -942,7 +943,12 @@ class FloatingCatService : Service() {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
                     background = GradientDrawable().apply {
-                        setColor(if (completed) Color.parseColor(if (isDarkTheme) "#121212" else "#F9FAFB") else Color.parseColor(if (isDarkTheme) "#1F1F1F" else "#F3F4F6"))
+                        setColor(
+                            Color.parseColor(
+                                if (completed) (if (isDarkTheme) "#121212" else "#F9FAFB")
+                                else (if (isDarkTheme) "#1F1F1F" else "#F3F4F6")
+                            )
+                        )
                         cornerRadius = 10 * density
                     }
                     val hp = (10 * density).toInt()
@@ -950,7 +956,6 @@ class FloatingCatService : Service() {
                     setPadding(hp, vp, hp, vp)
                 }
 
-                // Checkbox
                 val checkView = TextView(this).apply {
                     text = if (completed) "✓" else ""
                     textSize = 13f
@@ -960,27 +965,31 @@ class FloatingCatService : Service() {
                         shape = GradientDrawable.RECTANGLE
                         cornerRadius = 6 * density
                         setColor(if (completed) Color.parseColor(if (isDarkTheme) "#FFFFFF" else "#111827") else Color.TRANSPARENT)
-                        setStroke((1.5f * density).toInt(), if (completed) Color.parseColor(if (isDarkTheme) "#FFFFFF" else "#111827") else Color.parseColor(if (isDarkTheme) "#525252" else "#D1D5DB"))
+                        setStroke(
+                            (1.5f * density).toInt(),
+                            if (completed) Color.parseColor(if (isDarkTheme) "#FFFFFF" else "#111827")
+                            else Color.parseColor(if (isDarkTheme) "#525252" else "#D1D5DB")
+                        )
                     }
                 }
-                val checkParams = LinearLayout.LayoutParams((22 * density).toInt(), (22 * density).toInt()).apply {
+                row.addView(checkView, LinearLayout.LayoutParams((22 * density).toInt(), (22 * density).toInt()).apply {
                     marginEnd = (10 * density).toInt()
-                }
-                row.addView(checkView, checkParams)
+                })
 
-                // Title with increased font size
                 val titleView = TextView(this).apply {
                     this.text = title
                     textSize = 16f
                     snigletFont?.let { typeface = it }
-                    setTextColor(if (completed) Color.parseColor(if (isDarkTheme) "#737373" else "#9CA3AF") else Color.parseColor(if (isDarkTheme) "#FFFFFF" else "#111827"))
-                    if (completed) {
-                        paintFlags = paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
-                    }
+                    setTextColor(
+                        Color.parseColor(
+                            if (completed) (if (isDarkTheme) "#737373" else "#9CA3AF")
+                            else (if (isDarkTheme) "#FFFFFF" else "#111827")
+                        )
+                    )
+                    if (completed) paintFlags = paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
                 }
                 row.addView(titleView, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
 
-                // Priority Indicator
                 val priorityColor = when (priority.lowercase()) {
                     "high" -> Color.parseColor("#EF4444")
                     "low" -> Color.parseColor("#10B981")
@@ -992,26 +1001,20 @@ class FloatingCatService : Service() {
                         setColor(priorityColor)
                     }
                 }
-                val prioParams = LinearLayout.LayoutParams((7 * density).toInt(), (7 * density).toInt()).apply {
+                row.addView(prioDot, LinearLayout.LayoutParams((7 * density).toInt(), (7 * density).toInt()).apply {
                     marginStart = (8 * density).toInt()
-                }
-                row.addView(prioDot, prioParams)
+                })
 
-                // Toggle click listener
-                row.setOnClickListener {
-                    toggleTaskCompleted(id, !completed)
-                }
+                row.setOnClickListener { toggleTaskCompleted(id, !completed) }
 
-                val rowParams = LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
+                container.addView(row, LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply {
                     bottomMargin = (8 * density).toInt()
-                }
-                container.addView(row, rowParams)
+                })
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            TaskUtils.logError("FloatingCatService", "updateExpandedUi failed", e)
         }
     }
 
@@ -1019,47 +1022,33 @@ class FloatingCatService : Service() {
         val raw = tasksJsonString ?: return
         try {
             val jsonArray = JSONArray(raw)
-            var activeCount = 0
             for (i in 0 until jsonArray.length()) {
                 val item = jsonArray.getJSONObject(i)
                 if (item.optString("id") == taskId) {
                     item.put("completed", newCompleted)
-                    val nowIso = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
-                        timeZone = java.util.TimeZone.getTimeZone("UTC")
-                    }.format(java.util.Date())
-                    item.put("updatedAt", nowIso)
-                }
-                if (!item.optBoolean("completed", false)) {
-                    activeCount++
+                    item.put("updatedAt", TaskUtils.nowIso())
                 }
             }
 
             val updatedJson = jsonArray.toString()
             saveTasksToStorage(updatedJson)
 
-            speedPercent = if (jsonArray.length() == 0 || activeCount == 0) 0 else ((activeCount / 5.0) * 100).toInt().coerceIn(0, 100)
+            val (activeCount, totalCount) = TaskUtils.countTasks(jsonArray)
+            speedPercent = TaskUtils.calcSpeedPercent(activeCount, totalCount)
             calculateInterval(speedPercent)
-            handler.removeCallbacks(frameRunnable)
-            handler.post(frameRunnable)
+            restartAnimationLoop()
 
             updateExpandedUi()
         } catch (e: Exception) {
-            e.printStackTrace()
+            TaskUtils.logError("FloatingCatService", "toggleTaskCompleted failed", e)
         }
     }
 
     private fun addNewTask(title: String) {
         try {
-            val jsonArray = if (!tasksJsonString.isNullOrEmpty()) {
-                JSONArray(tasksJsonString)
-            } else {
-                JSONArray()
-            }
+            val existingArray = if (!tasksJsonString.isNullOrEmpty()) JSONArray(tasksJsonString) else JSONArray()
 
-            val nowIso = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US).apply {
-                timeZone = java.util.TimeZone.getTimeZone("UTC")
-            }.format(java.util.Date())
-
+            val nowIso = TaskUtils.nowIso()
             val newTask = JSONObject().apply {
                 put("id", UUID.randomUUID().toString())
                 put("title", title)
@@ -1069,31 +1058,19 @@ class FloatingCatService : Service() {
                 put("updatedAt", nowIso)
             }
 
-            // Prepend new task
-            val newArray = JSONArray()
-            newArray.put(newTask)
-            for (i in 0 until jsonArray.length()) {
-                newArray.put(jsonArray.get(i))
-            }
-
+            val newArray = TaskUtils.prependTask(existingArray, newTask)
             val updatedJson = newArray.toString()
             saveTasksToStorage(updatedJson)
 
-            var activeCount = 0
-            for (i in 0 until newArray.length()) {
-                if (!newArray.getJSONObject(i).optBoolean("completed", false)) {
-                    activeCount++
-                }
-            }
-            speedPercent = if (newArray.length() == 0 || activeCount == 0) 0 else ((activeCount / 5.0) * 100).toInt().coerceIn(0, 100)
+            val (activeCount, totalCount) = TaskUtils.countTasks(newArray)
+            speedPercent = TaskUtils.calcSpeedPercent(activeCount, totalCount)
             calculateInterval(speedPercent)
-            handler.removeCallbacks(frameRunnable)
-            handler.post(frameRunnable)
+            restartAnimationLoop()
 
             updateExpandedUi()
             Toast.makeText(this, "Task created!", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            e.printStackTrace()
+            TaskUtils.logError("FloatingCatService", "addNewTask failed", e)
         }
     }
 
@@ -1101,17 +1078,17 @@ class FloatingCatService : Service() {
         isRunning = false
         handler.removeCallbacks(frameRunnable)
 
+        try {
+            unregisterReceiver(screenReceiver)
+        } catch (_: Exception) {}
+
         floatingContainer?.let { view ->
-            try {
-                windowManager?.removeView(view)
-            } catch (_: Exception) {}
+            try { windowManager?.removeView(view) } catch (_: Exception) {}
             floatingContainer = null
         }
 
         dismissTargetView?.let { view ->
-            try {
-                windowManager?.removeView(view)
-            } catch (_: Exception) {}
+            try { windowManager?.removeView(view) } catch (_: Exception) {}
             dismissTargetView = null
         }
 

@@ -49,25 +49,7 @@ class MainActivity : FlutterActivity() {
                     result.success(true)
                 }
                 "startFloatingCat" -> {
-                    val speedPercent = call.argument<Int>("speedPercent") ?: 0
-                    val speedMessage = call.argument<String>("speedMessage") ?: "TodoCat is running"
-                    val tasksJson = call.argument<String>("tasksJson")
-                    val isCatWhite = call.argument<Boolean>("isCatWhite")
-                    val isDark = call.argument<Boolean>("isDark")
-                    val intent = Intent(this, FloatingCatService::class.java).apply {
-                        action = FloatingCatService.ACTION_START
-                        putExtra(FloatingCatService.EXTRA_SPEED_PERCENT, speedPercent)
-                        putExtra(FloatingCatService.EXTRA_SPEED_MESSAGE, speedMessage)
-                        if (isCatWhite != null) {
-                            putExtra(FloatingCatService.EXTRA_IS_WHITE, isCatWhite)
-                        }
-                        if (isDark != null) {
-                            putExtra(FloatingCatService.EXTRA_IS_DARK, isDark)
-                        }
-                        if (tasksJson != null) {
-                            putExtra(FloatingCatService.EXTRA_TASKS_JSON, tasksJson)
-                        }
-                    }
+                    val intent = buildFloatingCatIntent(FloatingCatService.ACTION_START, call)
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                         startForegroundService(intent)
                     } else {
@@ -76,26 +58,7 @@ class MainActivity : FlutterActivity() {
                     result.success(true)
                 }
                 "updateFloatingCat" -> {
-                    val speedPercent = call.argument<Int>("speedPercent") ?: 0
-                    val speedMessage = call.argument<String>("speedMessage") ?: "TodoCat is running"
-                    val tasksJson = call.argument<String>("tasksJson")
-                    val isCatWhite = call.argument<Boolean>("isCatWhite")
-                    val isDark = call.argument<Boolean>("isDark")
-                    val intent = Intent(this, FloatingCatService::class.java).apply {
-                        action = FloatingCatService.ACTION_UPDATE
-                        putExtra(FloatingCatService.EXTRA_SPEED_PERCENT, speedPercent)
-                        putExtra(FloatingCatService.EXTRA_SPEED_MESSAGE, speedMessage)
-                        if (isCatWhite != null) {
-                            putExtra(FloatingCatService.EXTRA_IS_WHITE, isCatWhite)
-                        }
-                        if (isDark != null) {
-                            putExtra(FloatingCatService.EXTRA_IS_DARK, isDark)
-                        }
-                        if (tasksJson != null) {
-                            putExtra(FloatingCatService.EXTRA_TASKS_JSON, tasksJson)
-                        }
-                    }
-                    startService(intent)
+                    startService(buildFloatingCatIntent(FloatingCatService.ACTION_UPDATE, call))
                     result.success(true)
                 }
                 "stopFloatingCat" -> {
@@ -110,6 +73,17 @@ class MainActivity : FlutterActivity() {
                 }
                 else -> result.notImplemented()
             }
+        }
+    }
+
+    private fun buildFloatingCatIntent(action: String, call: io.flutter.plugin.common.MethodCall): Intent {
+        return Intent(this, FloatingCatService::class.java).apply {
+            this.action = action
+            putExtra(FloatingCatService.EXTRA_SPEED_PERCENT, call.argument<Int>("speedPercent") ?: 0)
+            putExtra(FloatingCatService.EXTRA_SPEED_MESSAGE, call.argument<String>("speedMessage") ?: "TodoCat is running")
+            call.argument<Boolean>("isCatWhite")?.let { putExtra(FloatingCatService.EXTRA_IS_WHITE, it) }
+            call.argument<Boolean>("isDark")?.let { putExtra(FloatingCatService.EXTRA_IS_DARK, it) }
+            call.argument<String>("tasksJson")?.let { putExtra(FloatingCatService.EXTRA_TASKS_JSON, it) }
         }
     }
 

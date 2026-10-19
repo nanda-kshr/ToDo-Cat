@@ -5,5 +5,6 @@ void main() {
   testWidgets('TodoCatApp smoke test', (WidgetTester tester) async {
     await tester.pumpWidget(const TodoCatApp());
     expect(find.byType(TodoCatApp), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 2000));
   });
 }

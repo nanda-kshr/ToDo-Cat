@@ -15,39 +15,47 @@ class WidgetService {
     bool? isDark,
     bool? isCatWhite,
     List<Task>? tasks,
+    String? tasksJson,
   }) async {
     try {
-      await HomeWidget.saveWidgetData<int>('pending_count', pendingCount);
-      await HomeWidget.saveWidgetData<int>('total_count', totalCount);
-      await HomeWidget.saveWidgetData<int>('speed_percent', speedPercent);
-      await HomeWidget.saveWidgetData<String>('speed_message', speedMessage);
+      final saveFutures = <Future>[
+        HomeWidget.saveWidgetData<int>('pending_count', pendingCount),
+        HomeWidget.saveWidgetData<int>('total_count', totalCount),
+        HomeWidget.saveWidgetData<int>('speed_percent', speedPercent),
+        HomeWidget.saveWidgetData<String>('speed_message', speedMessage),
+      ];
 
       if (isDark != null) {
-        await HomeWidget.saveWidgetData<bool>('is_dark', isDark);
+        saveFutures.add(HomeWidget.saveWidgetData<bool>('is_dark', isDark));
       }
       if (isCatWhite != null) {
-        await HomeWidget.saveWidgetData<bool>('is_cat_white', isCatWhite);
+        saveFutures.add(HomeWidget.saveWidgetData<bool>('is_cat_white', isCatWhite));
       }
+
+      await Future.wait(saveFutures);
 
       final prefs = await SharedPreferences.getInstance();
       if (isDark != null) await prefs.setBool('is_dark', isDark);
       if (isCatWhite != null) await prefs.setBool('is_cat_white', isCatWhite);
 
-      if (tasks != null) {
-        final tasksJson = jsonEncode(tasks.map((t) => t.toJson()).toList());
-        await HomeWidget.saveWidgetData<String>('tasks_json', tasksJson);
-        await prefs.setString('tasks_json', tasksJson);
+      final serialized = tasksJson ?? (tasks != null ? jsonEncode(tasks.map((t) => t.toJson()).toList()) : null);
+      if (serialized != null) {
+        await Future.wait([
+          HomeWidget.saveWidgetData<String>('tasks_json', serialized),
+          prefs.setString('tasks_json', serialized),
+        ]);
       }
 
-      await HomeWidget.updateWidget(
-        name: _summaryWidgetProvider,
-        androidName: _summaryWidgetProvider,
-      );
-
-      await HomeWidget.updateWidget(
-        name: _listWidgetProvider,
-        androidName: _listWidgetProvider,
-      );
+      await Future.wait([
+        HomeWidget.updateWidget(
+          name: _summaryWidgetProvider,
+          androidName: _summaryWidgetProvider,
+        ),
+        HomeWidget.updateWidget(
+          name: _listWidgetProvider,
+          androidName: _listWidgetProvider,
+        ),
+      ]);
     } catch (_) {
       // Best-effort widget update
     }

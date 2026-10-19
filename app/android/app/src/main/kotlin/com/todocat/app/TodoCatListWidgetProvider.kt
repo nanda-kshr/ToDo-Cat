@@ -70,6 +70,7 @@ class TodoCatListWidgetProvider : HomeWidgetProvider() {
 
             val addTaskIntent = Intent(context, QuickAddActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                putExtra("is_dark", isDark)
             }
             val addTaskPendingIntent = PendingIntent.getActivity(
                 context,

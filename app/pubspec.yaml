@@ -65,7 +65,6 @@ flutter:
 
   assets:
     - assets/logo.svg
-    - assets/logo.png
     - assets/grass.svg
     - assets/runners/cat/
     - assets/runners/cat_white/

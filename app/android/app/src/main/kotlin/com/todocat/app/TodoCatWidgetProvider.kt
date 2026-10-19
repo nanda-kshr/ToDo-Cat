@@ -27,17 +27,7 @@ class TodoCatWidgetProvider : HomeWidgetProvider() {
         val completedCount = (totalCount - pendingCount).coerceAtLeast(0)
 
         appWidgetIds.forEach { widgetId ->
-            updateCatWidget(
-                context,
-                appWidgetManager,
-                widgetId,
-                pendingCount,
-                completedCount,
-                speedPercent,
-                totalCount,
-                isDark,
-                isCatWhite
-            )
+            updateCatWidget(context, appWidgetManager, widgetId, pendingCount, completedCount, speedPercent, totalCount, isDark, isCatWhite)
         }
     }
 
@@ -56,17 +46,7 @@ class TodoCatWidgetProvider : HomeWidgetProvider() {
         val isCatWhite = homePrefs.getBoolean("is_cat_white", false)
         val completedCount = (totalCount - pendingCount).coerceAtLeast(0)
 
-        updateCatWidget(
-            context,
-            appWidgetManager,
-            appWidgetId,
-            pendingCount,
-            completedCount,
-            speedPercent,
-            totalCount,
-            isDark,
-            isCatWhite
-        )
+        updateCatWidget(context, appWidgetManager, appWidgetId, pendingCount, completedCount, speedPercent, totalCount, isDark, isCatWhite)
     }
 
     companion object {
@@ -81,10 +61,7 @@ class TodoCatWidgetProvider : HomeWidgetProvider() {
             isDark: Boolean,
             isCatWhite: Boolean
         ): RemoteViews {
-            val openAppPendingIntent = HomeWidgetLaunchIntent.getActivity(
-                context,
-                MainActivity::class.java
-            )
+            val openAppPendingIntent = HomeWidgetLaunchIntent.getActivity(context, MainActivity::class.java)
 
             return RemoteViews(context.packageName, layoutId).apply {
                 setOnClickPendingIntent(R.id.widget_cat_root, openAppPendingIntent)
@@ -93,7 +70,6 @@ class TodoCatWidgetProvider : HomeWidgetProvider() {
                 setTextViewText(R.id.widget_cat_ratio, ratioText)
                 setTextViewText(R.id.widget_cat_ratio_label, "tasks")
 
-                // Theme styling (Dark vs Light)
                 if (isDark) {
                     setInt(R.id.widget_cat_root, "setBackgroundResource", R.drawable.widget_cat_background_dark)
                     setTextColor(R.id.widget_cat_time, Color.parseColor("#FFFFFF"))
@@ -108,7 +84,7 @@ class TodoCatWidgetProvider : HomeWidgetProvider() {
                     setTextColor(R.id.widget_cat_ratio_label, Color.parseColor("#9CA3AF"))
                 }
 
-                // Cat animation frames: White vs Black Cat
+                // Cat animation frames: White vs Black
                 if (isCatWhite) {
                     setImageViewResource(R.id.widget_cat_frame_0, R.drawable.cat_white_0)
                     setImageViewResource(R.id.widget_cat_frame_1, R.drawable.cat_white_1)
@@ -117,7 +93,6 @@ class TodoCatWidgetProvider : HomeWidgetProvider() {
                     setImageViewResource(R.id.widget_cat_frame_4, R.drawable.cat_white_4)
                     setImageViewResource(R.id.widget_cat_frame_5, R.drawable.cat_white_5)
                     setImageViewResource(R.id.widget_cat_frame_6, R.drawable.cat_white_6)
-
                     setImageViewResource(R.id.widget_cat_sleep_0, R.drawable.cat_white_sleep_0)
                     setImageViewResource(R.id.widget_cat_sleep_1, R.drawable.cat_white_sleep_1)
                     setImageViewResource(R.id.widget_cat_sleep_2, R.drawable.cat_white_sleep_2)
@@ -132,7 +107,6 @@ class TodoCatWidgetProvider : HomeWidgetProvider() {
                     setImageViewResource(R.id.widget_cat_frame_4, R.drawable.cat_4)
                     setImageViewResource(R.id.widget_cat_frame_5, R.drawable.cat_5)
                     setImageViewResource(R.id.widget_cat_frame_6, R.drawable.cat_6)
-
                     setImageViewResource(R.id.widget_cat_sleep_0, R.drawable.cat_sleep_0)
                     setImageViewResource(R.id.widget_cat_sleep_1, R.drawable.cat_sleep_1)
                     setImageViewResource(R.id.widget_cat_sleep_2, R.drawable.cat_sleep_2)
@@ -148,15 +122,12 @@ class TodoCatWidgetProvider : HomeWidgetProvider() {
                 }
 
                 if (pendingCount <= 0) {
-                    // Show relaxed / sleeping cat animation (all tasks done!)
                     setViewVisibility(R.id.widget_cat_flipper, View.GONE)
                     setViewVisibility(R.id.widget_cat_sleeping, View.VISIBLE)
                     setInt(R.id.widget_cat_sleeping, "setFlipInterval", 350)
                 } else {
                     setViewVisibility(R.id.widget_cat_flipper, View.VISIBLE)
                     setViewVisibility(R.id.widget_cat_sleeping, View.GONE)
-
-                    // Flip interval based on speed: 40ms sprint at 100%, 280ms relaxed at 20%
                     val clampedSpeed = speedPercent.coerceIn(1, 100)
                     val intervalMs = (320 - (clampedSpeed * 2.8).toInt()).coerceIn(40, 320)
                     setInt(R.id.widget_cat_flipper, "setFlipInterval", intervalMs)
@@ -172,31 +143,21 @@ class TodoCatWidgetProvider : HomeWidgetProvider() {
             completedCount: Int,
             speedPercent: Int,
             totalCount: Int = pendingCount + completedCount,
-            isDark: Boolean = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE).getBoolean("is_dark", false),
-            isCatWhite: Boolean = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE).getBoolean("is_cat_white", false)
+            isDark: Boolean = false,
+            isCatWhite: Boolean = false
         ) {
             val options = appWidgetManager.getAppWidgetOptions(widgetId)
             val minWidth = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0) ?: 0
             val minHeight = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0) ?: 0
 
-            val (layoutId, hasProgress) = when {
-                minHeight >= 160 && minHeight > minWidth -> Pair(R.layout.todocat_cat_widget_tall, true)
-                minWidth >= 180 && minWidth > minHeight -> Pair(R.layout.todocat_cat_widget_wide, true)
-                minHeight >= 160 && minWidth >= 180 -> Pair(R.layout.todocat_cat_widget_tall, true)
-                else -> Pair(R.layout.todocat_cat_widget, true)
+            // Note: order matters — tall takes priority over wide for square-ish sizes
+            val layoutId = when {
+                minHeight >= 160 && minHeight > minWidth -> R.layout.todocat_cat_widget_tall
+                minWidth >= 180 -> R.layout.todocat_cat_widget_wide
+                else -> R.layout.todocat_cat_widget
             }
 
-            val views = buildWidgetViews(
-                context,
-                layoutId,
-                pendingCount,
-                completedCount,
-                totalCount,
-                speedPercent,
-                hasProgress,
-                isDark,
-                isCatWhite
-            )
+            val views = buildWidgetViews(context, layoutId, pendingCount, completedCount, totalCount, speedPercent, true, isDark, isCatWhite)
             appWidgetManager.updateAppWidget(widgetId, views)
         }
     }

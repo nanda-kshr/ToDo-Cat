@@ -1,3 +1,5 @@
+import '../core/utils/date_utils.dart' as date_utils;
+
 class Task {
   final String id;
   final String title;
@@ -80,14 +82,7 @@ class Task {
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
-
-  bool get isToday {
-    if (dueDate == null) return false;
-    final now = DateTime.now();
-    return dueDate!.year == now.year &&
-        dueDate!.month == now.month &&
-        dueDate!.day == now.day;
-  }
+  bool get isToday => date_utils.isToday(dueDate);
 
   bool get isOverdue {
     if (dueDate == null || completed) return false;

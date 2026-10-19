@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../services/theme_service.dart';
+import '../../services/theme_service.dart';
 
 class CatAnimation extends StatefulWidget {
   final int speedPercent;
@@ -22,7 +22,7 @@ class CatAnimation extends StatefulWidget {
 }
 
 class _CatAnimationState extends State<CatAnimation>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late AnimationController _controller;
 
   bool get _isSleeping => widget.speedPercent <= 0 && !widget.idleRunWhenSleeping;
@@ -40,10 +40,24 @@ class _CatAnimationState extends State<CatAnimation>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _controller = AnimationController(
       vsync: this,
       duration: _getDuration(),
     )..repeat();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (!_controller.isAnimating) {
+        _controller.repeat();
+      }
+    } else {
+      if (_controller.isAnimating) {
+        _controller.stop();
+      }
+    }
   }
 
   @override
@@ -64,6 +78,7 @@ class _CatAnimationState extends State<CatAnimation>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _controller.dispose();
     super.dispose();
   }
@@ -77,6 +92,8 @@ class _CatAnimationState extends State<CatAnimation>
 
     final useWhite = widget.isWhite ?? ThemeService.instance.isCatWhite(context);
     final assetDir = useWhite ? 'assets/runners/cat_white' : 'assets/runners/cat';
+    final pixelRatio = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
+    final targetCachePx = (widget.size * pixelRatio).round().clamp(32, 256);
 
     final catImage = Center(
       child: AnimatedBuilder(
@@ -88,6 +105,9 @@ class _CatAnimationState extends State<CatAnimation>
               '$assetDir/cat_sleep_$frame.png',
               fit: BoxFit.contain,
               filterQuality: FilterQuality.none,
+              gaplessPlayback: true,
+              cacheWidth: targetCachePx,
+              cacheHeight: targetCachePx,
             );
           } else {
             final frame = (_controller.value * 7).floor().clamp(0, 6);
@@ -95,6 +115,9 @@ class _CatAnimationState extends State<CatAnimation>
               '$assetDir/cat_$frame.png',
               fit: BoxFit.contain,
               filterQuality: FilterQuality.none,
+              gaplessPlayback: true,
+              cacheWidth: targetCachePx,
+              cacheHeight: targetCachePx,
             );
           }
         },
