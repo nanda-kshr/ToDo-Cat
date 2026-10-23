@@ -16,7 +16,7 @@ class TodoCatApp extends StatelessWidget {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: ThemeService.instance.themeMode,
       builder: (context, currentMode, _) {
-        const pageTransitions = PageTransitionsTheme(
+        final pageTransitions = PageTransitionsTheme(
           builders: {
             TargetPlatform.android: ZoomPageTransitionsBuilder(),
             TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
