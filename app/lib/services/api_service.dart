@@ -269,11 +269,15 @@ class ApiService {
           await GoogleSignIn.instance.authenticate();
       final String? idToken = account.authentication.idToken;
 
+      if (idToken == null || idToken.isEmpty) {
+        throw ApiException('Google sign-in failed: could not retrieve ID token. Ensure the correct OAuth client ID is configured for web.');
+      }
+
       final response = await _client.post(
         Uri.parse(ApiConfig.googleAuth),
         headers: await _getHeaders(),
         body: jsonEncode({
-          'idToken': ?idToken,
+          'idToken': idToken,
           'email': account.email,
           'name': account.displayName,
           'googleId': account.id,
