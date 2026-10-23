@@ -19,7 +19,7 @@ class TodoCatApp extends StatelessWidget {
         final pageTransitions = PageTransitionsTheme(
           builders: {
             TargetPlatform.android: ZoomPageTransitionsBuilder(),
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.iOS: ZoomPageTransitionsBuilder(),
           },
         );
 
