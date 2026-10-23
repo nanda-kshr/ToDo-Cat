@@ -254,10 +254,14 @@ class ApiService {
   bool _googleInitialized = false;
 
   Future<void> _initGoogleSignIn() async {
-    if (!_googleInitialized) {
+    if (_googleInitialized) return;
+    try {
       await GoogleSignIn.instance.initialize(
         serverClientId: ApiConfig.googleServerClientId,
       );
+      _googleInitialized = true;
+    } catch (e) {
+      // Already initialized (can happen on web with hot reload)
       _googleInitialized = true;
     }
   }
