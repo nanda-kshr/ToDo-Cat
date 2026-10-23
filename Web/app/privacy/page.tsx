@@ -23,6 +23,9 @@ export default function PrivacyPage() {
             <Link href="/terms" className="text-neutral-400 hover:text-white transition">
               Terms & Conditions
             </Link>
+            <Link href="/delete-account" className="text-neutral-400 hover:text-white transition">
+              Delete Account
+            </Link>
             <Link
               href="/auth"
               className="px-3.5 py-1.5 rounded-lg bg-white text-neutral-950 font-medium hover:bg-neutral-200 transition"
@@ -114,7 +117,11 @@ export default function PrivacyPage() {
             <section className="space-y-3">
               <h2 className="text-lg font-semibold text-white">6. Your Rights and Data Deletion</h2>
               <p>
-                You have full control over your data. You may edit or delete individual tasks at any time directly through the app or dashboard. If you wish to delete your entire account and all associated data, you can request full deletion by contacting us at{" "}
+                You have full control over your data. You may edit or delete individual tasks at any time directly through the app or dashboard. If you wish to delete your entire account and all associated data, you can request full deletion through our{" "}
+                <Link href="/delete-account" className="text-white underline">
+                  Account Deletion Portal
+                </Link>{" "}
+                or by contacting developer Nandakishore P at{" "}
                 <a href="mailto:nandakishorep212@gmail.com" className="text-white underline">
                   nandakishorep212@gmail.com
                 </a>
@@ -166,6 +173,7 @@ export default function PrivacyPage() {
           <div className="flex items-center gap-4">
             <Link href="/" className="hover:text-neutral-300 transition">Home</Link>
             <Link href="/terms" className="hover:text-neutral-300 transition">Terms &amp; Conditions</Link>
+            <Link href="/delete-account" className="hover:text-neutral-300 transition">Delete Account</Link>
             <Link href="/auth" className="hover:text-neutral-300 transition">Sign In</Link>
           </div>
         </div>

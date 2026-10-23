@@ -23,6 +23,9 @@ export default function TermsPage() {
             <Link href="/privacy" className="text-neutral-400 hover:text-white transition">
               Privacy Policy
             </Link>
+            <Link href="/delete-account" className="text-neutral-400 hover:text-white transition">
+              Delete Account
+            </Link>
             <Link
               href="/auth"
               className="px-3.5 py-1.5 rounded-lg bg-white text-neutral-950 font-medium hover:bg-neutral-200 transition"
@@ -121,7 +124,7 @@ export default function TermsPage() {
                 If you have any questions about these Terms and Conditions, please contact us:
               </p>
               <div className="p-4 rounded-xl bg-neutral-900 border border-neutral-800 text-neutral-300">
-                <p className="font-medium text-white">TodoCat Inquiries</p>
+                <p className="font-medium text-white">TodoCat Inquiries &ndash; Nandakishore P</p>
                 <p className="text-xs text-neutral-400 mt-1">
                   Developer Email:{" "}
                   <a href="mailto:nandakishorep212@gmail.com" className="text-white hover:underline">
@@ -152,6 +155,7 @@ export default function TermsPage() {
           <div className="flex items-center gap-4">
             <Link href="/" className="hover:text-neutral-300 transition">Home</Link>
             <Link href="/privacy" className="hover:text-neutral-300 transition">Privacy Policy</Link>
+            <Link href="/delete-account" className="hover:text-neutral-300 transition">Delete Account</Link>
             <Link href="/auth" className="hover:text-neutral-300 transition">Sign In</Link>
           </div>
         </div>

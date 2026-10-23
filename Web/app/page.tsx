@@ -421,6 +421,9 @@ export default function Home() {
             <Link href="/terms" className="text-neutral-400 hover:text-white transition">
               Terms &amp; Conditions
             </Link>
+            <Link href="/delete-account" className="text-neutral-400 hover:text-white transition">
+              Delete Account
+            </Link>
           </div>
 
           <div className="flex items-center gap-4 text-xs">
