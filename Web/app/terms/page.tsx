@@ -53,8 +53,8 @@ export default function TermsPage() {
               <h2 className="text-lg font-semibold text-white">1. Agreement to Terms</h2>
               <p>
                 By accessing or using the TodoCat website (
-                <a href="https://to-do-cat.vercel.app" className="text-white underline">
-                  https://to-do-cat.vercel.app
+                <a href="https://todocat.instaroid.page" className="text-white underline">
+                  https://todocat.instaroid.page
                 </a>
                 ) and associated mobile applications, you agree to be bound by these Terms and Conditions. If you do not agree with any part of these terms, you must not use our service.
               </p>

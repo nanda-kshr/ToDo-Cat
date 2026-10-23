@@ -201,15 +201,17 @@ function AuthForm() {
         )}
       </div>
 
-      <div className="mt-6 pt-4 border-t border-neutral-800/80 flex items-center justify-center gap-3 text-[11px] text-neutral-500">
-        <Link href="/privacy" className="hover:text-neutral-400 transition underline underline-offset-2">
+      <p className="mt-6 pt-4 border-t border-neutral-800/80 text-center text-[11px] text-neutral-500 leading-relaxed">
+        By signing in or signing up, you agree to our{" "}
+        <Link href="/terms" className="text-neutral-400 hover:text-white underline underline-offset-2">
+          Terms &amp; Conditions
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" className="text-neutral-400 hover:text-white underline underline-offset-2">
           Privacy Policy
         </Link>
-        <span>&bull;</span>
-        <Link href="/terms" className="hover:text-neutral-400 transition underline underline-offset-2">
-          Terms &amp; Conditions
-        </Link>
-      </div>
+        .
+      </p>
     </div>
   );
 }

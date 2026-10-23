@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://to-do-cat.vercel.app"),
+  metadataBase: new URL("https://todocat.instaroid.page"),
   title: {
     default: "TodoCat — Visual Task Management",
     template: "%s | TodoCat",
@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "TodoCat — Visual Task Management",
     description: "Visual to-do list powered by RunCat animation frames.",
-    url: "https://to-do-cat.vercel.app",
+    url: "https://todocat.instaroid.page",
     siteName: "TodoCat",
     images: [
       {

@@ -53,8 +53,8 @@ export default function PrivacyPage() {
               <h2 className="text-lg font-semibold text-white">1. Introduction</h2>
               <p>
                 Welcome to TodoCat (&ldquo;we,&rdquo; &ldquo;our,&rdquo; or &ldquo;us&rdquo;). We respect your privacy and are committed to protecting the personal data you share with us. This Privacy Policy explains how we collect, use, and safeguard your information when you visit our website at{" "}
-                <a href="https://to-do-cat.vercel.app" className="text-white underline">
-                  https://to-do-cat.vercel.app
+                <a href="https://todocat.instaroid.page" className="text-white underline">
+                  https://todocat.instaroid.page
                 </a>{" "}
                 and use the TodoCat mobile application.
               </p>
