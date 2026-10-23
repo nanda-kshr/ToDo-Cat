@@ -210,10 +210,19 @@ export default function DeleteAccountPage() {
       <footer className="border-t border-neutral-900 py-8 px-4 sm:px-6 text-xs text-neutral-500">
         <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <p>&copy; 2026 TodoCat. All rights reserved.</p>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <Link href="/" className="hover:text-neutral-300 transition">Home</Link>
+            <Link href="/about" className="hover:text-neutral-300 transition">About Developer</Link>
             <Link href="/privacy" className="hover:text-neutral-300 transition">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-neutral-300 transition">Terms &amp; Conditions</Link>
+            <a
+              href="https://buymeacoffee.com/nanda_kshr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-amber-400 hover:text-amber-300 transition"
+            >
+              Buy Me a Coffee
+            </a>
           </div>
         </div>
       </footer>

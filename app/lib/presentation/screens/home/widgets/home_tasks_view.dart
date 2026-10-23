@@ -287,10 +287,12 @@ class HomeTasksView extends StatelessWidget {
                   const SizedBox(height: 24),
                   IgnorePointer(
                     child: RepaintBoundary(
-                      child: SvgPicture.asset(
-                        'assets/grass.svg',
-                        width: double.infinity,
-                        fit: BoxFit.fitWidth,
+                      child: AspectRatio(
+                        aspectRatio: 1024 / 434,
+                        child: SvgPicture.asset(
+                          'assets/grass.svg',
+                          fit: BoxFit.fitWidth,
+                        ),
                       ),
                     ),
                   ),

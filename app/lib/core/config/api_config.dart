@@ -1,5 +1,5 @@
 class ApiConfig {
-  static const String baseUrl = 'https://to-do-cat.vercel.app';
+  static const String baseUrl = 'https://todocat.instaroid.page';
 
   // Web Application Client ID for Google Sign-In serverClientId (ID Token audience)
   static const String googleServerClientId =

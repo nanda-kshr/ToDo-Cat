@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../models/user.dart';
 import '../../../../services/theme_service.dart';
+import '../../about_screen.dart';
+import '../../legal_screen.dart';
 
 Future<void> showSettingsModal(
   BuildContext context, {
@@ -345,6 +348,174 @@ Future<void> showSettingsModal(
                                 ),
                                 Text(
                                   'Setup quick tasks and running cat widgets',
+                                  style: TextStyle(color: textSecondary, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.chevron_right, color: textSecondary, size: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // About TodoCat
+                  InkWell(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const AboutScreen()),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: cardBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE4E4E7),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.info_outline, size: 20, color: textPrimary),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'About TodoCat',
+                                  style: TextStyle(
+                                    fontFamily: 'Sniglet',
+                                    fontWeight: FontWeight.w600,
+                                    color: textPrimary,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                Text(
+                                  'Developer info & version',
+                                  style: TextStyle(color: textSecondary, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.chevron_right, color: textSecondary, size: 20),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Buy Me a Coffee
+                  InkWell(
+                    onTap: () async {
+                      Navigator.pop(ctx);
+                      final uri = Uri.parse('https://buymeacoffee.com/nanda_kshr');
+                      try {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      } catch (_) {}
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: cardBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF261E0A) : const Color(0xFFFFFBEB),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.coffee_rounded, size: 20, color: Color(0xFFF59E0B)),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Buy Me a Coffee',
+                                  style: TextStyle(
+                                    fontFamily: 'Sniglet',
+                                    fontWeight: FontWeight.w600,
+                                    color: textPrimary,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                Text(
+                                  'Support the developer',
+                                  style: TextStyle(color: textSecondary, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.favorite, color: Color(0xFFF59E0B), size: 16),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // Privacy & Terms
+                  InkWell(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LegalScreen()),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: cardBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 36,
+                            height: 36,
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE4E4E7),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.policy_outlined, size: 20, color: textPrimary),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Privacy & Terms',
+                                  style: TextStyle(
+                                    fontFamily: 'Sniglet',
+                                    fontWeight: FontWeight.w600,
+                                    color: textPrimary,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                Text(
+                                  'Privacy policy and terms of service',
                                   style: TextStyle(color: textSecondary, fontSize: 11),
                                 ),
                               ],

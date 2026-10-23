@@ -46,9 +46,21 @@ export default function Home() {
             <a href="#features" className="hover:text-white transition">Features</a>
             <a href="#demo" className="hover:text-white transition">Interactive Demo</a>
             <a href="#workflow" className="hover:text-white transition">Workflow</a>
+            <Link href="/about" className="hover:text-white transition">About Developer</Link>
           </div>
 
           <div className="flex items-center gap-2.5">
+            <a
+              href="https://buymeacoffee.com/nanda_kshr"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Buy Me a Coffee"
+              title="Buy Me a Coffee"
+              className="hidden sm:inline-flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 text-xs font-bold transition shadow-sm"
+            >
+              <span>☕</span>
+              <span>Coffee</span>
+            </a>
             <a
               href="https://github.com/nanda-kshr/ToDo-Cat"
               target="_blank"
@@ -415,6 +427,9 @@ export default function Home() {
               <span>nandakishorep212@gmail.com</span>
             </a>
 
+            <Link href="/about" className="text-neutral-400 hover:text-white transition">
+              About Developer
+            </Link>
             <Link href="/privacy" className="text-neutral-400 hover:text-white transition">
               Privacy Policy
             </Link>
@@ -424,6 +439,14 @@ export default function Home() {
             <Link href="/delete-account" className="text-neutral-400 hover:text-white transition">
               Delete Account
             </Link>
+            <a
+              href="https://buymeacoffee.com/nanda_kshr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-amber-400 hover:text-amber-300 transition font-medium"
+            >
+              ☕ Buy Me a Coffee
+            </a>
           </div>
 
           <div className="flex items-center gap-4 text-xs">

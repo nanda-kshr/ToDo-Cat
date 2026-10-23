@@ -921,17 +921,15 @@ class FloatingCatService : Service() {
 
         try {
             val jsonArray = JSONArray(raw)
-            val (pendingCount, totalCount) = TaskUtils.countTasks(jsonArray)
-            val completedCount = (totalCount - pendingCount).coerceAtLeast(0)
-            speedBadgeText?.text = if (totalCount == 0) "All caught up" else "$pendingCount pending • $completedCount completed"
+            val (pendingCount, completedCount, totalToday) = TaskUtils.countTodayTasks(jsonArray)
+            speedBadgeText?.text = if (totalToday == 0) "All caught up" else "$pendingCount pending • $completedCount completed"
 
-            if (jsonArray.length() == 0) {
-                container.addView(buildEmptyTaskView(density))
-                return
-            }
-
+            var visibleCount = 0
             for (i in 0 until jsonArray.length()) {
                 val item = jsonArray.getJSONObject(i)
+                if (!TaskUtils.isTodayTask(item)) continue
+                visibleCount++
+
                 val id = item.optString("id", "")
                 val title = item.optString("title", "Untitled Task")
                 val completed = item.optBoolean("completed", false)
@@ -1011,6 +1009,10 @@ class FloatingCatService : Service() {
                     bottomMargin = (8 * density).toInt()
                 })
             }
+
+            if (visibleCount == 0) {
+                container.addView(buildEmptyTaskView(density))
+            }
         } catch (e: Exception) {
             TaskUtils.logError("FloatingCatService", "updateExpandedUi failed", e)
         }
@@ -1031,8 +1033,8 @@ class FloatingCatService : Service() {
             val updatedJson = jsonArray.toString()
             saveTasksToStorage(updatedJson)
 
-            val (activeCount, totalCount) = TaskUtils.countTasks(jsonArray)
-            speedPercent = TaskUtils.calcSpeedPercent(activeCount, totalCount)
+            val (activeCount, _, totalToday) = TaskUtils.countTodayTasks(jsonArray)
+            speedPercent = TaskUtils.calcSpeedPercent(activeCount, totalToday)
             calculateInterval(speedPercent)
             restartAnimationLoop()
 
@@ -1060,8 +1062,8 @@ class FloatingCatService : Service() {
             val updatedJson = newArray.toString()
             saveTasksToStorage(updatedJson)
 
-            val (activeCount, totalCount) = TaskUtils.countTasks(newArray)
-            speedPercent = TaskUtils.calcSpeedPercent(activeCount, totalCount)
+            val (activeCount, _, totalToday) = TaskUtils.countTodayTasks(newArray)
+            speedPercent = TaskUtils.calcSpeedPercent(activeCount, totalToday)
             calculateInterval(speedPercent)
             restartAnimationLoop()
 

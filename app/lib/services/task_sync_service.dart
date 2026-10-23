@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../core/utils/date_utils.dart';
 import '../models/task.dart';
 import 'api_service.dart';
 import 'floating_cat_service.dart';
@@ -151,10 +152,12 @@ class TaskSyncService {
     );
 
     if (isFloatingOverlayRunning) {
+      final todayTasks = tasks.where((t) => !t.completed || isToday(t.updatedAt ?? t.createdAt)).toList();
+      final floatingTasksJson = jsonEncode(todayTasks.map((t) => t.toJson()).toList());
       FloatingCatService.update(
         speedPercent: catSpeed,
         speedMessage: speedMessage,
-        tasksJson: tasksJson,
+        tasksJson: floatingTasksJson,
         isCatWhite: isWhite,
         isDark: isDark,
       );

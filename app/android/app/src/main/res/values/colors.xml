@@ -8,4 +8,5 @@
     <color name="widget_cat_progress_track">#EBE4F7</color>
     <color name="widget_cat_progress_fill">#7755FD</color>
     <color name="splash_background">#0A0A0A</color>
+    <color name="ic_launcher_background">#ffffff</color>
 </resources>

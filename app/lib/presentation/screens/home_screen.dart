@@ -458,7 +458,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final isDark = ThemeService.instance.isDarkMode(context);
     final isWhite = ThemeService.instance.isCatWhite(context);
     final counts = _counts;
-    final tasksJson = jsonEncode(_tasks.map((t) => t.toJson()).toList());
+    final todayTasks = _tasks.where((t) => !t.completed || isToday(t.updatedAt ?? t.createdAt)).toList();
+    final tasksJson = jsonEncode(todayTasks.map((t) => t.toJson()).toList());
     final speedMessage = counts.active == 0 ? 'All caught up' : '${counts.active} tasks pending';
 
     final started = await FloatingCatService.start(

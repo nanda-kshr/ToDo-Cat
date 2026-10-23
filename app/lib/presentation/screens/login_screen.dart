@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../widgets/app_logo.dart';
 import 'home_screen.dart';
+import 'legal_screen.dart';
 import 'login/widgets/auth_mode_toggle.dart';
 import 'login/widgets/auth_text_field.dart';
 import 'login/widgets/google_sign_in_button.dart';
@@ -310,6 +311,67 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: Color(0xFFA3A3A3),
                         fontSize: 13,
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Terms and Privacy disclaimer
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text.rich(
+                      TextSpan(
+                        text: 'By signing in or signing up, you agree to our ',
+                        style: const TextStyle(
+                          color: Color(0xFF737373),
+                          fontSize: 11,
+                          height: 1.4,
+                        ),
+                        children: [
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.baseline,
+                            baseline: TextBaseline.alphabetic,
+                            child: GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const LegalScreen(initialIndex: 1),
+                                ),
+                              ),
+                              child: const Text(
+                                'Terms & Conditions',
+                                style: TextStyle(
+                                  color: Color(0xFFA3A3A3),
+                                  fontSize: 11,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const TextSpan(text: ' and '),
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.baseline,
+                            baseline: TextBaseline.alphabetic,
+                            child: GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const LegalScreen(initialIndex: 0),
+                                ),
+                              ),
+                              child: const Text(
+                                'Privacy Policy',
+                                style: TextStyle(
+                                  color: Color(0xFFA3A3A3),
+                                  fontSize: 11,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const TextSpan(text: '.'),
+                        ],
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 ],

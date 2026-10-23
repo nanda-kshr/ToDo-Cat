@@ -13,11 +13,15 @@ export const metadata: Metadata = {
   authors: [{ name: "Nandakishore", url: "https://github.com/nanda-kshr/ToDo-Cat" }],
   icons: {
     icon: [
+      { url: "/favicon.ico", sizes: "any" },
       { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
       { url: "/logo.png" },
     ],
-    apple: [{ url: "/logo.png" }],
+    apple: [{ url: "/apple-touch-icon.png" }],
   },
+  manifest: "/manifest.json",
   openGraph: {
     title: "TodoCat — Visual Task Management",
     description: "Visual to-do list powered by RunCat animation frames.",
