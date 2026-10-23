@@ -176,5 +176,18 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     expect(tester.takeException(), isNull);
+
+    // Expand Completed Earlier button
+    expect(find.text('Completed Earlier'), findsOneWidget);
+    await tester.tap(find.text('Completed Earlier'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Completed Task'), findsOneWidget);
+
+    // Collapse Completed Earlier button
+    await tester.tap(find.text('Completed Earlier'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Completed Task'), findsNothing);
   });
 }

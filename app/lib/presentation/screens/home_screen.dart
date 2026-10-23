@@ -541,7 +541,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       onTaskCreated: (newTask) {
         if (mounted) {
           setState(() {
-            _tasks.insert(0, newTask);
+            _tasks = [newTask, ..._tasks];
           });
           _syncWidget();
         }
@@ -549,13 +549,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
+  Future<void> _editTask(Task task, {
+    required String title,
+    required String description,
+    required DateTime dueDate,
+    required String priority,
+    required String category,
+  }) async {
+    final updatedTask = await ApiService().updateTask(
+      task.id,
+      title: title,
+      description: description,
+      dueDate: dueDate,
+      priority: priority,
+      category: category,
+    );
+    if (mounted) {
+      setState(() {
+        _tasks = _tasks.map((t) => t.id == task.id ? updatedTask : t).toList();
+      });
+      _syncWidget();
+    }
+  }
+
   void _showTaskDetailsModal(Task task) {
     showTaskDetailsModal(
       context,
       task: task,
-      tasks: _tasks,
+      getTasks: () => _tasks,
       onToggle: _toggleTask,
       onDelete: _deleteTask,
+      onEdit: _editTask,
     );
   }
 
