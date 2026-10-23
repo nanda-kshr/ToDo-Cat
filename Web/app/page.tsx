@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import CatAnimation from "@/components/CatAnimation";
+import { CoffeeIcon } from "@/components/Icons";
 
 export default function Home() {
   // Demo interactive state
@@ -58,7 +59,7 @@ export default function Home() {
               title="Buy Me a Coffee"
               className="hidden sm:inline-flex items-center gap-1.5 py-1.5 px-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 text-xs font-bold transition shadow-sm"
             >
-              <span>☕</span>
+              <CoffeeIcon className="w-3.5 h-3.5" />
               <span>Coffee</span>
             </a>
             <a
@@ -443,9 +444,10 @@ export default function Home() {
               href="https://buymeacoffee.com/nanda_kshr"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-amber-400 hover:text-amber-300 transition font-medium"
+              className="text-amber-400 hover:text-amber-300 transition font-medium inline-flex items-center gap-1.5"
             >
-              ☕ Buy Me a Coffee
+              <CoffeeIcon className="w-3.5 h-3.5" />
+              <span>Buy Me a Coffee</span>
             </a>
           </div>
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
+import { CoffeeIcon, HeartIcon } from "@/components/Icons";
 
 export const metadata: Metadata = {
   title: "About Developer | TodoCat",
@@ -26,7 +27,7 @@ export default function AboutPage() {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-neutral-950 font-bold transition shadow-sm"
             >
-              <span>☕</span>
+              <CoffeeIcon className="w-4 h-4" />
               <span>Buy Me a Coffee</span>
             </a>
             <Link href="/privacy" className="text-neutral-400 hover:text-white transition hidden sm:inline-block">
@@ -104,8 +105,8 @@ export default function AboutPage() {
           {/* Support / Buy Me a Coffee Card */}
           <div className="p-6 sm:p-8 rounded-2xl bg-gradient-to-br from-amber-950/40 via-neutral-900 to-neutral-900 border border-amber-500/30 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-400 text-neutral-950 flex items-center justify-center text-xl shadow-md">
-                ☕
+              <div className="w-10 h-10 rounded-xl bg-amber-400 text-neutral-950 flex items-center justify-center shadow-md">
+                <HeartIcon className="w-5 h-5 text-neutral-950" />
               </div>
               <div>
                 <h3 className="text-lg font-bold text-white">Support the Project</h3>
@@ -122,7 +123,7 @@ export default function AboutPage() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-neutral-950 font-bold text-sm transition shadow-lg shadow-amber-400/10"
               >
-                <span>☕</span>
+                <CoffeeIcon className="w-4 h-4" />
                 <span>Buy Me a Coffee at buymeacoffee.com/nanda_kshr</span>
                 <span>&rarr;</span>
               </a>
