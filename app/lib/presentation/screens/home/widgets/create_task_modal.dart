@@ -29,7 +29,7 @@ class CreateTaskDialog extends StatefulWidget {
 class _CreateTaskDialogState extends State<CreateTaskDialog> {
   late final TextEditingController _titleController;
   late final TextEditingController _descController;
-  DateTime _selectedDate = DateTime.now();
+  DateTime? _selectedDate; // Default is no deadline
   TimeOfDay? _selectedTime;
   bool _hasTime = false;
   String _selectedPriority = 'medium';
@@ -50,6 +50,49 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
     super.dispose();
   }
 
+  String _recurrenceLabel(String val) {
+    switch (val) {
+      case 'daily':
+        return 'Daily';
+      case 'weekly':
+        return 'Weekly';
+      case 'monthly':
+        return 'Monthly';
+      case 'yearly':
+        return 'Yearly';
+      case 'none':
+      default:
+        return 'None';
+    }
+  }
+
+  PopupMenuItem<String> _buildRecurrenceItem(
+    String label,
+    String value,
+    Color textPrimary,
+    Color textSecondary,
+  ) {
+    final isSel = _selectedRecurrence == value;
+    return PopupMenuItem<String>(
+      value: value,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Sniglet',
+              fontSize: 13,
+              fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+              color: isSel ? textPrimary : textSecondary,
+            ),
+          ),
+          if (isSel) Icon(Icons.check, size: 16, color: textPrimary),
+        ],
+      ),
+    );
+  }
+
   Future<void> _submit() async {
     final title = _titleController.text.trim();
     if (title.isEmpty) return;
@@ -57,21 +100,23 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
     final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
 
-    try {
-      final dueDate = _hasTime && _selectedTime != null
-          ? DateTime(
-              _selectedDate.year,
-              _selectedDate.month,
-              _selectedDate.day,
-              _selectedTime!.hour,
-              _selectedTime!.minute,
-            )
-          : DateTime(
-              _selectedDate.year,
-              _selectedDate.month,
-              _selectedDate.day,
-            );
+    final dueDate = _selectedDate == null
+        ? null
+        : (_hasTime && _selectedTime != null
+            ? DateTime(
+                _selectedDate!.year,
+                _selectedDate!.month,
+                _selectedDate!.day,
+                _selectedTime!.hour,
+                _selectedTime!.minute,
+              )
+            : DateTime(
+                _selectedDate!.year,
+                _selectedDate!.month,
+                _selectedDate!.day,
+              ));
 
+    try {
       final newTask = await ApiService().createTask(
         title: title,
         description: _descController.text.trim(),
@@ -82,9 +127,26 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
         category: _selectedCategory,
       );
       widget.onTaskCreated(newTask);
-    } catch (e) {
+    } catch (_) {
+      // Offline fallback: save locally and notify user
+      final offlineTask = Task(
+        id: 'local-${DateTime.now().millisecondsSinceEpoch}',
+        title: title,
+        description: _descController.text.trim(),
+        priority: _selectedPriority,
+        dueDate: dueDate,
+        hasTime: _hasTime,
+        recurrence: _selectedRecurrence,
+        category: _selectedCategory,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      widget.onTaskCreated(offlineTask);
       messenger.showSnackBar(
-        SnackBar(content: Text('Failed to create task: $e')),
+        const SnackBar(
+          content: Text('Saved offline. Will sync when back online.'),
+          duration: Duration(seconds: 2),
+        ),
       );
     }
   }
@@ -203,117 +265,178 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                     ),
                   ],
                 ),
-                Row(
-                  children: [
-                    InkWell(
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: _selectedDate,
-                          firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                          lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
-                        );
-                        if (picked != null) {
-                          setState(() => _selectedDate = picked);
-                        }
-                      },
-                      borderRadius: BorderRadius.circular(18),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: inputBg,
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_month_outlined,
-                              size: 14,
+                if (_selectedDate == null)
+                  InkWell(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                        lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
+                      );
+                      if (picked != null) {
+                        setState(() => _selectedDate = picked);
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(18),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: inputBg,
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 14,
+                            color: textSecondary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            '+ Add date',
+                            style: TextStyle(
+                              fontFamily: 'Sniglet',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
                               color: textSecondary,
                             ),
-                            const SizedBox(width: 5),
-                            Text(
-                              formatDueDate(_selectedDate),
-                              style: TextStyle(
-                                fontFamily: 'Sniglet',
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    InkWell(
-                      onTap: () async {
-                        final initial = _selectedTime ?? TimeOfDay.fromDateTime(_selectedDate);
-                        final picked = await showTimePicker(
-                          context: context,
-                          initialTime: initial,
-                        );
-                        if (picked != null) {
-                          setState(() {
-                            _selectedTime = picked;
-                            _hasTime = true;
-                          });
-                        }
-                      },
-                      borderRadius: BorderRadius.circular(18),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  )
+                else
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                         decoration: BoxDecoration(
                           color: inputBg,
                           borderRadius: BorderRadius.circular(18),
-                          border: _hasTime
-                              ? Border.all(
-                                  color: isDark ? Colors.white30 : const Color(0xFF9CA3AF),
-                                  width: 1.2,
-                                )
-                              : null,
+                          border: Border.all(
+                            color: isDark ? Colors.white24 : const Color(0xFFD4D4D8),
+                            width: 1.2,
+                          ),
                         ),
                         child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Icons.access_time_rounded,
-                              size: 14,
-                              color: _hasTime ? textPrimary : textSecondary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              _hasTime && _selectedTime != null
-                                  ? formatTime(DateTime(2026, 1, 1, _selectedTime!.hour, _selectedTime!.minute))
-                                  : '+ Time',
-                              style: TextStyle(
-                                fontFamily: 'Sniglet',
-                                fontSize: 12,
-                                fontWeight: _hasTime ? FontWeight.bold : FontWeight.w600,
-                                color: _hasTime ? textPrimary : textSecondary,
+                            InkWell(
+                              onTap: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: _selectedDate!,
+                                  firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                                  lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
+                                );
+                                if (picked != null) {
+                                  setState(() => _selectedDate = picked);
+                                }
+                              },
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.calendar_month_outlined,
+                                    size: 14,
+                                    color: textPrimary,
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    formatDueDate(_selectedDate),
+                                    style: TextStyle(
+                                      fontFamily: 'Sniglet',
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: textPrimary,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            if (_hasTime) ...[
-                              const SizedBox(width: 4),
-                              GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    _hasTime = false;
-                                    _selectedTime = null;
-                                  });
-                                },
-                                child: Icon(
-                                  Icons.close,
-                                  size: 13,
-                                  color: textSecondary,
-                                ),
-                              ),
-                            ],
+                            const SizedBox(width: 6),
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _selectedDate = null;
+                                  _hasTime = false;
+                                  _selectedTime = null;
+                                });
+                              },
+                              child: Icon(Icons.close, size: 14, color: textSecondary),
+                            ),
                           ],
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                      const SizedBox(width: 6),
+                      InkWell(
+                        onTap: () async {
+                          final initial = _selectedTime ?? TimeOfDay.now();
+                          final picked = await showTimePicker(
+                            context: context,
+                            initialTime: initial,
+                          );
+                          if (picked != null) {
+                            setState(() {
+                              _selectedTime = picked;
+                              _hasTime = true;
+                            });
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(18),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                          decoration: BoxDecoration(
+                            color: inputBg,
+                            borderRadius: BorderRadius.circular(18),
+                            border: _hasTime
+                                ? Border.all(
+                                    color: isDark ? Colors.white30 : const Color(0xFF9CA3AF),
+                                    width: 1.2,
+                                  )
+                                : null,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.access_time_rounded,
+                                size: 14,
+                                color: _hasTime ? textPrimary : textSecondary,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                _hasTime && _selectedTime != null
+                                    ? formatTime(DateTime(2026, 1, 1, _selectedTime!.hour, _selectedTime!.minute))
+                                    : '+ Time',
+                                style: TextStyle(
+                                  fontFamily: 'Sniglet',
+                                  fontSize: 12,
+                                  fontWeight: _hasTime ? FontWeight.bold : FontWeight.w600,
+                                  color: _hasTime ? textPrimary : textSecondary,
+                                ),
+                              ),
+                              if (_hasTime) ...[
+                                const SizedBox(width: 4),
+                                GestureDetector(
+                                  onTap: () {
+                                    setState(() {
+                                      _hasTime = false;
+                                      _selectedTime = null;
+                                    });
+                                  },
+                                  child: Icon(Icons.close, size: 13, color: textSecondary),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
               ],
             ),
             const SizedBox(height: 16),
@@ -349,45 +472,54 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                     ),
                   ],
                 ),
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      {'label': 'None', 'value': 'none'},
-                      {'label': 'Daily', 'value': 'daily'},
-                      {'label': 'Weekly', 'value': 'weekly'},
-                      {'label': 'Monthly', 'value': 'monthly'},
-                      {'label': 'Yearly', 'value': 'yearly'},
-                    ].map((r) {
-                      final isSel = _selectedRecurrence == r['value'];
-                      return Padding(
-                        padding: const EdgeInsets.only(left: 4),
-                        child: InkWell(
-                          onTap: () => setState(() => _selectedRecurrence = r['value']!),
-                          borderRadius: BorderRadius.circular(14),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: isSel
-                                  ? (isDark ? Colors.white : const Color(0xFF4B5563))
-                                  : inputBg,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Text(
-                              r['label']!,
-                              style: TextStyle(
-                                fontFamily: 'Sniglet',
-                                fontSize: 12,
-                                fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
-                                color: isSel
-                                    ? (isDark ? Colors.black : Colors.white)
-                                    : textSecondary,
-                              ),
-                            ),
+                PopupMenuButton<String>(
+                  onSelected: (val) => setState(() => _selectedRecurrence = val),
+                  color: isDark ? const Color(0xFF222222) : Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 6,
+                  itemBuilder: (ctx) => [
+                    _buildRecurrenceItem('None', 'none', textPrimary, textSecondary),
+                    _buildRecurrenceItem('Daily', 'daily', textPrimary, textSecondary),
+                    _buildRecurrenceItem('Weekly', 'weekly', textPrimary, textSecondary),
+                    _buildRecurrenceItem('Monthly', 'monthly', textPrimary, textSecondary),
+                    _buildRecurrenceItem('Yearly', 'yearly', textPrimary, textSecondary),
+                  ],
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: inputBg,
+                      borderRadius: BorderRadius.circular(18),
+                      border: _selectedRecurrence != 'none'
+                          ? Border.all(
+                              color: isDark ? Colors.white30 : const Color(0xFF9CA3AF),
+                              width: 1.2,
+                            )
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _recurrenceLabel(_selectedRecurrence),
+                          style: TextStyle(
+                            fontFamily: 'Sniglet',
+                            fontSize: 13,
+                            fontWeight: _selectedRecurrence != 'none'
+                                ? FontWeight.bold
+                                : FontWeight.w600,
+                            color: _selectedRecurrence != 'none'
+                                ? textPrimary
+                                : textSecondary,
                           ),
                         ),
-                      );
-                    }).toList(),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_drop_down_rounded,
+                          size: 18,
+                          color: textSecondary,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ],

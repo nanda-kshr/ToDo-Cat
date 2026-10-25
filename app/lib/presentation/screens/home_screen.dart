@@ -7,6 +7,7 @@ import '../../models/analytics.dart';
 import '../../models/task.dart';
 import '../../models/user.dart';
 import '../../services/api_service.dart';
+import '../../services/fcm_service.dart';
 import '../../services/floating_cat_service.dart';
 import '../../services/task_sync_service.dart';
 import '../../services/theme_service.dart';
@@ -207,6 +208,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           _error = null;
         });
         _syncWidget();
+        FcmService().syncCurrentToken();
         if (_currentTab == 1) {
           _loadAnalytics();
         }
@@ -552,7 +554,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _editTask(Task task, {
     required String title,
     required String description,
-    required DateTime dueDate,
+    required DateTime? dueDate,
     required bool hasTime,
     required String recurrence,
     required String priority,
@@ -563,6 +565,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       title: title,
       description: description,
       dueDate: dueDate,
+      clearDueDate: dueDate == null,
       hasTime: hasTime,
       recurrence: recurrence,
       priority: priority,

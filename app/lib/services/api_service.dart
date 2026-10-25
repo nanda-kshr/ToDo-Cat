@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -419,6 +420,7 @@ class ApiService {
     String? description,
     bool? completed,
     DateTime? dueDate,
+    bool clearDueDate = false,
     bool? hasTime,
     String? recurrence,
     String? priority,
@@ -431,6 +433,8 @@ class ApiService {
       if (completed != null) body['completed'] = completed;
       if (dueDate != null) {
         body['dueDate'] = dueDate.toIso8601String();
+      } else if (clearDueDate) {
+        body['dueDate'] = null;
       }
       if (hasTime != null) body['hasTime'] = hasTime;
       if (recurrence != null) body['recurrence'] = recurrence;
@@ -524,6 +528,35 @@ class ApiService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ApiException('Network error fetching analytics: $e');
+    }
+  }
+
+  Future<void> registerFcmToken(String token) async {
+    try {
+      await _authenticatedRequest(
+        (headers) => _client.post(
+          Uri.parse(ApiConfig.fcmToken),
+          headers: headers,
+          body: jsonEncode({'token': token}),
+        ),
+      );
+    } catch (e) {
+      // Non-blocking error
+      debugPrint('[ApiService] registerFcmToken error: $e');
+    }
+  }
+
+  Future<void> unregisterFcmToken(String token) async {
+    try {
+      await _authenticatedRequest(
+        (headers) => _client.delete(
+          Uri.parse(ApiConfig.fcmToken),
+          headers: headers,
+          body: jsonEncode({'token': token}),
+        ),
+      );
+    } catch (e) {
+      debugPrint('[ApiService] unregisterFcmToken error: $e');
     }
   }
 }

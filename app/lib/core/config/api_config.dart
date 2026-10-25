@@ -19,4 +19,7 @@ class ApiConfig {
 
   // Analytics endpoint
   static const String analytics = '$baseUrl/api/analytics';
+
+  // FCM Token endpoint
+  static const String fcmToken = '$baseUrl/api/user/fcm-token';
 }

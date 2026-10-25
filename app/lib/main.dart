@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'presentation/screens/home_screen.dart';
 import 'services/theme_service.dart';
+import 'services/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ThemeService.instance.init();
+  await FcmService().initialize();
   runApp(const TodoCatApp());
 }
 

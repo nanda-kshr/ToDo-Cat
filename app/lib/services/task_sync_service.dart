@@ -93,7 +93,23 @@ class TaskSyncService {
             id != null &&
             id.contains('-') &&
             !serverTitles.contains(title)) {
-          final created = await apiService.createTask(title: title);
+          final description = item['description'] as String?;
+          final priority = item['priority'] as String? ?? 'medium';
+          final category = item['category'] as String? ?? 'General';
+          final hasTime = item['hasTime'] as bool? ?? false;
+          final recurrence = item['recurrence'] as String? ?? 'none';
+          final dueDateStr = item['dueDate'] as String?;
+          final dueDate = dueDateStr != null ? DateTime.tryParse(dueDateStr) : null;
+
+          final created = await apiService.createTask(
+            title: title,
+            description: description,
+            dueDate: dueDate,
+            hasTime: hasTime,
+            recurrence: recurrence,
+            priority: priority,
+            category: category,
+          );
           if (serverTasks != null) {
             serverTasks.insert(0, created);
           } else {
