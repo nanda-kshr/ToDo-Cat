@@ -553,6 +553,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     required String title,
     required String description,
     required DateTime dueDate,
+    required bool hasTime,
+    required String recurrence,
     required String priority,
     required String category,
   }) async {
@@ -561,6 +563,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       title: title,
       description: description,
       dueDate: dueDate,
+      hasTime: hasTime,
+      recurrence: recurrence,
       priority: priority,
       category: category,
     );

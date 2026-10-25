@@ -24,7 +24,7 @@ class TaskCardTile extends StatelessWidget {
     final textPrimary = isDark ? Colors.white : const Color(0xFF4B5563);
     final textSecondary = isDark ? const Color(0xFFA3A3A3) : const Color(0xFF9CA3AF);
 
-    final formattedDate = formatDueDate(task.dueDate);
+    final formattedDate = formatDueDate(task.dueDate, hasTime: task.hasTime);
 
     return Dismissible(
       key: ValueKey(task.id),
@@ -100,25 +100,44 @@ class TaskCardTile extends StatelessWidget {
                         decoration: task.completed ? TextDecoration.lineThrough : null,
                       ),
                     ),
-                    if (formattedDate.isNotEmpty) ...[
+                    if (formattedDate.isNotEmpty || task.isRecurring) ...[
                       const SizedBox(height: 3),
                       Row(
                         children: [
-                          Icon(
-                            Icons.calendar_today_outlined,
-                            size: 12,
-                            color: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            formattedDate,
-                            style: TextStyle(
-                              fontFamily: 'Sniglet',
-                              fontSize: 12,
-                              fontWeight: FontWeight.normal,
+                          if (formattedDate.isNotEmpty) ...[
+                            Icon(
+                              Icons.calendar_today_outlined,
+                              size: 12,
                               color: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
                             ),
-                          ),
+                            const SizedBox(width: 4),
+                            Text(
+                              formattedDate,
+                              style: TextStyle(
+                                fontFamily: 'Sniglet',
+                                fontSize: 12,
+                                fontWeight: FontWeight.normal,
+                                color: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
+                              ),
+                            ),
+                          ],
+                          if (task.isRecurring) ...[
+                            if (formattedDate.isNotEmpty) const SizedBox(width: 8),
+                            Icon(
+                              Icons.repeat_rounded,
+                              size: 12,
+                              color: isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              task.recurrence[0].toUpperCase() + task.recurrence.substring(1),
+                              style: TextStyle(
+                                fontFamily: 'Sniglet',
+                                fontSize: 11,
+                                color: isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ],

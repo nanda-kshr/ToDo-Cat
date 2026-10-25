@@ -376,6 +376,8 @@ class ApiService {
     required String title,
     String? description,
     DateTime? dueDate,
+    bool hasTime = false,
+    String recurrence = 'none',
     String priority = 'medium',
     String category = 'General',
   }) async {
@@ -388,6 +390,8 @@ class ApiService {
             'title': title.trim(),
             if (description != null) 'description': description.trim(),
             if (dueDate != null) 'dueDate': dueDate.toIso8601String(),
+            'hasTime': hasTime,
+            'recurrence': recurrence,
             'priority': priority,
             'category': category.trim().isNotEmpty ? category.trim() : 'General',
           }),
@@ -415,6 +419,8 @@ class ApiService {
     String? description,
     bool? completed,
     DateTime? dueDate,
+    bool? hasTime,
+    String? recurrence,
     String? priority,
     String? category,
   }) async {
@@ -426,6 +432,8 @@ class ApiService {
       if (dueDate != null) {
         body['dueDate'] = dueDate.toIso8601String();
       }
+      if (hasTime != null) body['hasTime'] = hasTime;
+      if (recurrence != null) body['recurrence'] = recurrence;
       if (priority != null) body['priority'] = priority;
       if (category != null) body['category'] = category.trim();
 

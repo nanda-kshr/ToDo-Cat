@@ -14,6 +14,8 @@ Future<void> showTaskDetailsModal(
     required String title,
     required String description,
     required DateTime dueDate,
+    required bool hasTime,
+    required String recurrence,
     required String priority,
     required String category,
   }) onEdit,
@@ -40,7 +42,7 @@ Future<void> showTaskDetailsModal(
             (t) => t.id == task.id,
             orElse: () => task,
           );
-          final formattedDueDate = formatDueDate(currentTask.dueDate);
+          final formattedDueDate = formatDueDate(currentTask.dueDate, hasTime: currentTask.hasTime);
 
           return SafeArea(
             top: false,
@@ -73,6 +75,32 @@ Future<void> showTaskDetailsModal(
                                   fontSize: 12,
                                   color: textSecondary,
                                 ),
+                              ),
+                            ),
+                          ],
+                          if (currentTask.isRecurring) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: cardBg,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: cardBorder),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.repeat_rounded, size: 12, color: textSecondary),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    currentTask.recurrence[0].toUpperCase() + currentTask.recurrence.substring(1),
+                                    style: TextStyle(
+                                      fontFamily: 'Sniglet',
+                                      fontSize: 11,
+                                      color: textSecondary,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -287,6 +315,8 @@ Future<void> _showEditTaskModal(
     required String title,
     required String description,
     required DateTime dueDate,
+    required bool hasTime,
+    required String recurrence,
     required String priority,
     required String category,
   }) onEdit,
@@ -306,6 +336,8 @@ class _EditTaskDialog extends StatefulWidget {
     required String title,
     required String description,
     required DateTime dueDate,
+    required bool hasTime,
+    required String recurrence,
     required String priority,
     required String category,
   }) onEdit;
@@ -320,8 +352,11 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
   late final TextEditingController _titleController;
   late final TextEditingController _descController;
   late DateTime _selectedDate;
+  TimeOfDay? _selectedTime;
+  late bool _hasTime;
   late String _selectedPriority;
   late String _selectedCategory;
+  late String _selectedRecurrence;
   bool _saving = false;
 
   @override
@@ -330,8 +365,13 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
     _titleController = TextEditingController(text: widget.task.title);
     _descController = TextEditingController(text: widget.task.description);
     _selectedDate = widget.task.dueDate ?? DateTime.now();
+    _hasTime = widget.task.hasTime;
+    _selectedTime = widget.task.dueDate != null && widget.task.hasTime
+        ? TimeOfDay.fromDateTime(widget.task.dueDate!)
+        : null;
     _selectedPriority = widget.task.priority;
     _selectedCategory = widget.task.category.isNotEmpty ? widget.task.category : 'General';
+    _selectedRecurrence = widget.task.recurrence.isNotEmpty ? widget.task.recurrence : 'none';
   }
 
   @override
@@ -350,11 +390,27 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
     Navigator.of(context).pop();
 
     try {
+      final dueDate = _hasTime && _selectedTime != null
+          ? DateTime(
+              _selectedDate.year,
+              _selectedDate.month,
+              _selectedDate.day,
+              _selectedTime!.hour,
+              _selectedTime!.minute,
+            )
+          : DateTime(
+              _selectedDate.year,
+              _selectedDate.month,
+              _selectedDate.day,
+            );
+
       await widget.onEdit(
         widget.task,
         title: title,
         description: _descController.text.trim(),
-        dueDate: _selectedDate,
+        dueDate: dueDate,
+        hasTime: _hasTime,
+        recurrence: _selectedRecurrence,
         priority: _selectedPriority,
         category: _selectedCategory,
       );
@@ -432,7 +488,7 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
             ),
             const SizedBox(height: 16),
 
-            // Due Date
+            // Due Date & Time
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -446,7 +502,7 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
                     ),
                     const SizedBox(width: 10),
                     Text(
-                      'Due date',
+                      'Due',
                       style: TextStyle(
                         fontFamily: 'Sniglet',
                         fontSize: 14,
@@ -456,35 +512,182 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
                     ),
                   ],
                 ),
-                InkWell(
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: context,
-                      initialDate: _selectedDate,
-                      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-                      lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
-                    );
-                    if (picked != null) setState(() => _selectedDate = picked);
-                  },
-                  borderRadius: BorderRadius.circular(18),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(color: inputBg, borderRadius: BorderRadius.circular(18)),
-                    child: Row(
-                      children: [
-                        Icon(Icons.calendar_month_outlined, size: 15, color: textSecondary),
-                        const SizedBox(width: 6),
-                        Text(
-                          formatDueDate(_selectedDate),
-                          style: TextStyle(
-                            fontFamily: 'Sniglet',
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: textPrimary,
+                Row(
+                  children: [
+                    InkWell(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _selectedDate,
+                          firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                          lastDate: DateTime.now().add(const Duration(days: 365 * 3)),
+                        );
+                        if (picked != null) setState(() => _selectedDate = picked);
+                      },
+                      borderRadius: BorderRadius.circular(18),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(color: inputBg, borderRadius: BorderRadius.circular(18)),
+                        child: Row(
+                          children: [
+                            Icon(Icons.calendar_month_outlined, size: 14, color: textSecondary),
+                            const SizedBox(width: 5),
+                            Text(
+                              formatDueDate(_selectedDate),
+                              style: TextStyle(
+                                fontFamily: 'Sniglet',
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    InkWell(
+                      onTap: () async {
+                        final initial = _selectedTime ?? TimeOfDay.fromDateTime(_selectedDate);
+                        final picked = await showTimePicker(
+                          context: context,
+                          initialTime: initial,
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            _selectedTime = picked;
+                            _hasTime = true;
+                          });
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(18),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: inputBg,
+                          borderRadius: BorderRadius.circular(18),
+                          border: _hasTime
+                              ? Border.all(
+                                  color: isDark ? Colors.white30 : const Color(0xFF9CA3AF),
+                                  width: 1.2,
+                                )
+                              : null,
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.access_time_rounded,
+                              size: 14,
+                              color: _hasTime ? textPrimary : textSecondary,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _hasTime && _selectedTime != null
+                                  ? formatTime(DateTime(2026, 1, 1, _selectedTime!.hour, _selectedTime!.minute))
+                                  : '+ Time',
+                              style: TextStyle(
+                                fontFamily: 'Sniglet',
+                                fontSize: 12,
+                                fontWeight: _hasTime ? FontWeight.bold : FontWeight.w600,
+                                color: _hasTime ? textPrimary : textSecondary,
+                              ),
+                            ),
+                            if (_hasTime) ...[
+                              const SizedBox(width: 4),
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _hasTime = false;
+                                    _selectedTime = null;
+                                  });
+                                },
+                                child: Icon(
+                                  Icons.close,
+                                  size: 13,
+                                  color: textSecondary,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Repeat / Recurring Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: badgeBg,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.repeat_rounded,
+                        size: 16,
+                        color: textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Repeat',
+                      style: TextStyle(
+                        fontFamily: 'Sniglet',
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      {'label': 'None', 'value': 'none'},
+                      {'label': 'Daily', 'value': 'daily'},
+                      {'label': 'Weekly', 'value': 'weekly'},
+                      {'label': 'Monthly', 'value': 'monthly'},
+                      {'label': 'Yearly', 'value': 'yearly'},
+                    ].map((r) {
+                      final isSel = _selectedRecurrence == r['value'];
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: InkWell(
+                          onTap: () => setState(() => _selectedRecurrence = r['value']!),
+                          borderRadius: BorderRadius.circular(14),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: isSel
+                                  ? (isDark ? Colors.white : const Color(0xFF4B5563))
+                                  : inputBg,
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Text(
+                              r['label']!,
+                              style: TextStyle(
+                                fontFamily: 'Sniglet',
+                                fontSize: 12,
+                                fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                                color: isSel
+                                    ? (isDark ? Colors.black : Colors.white)
+                                    : textSecondary,
+                              ),
+                            ),
                           ),
                         ),
-                      ],
-                    ),
+                      );
+                    }).toList(),
                   ),
                 ),
               ],

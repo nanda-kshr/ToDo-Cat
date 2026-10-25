@@ -6,6 +6,8 @@ class Task {
   final String description;
   final bool completed;
   final DateTime? dueDate;
+  final bool hasTime;
+  final String recurrence;
   final String priority;
   final String category;
   final DateTime? createdAt;
@@ -17,6 +19,8 @@ class Task {
     this.description = '',
     this.completed = false,
     this.dueDate,
+    this.hasTime = false,
+    this.recurrence = 'none',
     this.priority = 'medium',
     this.category = 'General',
     this.createdAt,
@@ -38,6 +42,8 @@ class Task {
       description: json['description'] ?? '',
       completed: json['completed'] ?? false,
       dueDate: parseDate(json['dueDate']),
+      hasTime: json['hasTime'] as bool? ?? false,
+      recurrence: json['recurrence'] as String? ?? 'none',
       priority: json['priority'] ?? 'medium',
       category: json['category'] ?? 'General',
       createdAt: parseDate(json['createdAt']),
@@ -52,6 +58,8 @@ class Task {
       'description': description,
       'completed': completed,
       if (dueDate != null) 'dueDate': dueDate!.toIso8601String(),
+      'hasTime': hasTime,
+      'recurrence': recurrence,
       'priority': priority,
       'category': category,
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
@@ -65,6 +73,8 @@ class Task {
     String? description,
     bool? completed,
     DateTime? dueDate,
+    bool? hasTime,
+    String? recurrence,
     String? priority,
     String? category,
     DateTime? createdAt,
@@ -76,12 +86,16 @@ class Task {
       description: description ?? this.description,
       completed: completed ?? this.completed,
       dueDate: dueDate ?? this.dueDate,
+      hasTime: hasTime ?? this.hasTime,
+      recurrence: recurrence ?? this.recurrence,
       priority: priority ?? this.priority,
       category: category ?? this.category,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+
+  bool get isRecurring => recurrence.isNotEmpty && recurrence != 'none';
   bool get isToday => date_utils.isToday(dueDate);
 
   bool get isOverdue {
