@@ -145,9 +145,19 @@ function AuthForm() {
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-neutral-300 mb-1.5" htmlFor="password">
-            Password
-          </label>
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-medium text-neutral-300" htmlFor="password">
+              Password
+            </label>
+            {action === "login" && (
+              <Link
+                href="/reset-password"
+                className="text-xs text-neutral-400 hover:text-white transition"
+              >
+                Forgot password?
+              </Link>
+            )}
+          </div>
           <input
             id="password"
             type="password"

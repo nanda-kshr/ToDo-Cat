@@ -138,6 +138,42 @@ class TaskCardTile extends StatelessWidget {
                               ),
                             ),
                           ],
+                          if (task.isShared) ...[
+                            if (formattedDate.isNotEmpty || task.isRecurring) const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: task.completed
+                                    ? (isDark ? const Color(0xFF14532D) : const Color(0xFFDCFCE7))
+                                    : (isDark ? const Color(0xFF27272A) : const Color(0xFFF3F4F6)),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.people_alt_rounded,
+                                    size: 11,
+                                    color: task.completed
+                                        ? const Color(0xFF16A34A)
+                                        : (isDark ? Colors.white70 : const Color(0xFF4B5563)),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    task.dualProgressText,
+                                    style: TextStyle(
+                                      fontFamily: 'Sniglet',
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: task.completed
+                                          ? const Color(0xFF16A34A)
+                                          : (isDark ? Colors.white70 : const Color(0xFF4B5563)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ],

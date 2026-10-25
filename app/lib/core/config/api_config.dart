@@ -1,5 +1,5 @@
 class ApiConfig {
-  static const String baseUrl = 'https://todocat.instaroid.page';
+  static const String baseUrl = 'http://localhost:3000';//'https://todocat.instaroid.page';
 
   // Web Application Client ID for Google Sign-In serverClientId (ID Token audience)
   static const String googleServerClientId =
@@ -12,6 +12,8 @@ class ApiConfig {
   static const String me = '$baseUrl/api/auth/me';
   static const String refresh = '$baseUrl/api/auth/refresh';
   static const String logout = '$baseUrl/api/auth/logout';
+  static const String forgotPassword = '$baseUrl/api/auth/forgot-password';
+  static const String resetPassword = '$baseUrl/api/auth/reset-password';
 
   // Task endpoints
   static const String tasks = '$baseUrl/api/tasks';
@@ -22,4 +24,9 @@ class ApiConfig {
 
   // FCM Token endpoint
   static const String fcmToken = '$baseUrl/api/user/fcm-token';
+
+  // Friend endpoints
+  static const String friends = '$baseUrl/api/friends';
+  static const String friendsSearch = '$baseUrl/api/friends/search';
+  static String friendById(String id) => '$baseUrl/api/friends/$id';
 }

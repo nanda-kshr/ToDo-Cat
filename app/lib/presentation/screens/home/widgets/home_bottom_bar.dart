@@ -49,6 +49,16 @@ class HomeBottomBar extends StatelessWidget {
             textPrimary: textPrimary,
             textSecondary: textSecondary,
           ),
+          _NavItem(
+            index: 2,
+            icon: Icons.people_alt_rounded,
+            label: 'Friends',
+            isSelected: currentTab == 2,
+            onSelected: onTabSelected,
+            isDark: isDark,
+            textPrimary: textPrimary,
+            textSecondary: textSecondary,
+          ),
         ],
       ),
     );

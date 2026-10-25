@@ -5,6 +5,7 @@ import 'home_screen.dart';
 import 'legal_screen.dart';
 import 'login/widgets/auth_mode_toggle.dart';
 import 'login/widgets/auth_text_field.dart';
+import 'login/widgets/forgot_password_dialog.dart';
 import 'login/widgets/google_sign_in_button.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -231,7 +232,42 @@ class _LoginScreenState extends State<LoginScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 24),
+                  if (!_isSignUp) ...[
+                    const SizedBox(height: 6),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => ForgotPasswordDialog(
+                              initialEmail: _emailController.text.trim(),
+                              onPasswordReset: (email) {
+                                setState(() {
+                                  _emailController.text = email;
+                                  _passwordController.clear();
+                                });
+                              },
+                            ),
+                          );
+                        },
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text(
+                          'Forgot password?',
+                          style: TextStyle(
+                            fontFamily: 'Sniglet',
+                            fontSize: 12,
+                            color: Color(0xFFA1A1AA),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
 
                   // Submit Button
                   ElevatedButton(

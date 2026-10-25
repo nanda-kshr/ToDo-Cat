@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../models/task.dart';
+import '../../../../models/friend.dart';
 import '../../../../services/api_service.dart';
 
 Future<void> showCreateTaskModal(
@@ -35,12 +36,26 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
   String _selectedPriority = 'medium';
   String _selectedCategory = 'General';
   String _selectedRecurrence = 'none';
+  List<FriendItem> _availableFriends = [];
+  final List<FriendUser> _selectedFriends = [];
 
   @override
   void initState() {
     super.initState();
     _titleController = TextEditingController();
     _descController = TextEditingController();
+    _loadAvailableFriends();
+  }
+
+  Future<void> _loadAvailableFriends() async {
+    try {
+      final data = await ApiService().fetchFriends();
+      if (mounted) {
+        setState(() {
+          _availableFriends = data.friends;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -125,6 +140,7 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
         hasTime: _hasTime,
         recurrence: _selectedRecurrence,
         category: _selectedCategory,
+        sharedWith: _selectedFriends.map((f) => f.id).toList(),
       );
       widget.onTaskCreated(newTask);
     } catch (_) {
@@ -138,6 +154,7 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
         hasTime: _hasTime,
         recurrence: _selectedRecurrence,
         category: _selectedCategory,
+        sharedWith: _selectedFriends,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -662,6 +679,154 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                 }).toList(),
               ),
             ),
+            const SizedBox(height: 16),
+
+            // Share with Friends Row
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: badgeBg,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.group_add_outlined,
+                        size: 16,
+                        color: textPrimary,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Share',
+                      style: TextStyle(
+                        fontFamily: 'Sniglet',
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                if (_availableFriends.isEmpty)
+                  Text(
+                    'No friends yet',
+                    style: TextStyle(
+                      fontFamily: 'Sniglet',
+                      fontSize: 12,
+                      color: textSecondary,
+                    ),
+                  )
+                else
+                  PopupMenuButton<FriendUser>(
+                    onSelected: (friend) {
+                      setState(() {
+                        if (_selectedFriends.any((f) => f.id == friend.id)) {
+                          _selectedFriends.removeWhere((f) => f.id == friend.id);
+                        } else {
+                          _selectedFriends.add(friend);
+                        }
+                      });
+                    },
+                    color: isDark ? const Color(0xFF222222) : Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    itemBuilder: (ctx) => _availableFriends.map((f) {
+                      final isSel = _selectedFriends.any((sf) => sf.id == f.user.id);
+                      return PopupMenuItem<FriendUser>(
+                        value: f.user,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              f.user.displayName,
+                              style: TextStyle(
+                                fontFamily: 'Sniglet',
+                                fontSize: 13,
+                                fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                                color: isSel ? textPrimary : textSecondary,
+                              ),
+                            ),
+                            if (isSel) const Icon(Icons.check, size: 16, color: Color(0xFF10B981)),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: inputBg,
+                        borderRadius: BorderRadius.circular(18),
+                        border: _selectedFriends.isNotEmpty
+                            ? Border.all(color: const Color(0xFF10B981), width: 1.2)
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.person_add_alt_1_rounded,
+                            size: 14,
+                            color: _selectedFriends.isNotEmpty ? const Color(0xFF10B981) : textSecondary,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            _selectedFriends.isEmpty
+                                ? '+ Friend'
+                                : '${_selectedFriends.length} shared',
+                            style: TextStyle(
+                              fontFamily: 'Sniglet',
+                              fontSize: 12,
+                              fontWeight: _selectedFriends.isNotEmpty ? FontWeight.bold : FontWeight.normal,
+                              color: _selectedFriends.isNotEmpty ? const Color(0xFF10B981) : textSecondary,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(Icons.arrow_drop_down_rounded, size: 18, color: textSecondary),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            if (_selectedFriends.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: _selectedFriends.map((f) {
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1F2937) : const Color(0xFFE5E7EB),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          f.displayName,
+                          style: TextStyle(
+                            fontFamily: 'Sniglet',
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: textPrimary,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        GestureDetector(
+                          onTap: () => setState(() => _selectedFriends.removeWhere((sf) => sf.id == f.id)),
+                          child: Icon(Icons.close, size: 13, color: textSecondary),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
             const SizedBox(height: 22),
 
             // Add Task Action Button

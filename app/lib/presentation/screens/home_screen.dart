@@ -13,6 +13,7 @@ import '../../services/task_sync_service.dart';
 import '../../services/theme_service.dart';
 import '../../services/widget_service.dart';
 import 'home/widgets/create_task_modal.dart';
+import 'home/widgets/friends_view.dart';
 import 'home/widgets/home_bottom_bar.dart';
 import 'home/widgets/home_tasks_view.dart';
 import 'home/widgets/settings_modal.dart';
@@ -54,6 +55,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   bool _isFloatingOverlayRunning = false;
   StreamSubscription<Uri?>? _widgetClickSubscription;
+  final GlobalKey<FriendsViewState> _friendsViewKey = GlobalKey<FriendsViewState>();
 
   @override
   void initState() {
@@ -728,18 +730,33 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         scrollController: _statsScrollController,
                       ),
                     ),
+                    TickerMode(
+                      enabled: _currentTab == 2,
+                      child: FriendsView(key: _friendsViewKey),
+                    ),
                   ],
                 ),
-      floatingActionButton: _currentTab == 1
-          ? null
-          : FloatingActionButton(
+      floatingActionButton: _currentTab == 0
+          ? FloatingActionButton(
               onPressed: _showCreateTaskDialog,
               backgroundColor: isDark ? Colors.white : const Color(0xFF4B5563),
               foregroundColor: isDark ? Colors.black : Colors.white,
               elevation: 4,
               shape: const CircleBorder(),
               child: const Icon(Icons.add, size: 28),
-            ),
+            )
+          : _currentTab == 2
+              ? FloatingActionButton(
+                  onPressed: () {
+                    _friendsViewKey.currentState?.openAddFriendDialog();
+                  },
+                  backgroundColor: isDark ? Colors.white : const Color(0xFF4B5563),
+                  foregroundColor: isDark ? Colors.black : Colors.white,
+                  elevation: 4,
+                  shape: const CircleBorder(),
+                  child: const Icon(Icons.add, size: 28),
+                )
+              : null,
       bottomNavigationBar: HomeBottomBar(
         currentTab: _currentTab,
         onTabSelected: (index) {

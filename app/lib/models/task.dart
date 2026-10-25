@@ -1,4 +1,5 @@
 import '../core/utils/date_utils.dart' as date_utils;
+import 'friend.dart';
 
 class Task {
   final String id;
@@ -10,6 +11,8 @@ class Task {
   final String recurrence;
   final String priority;
   final String category;
+  final List<FriendUser> sharedWith;
+  final List<String> completedBy;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -23,6 +26,8 @@ class Task {
     this.recurrence = 'none',
     this.priority = 'medium',
     this.category = 'General',
+    this.sharedWith = const [],
+    this.completedBy = const [],
     this.createdAt,
     this.updatedAt,
   });
@@ -36,6 +41,22 @@ class Task {
       return null;
     }
 
+    final rawSharedWith = json['sharedWith'] as List? ?? [];
+    final sharedWithList = rawSharedWith.map((e) {
+      if (e is Map<String, dynamic>) {
+        return FriendUser.fromJson(e);
+      }
+      return FriendUser(id: e.toString(), email: '');
+    }).toList();
+
+    final rawCompletedBy = json['completedBy'] as List? ?? [];
+    final completedByList = rawCompletedBy.map((e) {
+      if (e is Map<String, dynamic>) {
+        return (e['_id'] ?? e['id'] ?? '').toString();
+      }
+      return e.toString();
+    }).toList();
+
     return Task(
       id: json['_id'] ?? json['id'] ?? '',
       title: json['title'] ?? '',
@@ -46,6 +67,8 @@ class Task {
       recurrence: json['recurrence'] as String? ?? 'none',
       priority: json['priority'] ?? 'medium',
       category: json['category'] ?? 'General',
+      sharedWith: sharedWithList,
+      completedBy: completedByList,
       createdAt: parseDate(json['createdAt']),
       updatedAt: parseDate(json['updatedAt']),
     );
@@ -62,6 +85,9 @@ class Task {
       'recurrence': recurrence,
       'priority': priority,
       'category': category,
+      if (sharedWith.isNotEmpty)
+        'sharedWith': sharedWith.map((f) => f.id).toList(),
+      if (completedBy.isNotEmpty) 'completedBy': completedBy,
       if (createdAt != null) 'createdAt': createdAt!.toIso8601String(),
       if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
     };
@@ -77,6 +103,8 @@ class Task {
     String? recurrence,
     String? priority,
     String? category,
+    List<FriendUser>? sharedWith,
+    List<String>? completedBy,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -90,10 +118,18 @@ class Task {
       recurrence: recurrence ?? this.recurrence,
       priority: priority ?? this.priority,
       category: category ?? this.category,
+      sharedWith: sharedWith ?? this.sharedWith,
+      completedBy: completedBy ?? this.completedBy,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+
+  bool get isShared => sharedWith.isNotEmpty;
+  bool isCompletedBy(String userId) => completedBy.contains(userId);
+  int get totalParticipants => 1 + sharedWith.length;
+  int get completedParticipantsCount => completedBy.length;
+  String get dualProgressText => '$completedParticipantsCount/$totalParticipants completed';
 
   bool get isRecurring => recurrence.isNotEmpty && recurrence != 'none';
   bool get isToday => date_utils.isToday(dueDate);

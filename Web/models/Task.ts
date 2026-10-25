@@ -13,6 +13,8 @@ export interface ITask extends Document {
   recurrence?: TaskRecurrence;
   priority: TaskPriority;
   category: string;
+  sharedWith?: Types.ObjectId[];
+  completedBy?: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,6 +67,16 @@ const TaskSchema = new Schema<ITask>(
       type: String,
       trim: true,
       default: "General",
+      index: true,
+    },
+    sharedWith: {
+      type: [{ type: Schema.Types.ObjectId, ref: "User" }],
+      default: [],
+      index: true,
+    },
+    completedBy: {
+      type: [{ type: Schema.Types.ObjectId, ref: "User" }],
+      default: [],
       index: true,
     },
   },

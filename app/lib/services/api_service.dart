@@ -8,6 +8,7 @@ import '../core/config/api_config.dart';
 import '../models/user.dart';
 import '../models/task.dart';
 import '../models/analytics.dart';
+import '../models/friend.dart';
 
 class ApiException implements Exception {
   final String message;
@@ -381,6 +382,7 @@ class ApiService {
     String recurrence = 'none',
     String priority = 'medium',
     String category = 'General',
+    List<String>? sharedWith,
   }) async {
     try {
       final response = await _authenticatedRequest(
@@ -395,6 +397,7 @@ class ApiService {
             'recurrence': recurrence,
             'priority': priority,
             'category': category.trim().isNotEmpty ? category.trim() : 'General',
+            if (sharedWith != null && sharedWith.isNotEmpty) 'sharedWith': sharedWith,
           }),
         ),
       );
@@ -425,6 +428,7 @@ class ApiService {
     String? recurrence,
     String? priority,
     String? category,
+    List<String>? sharedWith,
   }) async {
     try {
       final body = <String, dynamic>{};
@@ -440,6 +444,7 @@ class ApiService {
       if (recurrence != null) body['recurrence'] = recurrence;
       if (priority != null) body['priority'] = priority;
       if (category != null) body['category'] = category.trim();
+      if (sharedWith != null) body['sharedWith'] = sharedWith;
 
       final response = await _authenticatedRequest(
         (headers) => _client.patch(
@@ -557,6 +562,157 @@ class ApiService {
       );
     } catch (e) {
       debugPrint('[ApiService] unregisterFcmToken error: $e');
+    }
+  }
+
+  Future<FriendsData> fetchFriends({int? page, int? limit, String? search}) async {
+    try {
+      final queryParams = <String, String>{};
+      if (page != null) queryParams['page'] = page.toString();
+      if (limit != null) queryParams['limit'] = limit.toString();
+      if (search != null && search.trim().isNotEmpty) {
+        queryParams['search'] = search.trim();
+      }
+
+      final uri = queryParams.isEmpty
+          ? Uri.parse(ApiConfig.friends)
+          : Uri.parse(ApiConfig.friends).replace(queryParameters: queryParams);
+
+      final response = await _authenticatedRequest(
+        (headers) => _client.get(uri, headers: headers),
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return FriendsData.fromJson(data as Map<String, dynamic>);
+      } else {
+        throw ApiException(data['message'] ?? 'Failed to load friends', response.statusCode);
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Network error fetching friends: $e');
+    }
+  }
+
+  Future<List<FriendUser>> searchFriends(String email) async {
+    try {
+      final uri = Uri.parse(ApiConfig.friendsSearch).replace(
+        queryParameters: {'email': email.trim()},
+      );
+      final response = await _authenticatedRequest(
+        (headers) => _client.get(uri, headers: headers),
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        final list = (data['users'] as List? ?? []);
+        return list.map((e) => FriendUser.fromJson(e as Map<String, dynamic>)).toList();
+      } else {
+        throw ApiException(data['message'] ?? 'Failed to search users', response.statusCode);
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Network error searching users: $e');
+    }
+  }
+
+  Future<void> sendFriendRequest(String email) async {
+    try {
+      final response = await _authenticatedRequest(
+        (headers) => _client.post(
+          Uri.parse(ApiConfig.friends),
+          headers: headers,
+          body: jsonEncode({'email': email.trim()}),
+        ),
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw ApiException(data['message'] ?? 'Failed to send friend request', response.statusCode);
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Network error sending friend request: $e');
+    }
+  }
+
+  Future<void> respondFriendRequest(String friendshipId, String action) async {
+    try {
+      final response = await _authenticatedRequest(
+        (headers) => _client.patch(
+          Uri.parse(ApiConfig.friendById(friendshipId)),
+          headers: headers,
+          body: jsonEncode({'action': action}),
+        ),
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw ApiException(data['message'] ?? 'Failed to respond to request', response.statusCode);
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Network error updating friend request: $e');
+    }
+  }
+
+  Future<void> removeFriend(String friendshipId) async {
+    try {
+      final response = await _authenticatedRequest(
+        (headers) => _client.delete(
+          Uri.parse(ApiConfig.friendById(friendshipId)),
+          headers: headers,
+        ),
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw ApiException(data['message'] ?? 'Failed to remove friend', response.statusCode);
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Network error removing friend: $e');
+    }
+  }
+
+  Future<String> requestPasswordReset(String email) async {
+    try {
+      final response = await _client.post(
+        Uri.parse(ApiConfig.forgotPassword),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email.trim()}),
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return data['message'] ?? 'Reset instructions sent to your email.';
+      } else {
+        throw ApiException(data['message'] ?? 'Failed to request password reset', response.statusCode);
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Network error: $e');
+    }
+  }
+
+  Future<String> resetPasswordWithOtp({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    try {
+      final response = await _client.post(
+        Uri.parse(ApiConfig.resetPassword),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email.trim(),
+          'otp': otp.trim(),
+          'newPassword': newPassword,
+        }),
+      );
+      final data = jsonDecode(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return data['message'] ?? 'Password reset successful.';
+      } else {
+        throw ApiException(data['message'] ?? 'Failed to reset password', response.statusCode);
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Network error: $e');
     }
   }
 }

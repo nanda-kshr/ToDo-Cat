@@ -1,0 +1,38 @@
+---
+type: Feature
+title: Authentication & User Profile
+description: Dual authentication supporting email/password with JWT, Google OAuth 2.0, and rate-limited dual Password Reset via OTP and Link.
+tags: [auth, jwt, oauth, google-signin, security, password-reset, otp, rate-limiting]
+status: active
+last_updated: 2026-10-25
+---
+
+# Authentication & User Profile
+
+## Overview
+TodoCat provides secure authentication for both Web and Mobile platforms:
+- **Email/Password**: Standard signup and login with hashed passwords (`bcryptjs`) and JWT access + refresh tokens.
+- **Google OAuth 2.0**: Native Google Sign-In on mobile passing `idToken` to `/api/auth/google`, and web-based OAuth callback.
+- **Session Continuity**: Refresh token rotation stored in HTTP-only cookies on web and `SharedPreferences` on mobile.
+- **Password Reset (Dual Flow - Link & OTP)**:
+  - Users request a reset code with their email.
+  - A branded email is sent via SMTP containing both a 6-digit OTP code and a one-click reset link (15-minute expiration).
+  - Web users can reset directly via `/reset-password?token=...` or via OTP.
+  - Mobile app users can reset within the app via OTP modal.
+  - **Rate Limiting**: IP-based rate limiting (max 5 requests / 15m) and email throttling (1 request / 60s), plus max 5 OTP failed attempts before lockout. All existing sessions are revoked upon reset.
+
+## Components & Architecture
+- **Web Backend**:
+  - `Web/app/api/auth/login/route.ts` - Email/password login.
+  - `Web/app/api/auth/register/route.ts` - New user registration.
+  - `Web/app/api/auth/google/route.ts` - Google ID token verification.
+  - `Web/app/api/auth/forgot-password/route.ts` - Request reset OTP and link with rate limiting.
+  - `Web/app/api/auth/reset-password/route.ts` - Verify OTP or link token and update password.
+  - `Web/lib/rateLimit.ts` - In-memory sliding window rate limiter.
+  - `Web/lib/email.ts` - SMTP email dispatcher with branded reset templates.
+  - `Web/app/reset-password/page.tsx` - Responsive Next.js password reset page.
+  - `Web/models/User.ts` - User schema including `resetPasswordToken`, `resetPasswordOtp`, `resetPasswordExpires`, `resetPasswordAttempts`.
+- **Mobile (Flutter)**:
+  - `app/lib/presentation/screens/login/widgets/forgot_password_dialog.dart` - In-app OTP reset modal.
+  - `app/lib/presentation/screens/login_screen.dart` - "Forgot password?" trigger on login screen.
+  - `app/lib/services/api_service.dart` - `requestPasswordReset()`, `resetPasswordWithOtp()`.

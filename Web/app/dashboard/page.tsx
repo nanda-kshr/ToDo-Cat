@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import CatAnimation from "@/components/CatAnimation";
+import FriendsView from "@/components/FriendsView";
 
 interface UserProfile {
   id: string;
@@ -28,7 +29,7 @@ export interface TaskItem {
   updatedAt: string;
 }
 
-type ViewFilter = "all" | "today" | "upcoming" | "completed";
+type ViewFilter = "all" | "today" | "upcoming" | "completed" | "friends";
 
 // Check if a date string is today in local time
 function isTodayDate(dateStr: string): boolean {
@@ -86,6 +87,7 @@ function DashboardContent() {
 
   // Filters & Search
   const [activeView, setActiveView] = useState<ViewFilter>("all");
+  const [friendsCount, setFriendsCount] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -157,6 +159,7 @@ function DashboardContent() {
           const data = await userRes.json();
           setUser(data.user);
           loadTasks();
+          loadFriendsCount();
         } else {
           router.push("/auth?action=login");
         }
@@ -183,6 +186,18 @@ function DashboardContent() {
       console.error("Failed to load tasks:", err);
     } finally {
       setLoadingTasks(false);
+    }
+  };
+
+  const loadFriendsCount = async () => {
+    try {
+      const res = await authFetch("/api/friends?limit=1");
+      if (res.ok) {
+        const data = await res.json();
+        setFriendsCount(data.pagination?.total ?? data.friends?.length ?? 0);
+      }
+    } catch (err) {
+      console.error("Failed to load friends count:", err);
     }
   };
 
@@ -553,6 +568,7 @@ function DashboardContent() {
                 { id: "today", label: "Today", count: viewCounts.today },
                 { id: "upcoming", label: "Upcoming", count: viewCounts.upcoming },
                 { id: "completed", label: "Completed", count: viewCounts.completed },
+                { id: "friends", label: "Friends", count: friendsCount },
               ] as const
             ).map((tab) => (
               <button
@@ -587,7 +603,8 @@ function DashboardContent() {
         </div>
 
         {/* Search & Filters Row */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        {activeView !== "friends" && (
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <div className="relative flex-1">
             <svg
               className="w-4 h-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
@@ -639,10 +656,14 @@ function DashboardContent() {
             </select>
           </div>
         </div>
+        )}
       </div>
 
-      {/* Task List */}
-      <div className="space-y-2">
+      {activeView === "friends" ? (
+        <FriendsView authFetch={authFetch} onCountUpdate={setFriendsCount} />
+      ) : (
+        /* Task List */
+        <div className="space-y-2">
         {loadingTasks ? (
           <div className="text-center py-12 text-xs text-neutral-500">Loading tasks...</div>
         ) : filteredTasks.length === 0 ? (
@@ -824,6 +845,7 @@ function DashboardContent() {
           })
         )}
       </div>
+      )}
 
       {/* Create / Edit Task Modal */}
       {isModalOpen && (

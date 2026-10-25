@@ -8,6 +8,10 @@ export interface IUser extends Document {
   avatar?: string;
   refreshTokens: string[];
   fcmTokens?: string[];
+  resetPasswordToken?: string;
+  resetPasswordOtp?: string;
+  resetPasswordExpires?: Date;
+  resetPasswordAttempts?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -46,6 +50,22 @@ const UserSchema = new Schema<IUser>(
     fcmTokens: {
       type: [String],
       default: [],
+    },
+    resetPasswordToken: {
+      type: String,
+      index: true,
+    },
+    resetPasswordOtp: {
+      type: String,
+      index: true,
+    },
+    resetPasswordExpires: {
+      type: Date,
+      index: true,
+    },
+    resetPasswordAttempts: {
+      type: Number,
+      default: 0,
     },
   },
   {

@@ -266,6 +266,56 @@ Future<void> showTaskDetailsModal(
                             ],
                           ),
                         ],
+
+                        // Shared Friends & Dual Completion Row
+                        if (currentTask.isShared) ...[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Divider(color: cardBorder, height: 1),
+                          ),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.people_alt_rounded,
+                                size: 16,
+                                color: currentTask.completed ? const Color(0xFF10B981) : const Color(0xFF3B82F6),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Shared: ${currentTask.sharedWith.map((f) => f.displayName).join(", ")}',
+                                  style: TextStyle(
+                                    fontFamily: 'Sniglet',
+                                    fontSize: 13,
+                                    color: textPrimary,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: currentTask.completed
+                                      ? (isDark ? const Color(0xFF14532D) : const Color(0xFFDCFCE7))
+                                      : (isDark ? const Color(0xFF1E3A8A) : const Color(0xFFDBEAFE)),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Text(
+                                  currentTask.dualProgressText,
+                                  style: TextStyle(
+                                    fontFamily: 'Sniglet',
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: currentTask.completed
+                                        ? const Color(0xFF16A34A)
+                                        : const Color(0xFF2563EB),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ],
                     ),
                   ),
