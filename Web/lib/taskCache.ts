@@ -5,6 +5,8 @@ export interface CachedTask {
   description?: string;
   completed: boolean;
   dueDate?: string | Date | null;
+  hasTime?: boolean;
+  recurrence?: "none" | "daily" | "weekly" | "monthly" | "yearly";
   priority?: "low" | "medium" | "high";
   category?: string;
   createdAt?: string | Date;

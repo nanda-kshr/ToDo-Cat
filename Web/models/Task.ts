@@ -1,6 +1,7 @@
 import mongoose, { Document, Model, Schema, Types } from "mongoose";
 
 export type TaskPriority = "low" | "medium" | "high";
+export type TaskRecurrence = "none" | "daily" | "weekly" | "monthly" | "yearly";
 
 export interface ITask extends Document {
   userId: Types.ObjectId;
@@ -8,6 +9,8 @@ export interface ITask extends Document {
   description?: string;
   completed: boolean;
   dueDate?: Date | null;
+  hasTime?: boolean;
+  recurrence?: TaskRecurrence;
   priority: TaskPriority;
   category: string;
   createdAt: Date;
@@ -40,6 +43,16 @@ const TaskSchema = new Schema<ITask>(
     dueDate: {
       type: Date,
       default: null,
+      index: true,
+    },
+    hasTime: {
+      type: Boolean,
+      default: false,
+    },
+    recurrence: {
+      type: String,
+      enum: ["none", "daily", "weekly", "monthly", "yearly"],
+      default: "none",
       index: true,
     },
     priority: {

@@ -20,6 +20,8 @@ export interface TaskItem {
   description?: string;
   completed: boolean;
   dueDate?: string | null;
+  hasTime?: boolean;
+  recurrence?: string;
   priority: TaskPriority;
   category: string;
   createdAt: string;
@@ -56,13 +58,21 @@ function isUpcomingDate(dateStr: string): boolean {
 }
 
 // Format date for display
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string, hasTime?: boolean): string {
   const d = new Date(dateStr);
-  return d.toLocaleDateString(undefined, {
+  const datePart = d.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
     year: d.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
   });
+  if (hasTime) {
+    const timePart = d.toLocaleTimeString(undefined, {
+      hour: "numeric",
+      minute: "2-digit",
+    });
+    return `${datePart}, ${timePart}`;
+  }
+  return datePart;
 }
 
 function DashboardContent() {
@@ -86,6 +96,9 @@ function DashboardContent() {
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formDueDate, setFormDueDate] = useState("");
+  const [formHasTime, setFormHasTime] = useState(false);
+  const [formTime, setFormTime] = useState("");
+  const [formRecurrence, setFormRecurrence] = useState("none");
   const [formPriority, setFormPriority] = useState<TaskPriority>("medium");
   const [formCategory, setFormCategory] = useState("General");
   const [formSubmitting, setFormSubmitting] = useState(false);
@@ -233,6 +246,9 @@ function DashboardContent() {
     setFormTitle("");
     setFormDescription("");
     setFormDueDate("");
+    setFormHasTime(false);
+    setFormTime("");
+    setFormRecurrence("none");
     setFormPriority("medium");
     setFormCategory("General");
     setFormError(null);
@@ -244,7 +260,27 @@ function DashboardContent() {
     setEditingTaskId(task._id);
     setFormTitle(task.title);
     setFormDescription(task.description || "");
-    setFormDueDate(task.dueDate ? task.dueDate.split("T")[0] : "");
+    if (task.dueDate) {
+      const d = new Date(task.dueDate);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      setFormDueDate(`${yyyy}-${mm}-${dd}`);
+      if (task.hasTime) {
+        const hh = String(d.getHours()).padStart(2, "0");
+        const min = String(d.getMinutes()).padStart(2, "0");
+        setFormTime(`${hh}:${min}`);
+        setFormHasTime(true);
+      } else {
+        setFormTime("");
+        setFormHasTime(false);
+      }
+    } else {
+      setFormDueDate("");
+      setFormTime("");
+      setFormHasTime(false);
+    }
+    setFormRecurrence(task.recurrence || "none");
     setFormPriority(task.priority);
     setFormCategory(task.category || "General");
     setFormError(null);
@@ -262,10 +298,21 @@ function DashboardContent() {
     setFormSubmitting(true);
     setFormError(null);
 
+    let finalDueDate: string | null = null;
+    if (formDueDate) {
+      if (formHasTime && formTime) {
+        finalDueDate = new Date(`${formDueDate}T${formTime}:00`).toISOString();
+      } else {
+        finalDueDate = new Date(`${formDueDate}T00:00:00`).toISOString();
+      }
+    }
+
     const payload = {
       title: formTitle.trim(),
       description: formDescription.trim(),
-      dueDate: formDueDate ? new Date(formDueDate).toISOString() : null,
+      dueDate: finalDueDate,
+      hasTime: formHasTime && Boolean(formTime),
+      recurrence: formRecurrence,
       priority: formPriority,
       category: formCategory.trim() || "General",
     };
@@ -709,11 +756,21 @@ function DashboardContent() {
                           </svg>
                           <span>
                             {isDueOverdue
-                              ? `Overdue (${formatDate(task.dueDate!)})`
+                              ? `Overdue (${formatDate(task.dueDate!, task.hasTime)})`
                               : isDueToday
-                              ? "Due Today"
-                              : formatDate(task.dueDate!)}
+                              ? (task.hasTime ? `Due Today, ${new Date(task.dueDate!).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}` : "Due Today")
+                              : formatDate(task.dueDate!, task.hasTime)}
                           </span>
+                        </span>
+                      )}
+
+                      {/* Recurrence Badge */}
+                      {task.recurrence && task.recurrence !== "none" && (
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-300 border border-neutral-700 flex items-center gap-1">
+                          <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          <span className="capitalize">{task.recurrence}</span>
                         </span>
                       )}
                     </div>
@@ -823,18 +880,45 @@ function DashboardContent() {
                 />
               </div>
 
-              {/* Due Date & Category Row */}
+              {/* Due Date & Optional Time & Category */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-neutral-300 mb-1">
-                    Due Date
-                  </label>
-                  <input
-                    type="date"
-                    value={formDueDate}
-                    onChange={(e) => setFormDueDate(e.target.value)}
-                    className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-600 transition"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-neutral-300">
+                      Due Date
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (formHasTime) {
+                          setFormHasTime(false);
+                          setFormTime("");
+                        } else {
+                          setFormHasTime(true);
+                          if (!formTime) setFormTime("12:00");
+                        }
+                      }}
+                      className="text-[11px] text-neutral-400 hover:text-white transition"
+                    >
+                      {formHasTime ? "Remove time" : "+ Add time"}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="date"
+                      value={formDueDate}
+                      onChange={(e) => setFormDueDate(e.target.value)}
+                      className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-600 transition"
+                    />
+                    {formHasTime && (
+                      <input
+                        type="time"
+                        value={formTime}
+                        onChange={(e) => setFormTime(e.target.value)}
+                        className="w-32 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white placeholder-neutral-500 focus:outline-none focus:border-neutral-600 transition"
+                      />
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -856,6 +940,35 @@ function DashboardContent() {
                     <option value="Shopping" />
                     <option value="Health" />
                   </datalist>
+                </div>
+              </div>
+
+              {/* Repeat / Recurring */}
+              <div>
+                <label className="block text-xs font-medium text-neutral-300 mb-1.5">
+                  Repeat
+                </label>
+                <div className="grid grid-cols-5 gap-1.5">
+                  {[
+                    { label: "None", value: "none" },
+                    { label: "Daily", value: "daily" },
+                    { label: "Weekly", value: "weekly" },
+                    { label: "Monthly", value: "monthly" },
+                    { label: "Yearly", value: "yearly" },
+                  ].map((r) => (
+                    <button
+                      key={r.value}
+                      type="button"
+                      onClick={() => setFormRecurrence(r.value)}
+                      className={`py-1.5 rounded-xl text-xs font-medium border capitalize transition ${
+                        formRecurrence === r.value
+                          ? "bg-white text-neutral-950 border-white font-semibold"
+                          : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-neutral-200"
+                      }`}
+                    >
+                      {r.label}
+                    </button>
+                  ))}
                 </div>
               </div>
 

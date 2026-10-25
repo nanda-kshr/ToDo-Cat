@@ -38,6 +38,16 @@ export async function PATCH(
       updateData.dueDate = body.dueDate ? new Date(body.dueDate) : null;
     }
 
+    if (body.hasTime !== undefined) {
+      updateData.hasTime = Boolean(body.hasTime);
+    }
+
+    if (body.recurrence !== undefined) {
+      if (["none", "daily", "weekly", "monthly", "yearly"].includes(body.recurrence)) {
+        updateData.recurrence = body.recurrence;
+      }
+    }
+
     if (body.priority !== undefined) {
       if (["low", "medium", "high"].includes(body.priority)) {
         updateData.priority = body.priority;

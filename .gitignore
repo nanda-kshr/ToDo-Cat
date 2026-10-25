@@ -1,0 +1,8 @@
+.env*
+*.env
+*service-account*.json
+*service_account*.json
+google-services*.json
+google-service*.json
+*firebase*.json
+.DS_Store

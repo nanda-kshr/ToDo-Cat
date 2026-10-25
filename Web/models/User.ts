@@ -7,6 +7,7 @@ export interface IUser extends Document {
   googleId?: string;
   avatar?: string;
   refreshTokens: string[];
+  fcmTokens?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,6 +40,10 @@ const UserSchema = new Schema<IUser>(
       type: String,
     },
     refreshTokens: {
+      type: [String],
+      default: [],
+    },
+    fcmTokens: {
       type: [String],
       default: [],
     },

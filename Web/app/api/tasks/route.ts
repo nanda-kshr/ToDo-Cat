@@ -69,11 +69,15 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { title, description, dueDate, priority, category } = body;
+    const { title, description, dueDate, hasTime, recurrence, priority, category } = body;
 
     if (!title || typeof title !== "string" || !title.trim()) {
       return NextResponse.json({ message: "Title is required" }, { status: 400 });
     }
+
+    const validRecurrence = ["none", "daily", "weekly", "monthly", "yearly"].includes(recurrence)
+      ? recurrence
+      : "none";
 
     await connectDB();
     const task = await Task.create({
@@ -81,6 +85,8 @@ export async function POST(request: Request) {
       title: title.trim(),
       description: typeof description === "string" ? description.trim() : "",
       dueDate: dueDate ? new Date(dueDate) : null,
+      hasTime: Boolean(hasTime),
+      recurrence: validRecurrence,
       priority: ["low", "medium", "high"].includes(priority) ? priority : "medium",
       category: typeof category === "string" && category.trim() ? category.trim() : "General",
     });
