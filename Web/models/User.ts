@@ -12,6 +12,7 @@ export interface IUser extends Document {
   resetPasswordOtp?: string;
   resetPasswordExpires?: Date;
   resetPasswordAttempts?: number;
+  isProfilePublic?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -67,11 +68,19 @@ const UserSchema = new Schema<IUser>(
       type: Number,
       default: 0,
     },
+    isProfilePublic: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+if (mongoose.models.User) {
+  delete (mongoose.models as Record<string, unknown>).User;
+}
 
 export const User: Model<IUser> =
   mongoose.models.User || mongoose.model<IUser>("User", UserSchema);

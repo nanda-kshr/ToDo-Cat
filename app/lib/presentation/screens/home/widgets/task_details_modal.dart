@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../models/task.dart';
-import 'task_card_tile.dart';
+import '../../../widgets/app_outlined_icons.dart';
 
 Future<void> showTaskDetailsModal(
   BuildContext context, {
   required Task task,
+  String? currentUserId,
   required List<Task> Function() getTasks,
   required Future<void> Function(Task task) onToggle,
   required Future<void> Function(String taskId) onDelete,
@@ -20,12 +22,13 @@ Future<void> showTaskDetailsModal(
     required String category,
   }) onEdit,
 }) {
+  final palette = AppColors.of(context);
   final isDark = Theme.of(context).brightness == Brightness.dark;
-  final dialogBg = isDark ? const Color(0xFF181818) : Colors.white;
-  final textPrimary = isDark ? Colors.white : const Color(0xFF4B5563);
-  final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
-  final cardBg = isDark ? const Color(0xFF222222) : const Color(0xFFF4F4F5);
-  final cardBorder = isDark ? const Color(0xFF2E2E2E) : const Color(0xFFE4E4E7);
+  final dialogBg = palette.surfaceElevated;
+  final textPrimary = palette.textPrimary;
+  final textSecondary = palette.textSecondary;
+  final cardBg = palette.surface;
+  final cardBorder = palette.cardBorder;
 
   return showModalBottomSheet(
     context: context,
@@ -197,48 +200,61 @@ Future<void> showTaskDetailsModal(
                     child: Column(
                       children: [
                         // Toggle Status Row
-                        InkWell(
-                          onTap: () async {
-                            await onToggle(currentTask);
-                            setModalState(() {});
-                          },
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 24,
-                                height: 24,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(7),
-                                  color: currentTask.completed
-                                      ? (isDark ? Colors.white : const Color(0xFF4B5563))
-                                      : Colors.transparent,
-                                  border: Border.all(
-                                    color: currentTask.completed
-                                        ? Colors.transparent
-                                        : (isDark ? const Color(0xFF3F3F46) : const Color(0xFFD4D4D8)),
-                                    width: 2,
+                        Builder(
+                          builder: (context) {
+                            final isChecked = currentTask.isShared
+                                ? (currentUserId != null && currentTask.completedBy.contains(currentUserId))
+                                : currentTask.completed;
+                            return InkWell(
+                              onTap: () async {
+                                await onToggle(currentTask);
+                                setModalState(() {});
+                              },
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 24,
+                                    height: 24,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(7),
+                                      color: isChecked
+                                          ? (isDark ? Colors.white : const Color(0xFF4B5563))
+                                          : Colors.transparent,
+                                      border: Border.all(
+                                        color: isChecked
+                                            ? Colors.transparent
+                                            : (isDark ? const Color(0xFF3F3F46) : const Color(0xFFD4D4D8)),
+                                        width: 2,
+                                      ),
+                                    ),
+                                    child: isChecked
+                                        ? Icon(
+                                            Icons.check,
+                                            size: 15,
+                                            color: isDark ? Colors.black : Colors.white,
+                                          )
+                                        : null,
                                   ),
-                                ),
-                                child: currentTask.completed
-                                    ? Icon(
-                                        Icons.check,
-                                        size: 15,
-                                        color: isDark ? Colors.black : Colors.white,
-                                      )
-                                    : null,
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    currentTask.completed
+                                        ? 'Completed'
+                                        : (currentTask.isShared && isChecked
+                                            ? 'My part completed (Waiting for friends)'
+                                            : (currentTask.isShared
+                                                ? 'Mark my part complete'
+                                                : 'Mark as completed')),
+                                    style: TextStyle(
+                                      fontFamily: 'Sniglet',
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: textPrimary,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 12),
-                              Text(
-                                currentTask.completed ? 'Completed' : 'Mark as completed',
-                                style: TextStyle(
-                                  fontFamily: 'Sniglet',
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: textPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
+                            );
+                          },
                         ),
 
                         // Due Date row if present
@@ -270,49 +286,162 @@ Future<void> showTaskDetailsModal(
                         // Shared Friends & Dual Completion Row
                         if (currentTask.isShared) ...[
                           Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
                             child: Divider(color: cardBorder, height: 1),
                           ),
-                          Row(
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Icon(
-                                Icons.people_alt_rounded,
-                                size: 16,
-                                color: currentTask.completed ? const Color(0xFF10B981) : const Color(0xFF3B82F6),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  'Shared: ${currentTask.sharedWith.map((f) => f.displayName).join(", ")}',
-                                  style: TextStyle(
-                                    fontFamily: 'Sniglet',
-                                    fontSize: 13,
-                                    color: textPrimary,
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.people_alt_rounded,
+                                        size: 16,
+                                        color: textPrimary,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Participants',
+                                        style: TextStyle(
+                                          fontFamily: 'Sniglet',
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.bold,
+                                          color: textPrimary,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: currentTask.completed
-                                      ? (isDark ? const Color(0xFF14532D) : const Color(0xFFDCFCE7))
-                                      : (isDark ? const Color(0xFF1E3A8A) : const Color(0xFFDBEAFE)),
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Text(
-                                  currentTask.dualProgressText,
-                                  style: TextStyle(
-                                    fontFamily: 'Sniglet',
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: currentTask.completed
-                                        ? const Color(0xFF16A34A)
-                                        : const Color(0xFF2563EB),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE5E7EB),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: Text(
+                                      currentTask.dualProgressText,
+                                      style: TextStyle(
+                                        fontFamily: 'Sniglet',
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: textPrimary,
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
+                              const SizedBox(height: 10),
+                              ...currentTask.allParticipants.map((person) {
+                                final isDone = currentTask.completedBy.contains(person.id);
+                                final isCreator = currentTask.creator != null && currentTask.creator!.id == person.id;
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 6),
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? const Color(0xFF1C1C1C) : Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: cardBorder),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 14,
+                                        backgroundColor: isDark ? const Color(0xFF333333) : const Color(0xFFE5E7EB),
+                                        backgroundImage: person.avatar != null && person.avatar!.isNotEmpty
+                                            ? NetworkImage(person.avatar!)
+                                            : null,
+                                        child: person.avatar == null || person.avatar!.isEmpty
+                                            ? Text(
+                                                person.displayName.isNotEmpty ? person.displayName[0].toUpperCase() : '?',
+                                                style: TextStyle(
+                                                  fontFamily: 'Sniglet',
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 11,
+                                                  color: textPrimary,
+                                                ),
+                                              )
+                                            : null,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Flexible(
+                                                  child: Text(
+                                                    person.displayName,
+                                                    style: TextStyle(
+                                                      fontFamily: 'Sniglet',
+                                                      fontSize: 13,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: textPrimary,
+                                                    ),
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                if (currentUserId != null && person.id == currentUserId) ...[
+                                                  const SizedBox(width: 6),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                                    decoration: BoxDecoration(
+                                                      color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE5E7EB),
+                                                      borderRadius: BorderRadius.circular(6),
+                                                    ),
+                                                    child: Text(
+                                                      'You',
+                                                      style: TextStyle(
+                                                        fontFamily: 'Sniglet',
+                                                        fontSize: 10,
+                                                        fontWeight: FontWeight.bold,
+                                                        color: textPrimary,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                                if (isCreator) ...[
+                                                  const SizedBox(width: 6),
+                                                  Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                                    decoration: BoxDecoration(
+                                                      color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFF3F4F6),
+                                                      borderRadius: BorderRadius.circular(6),
+                                                    ),
+                                                    child: Text(
+                                                      'Creator',
+                                                      style: TextStyle(
+                                                        fontFamily: 'Sniglet',
+                                                        fontSize: 10,
+                                                        color: textSecondary,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                            if (person.email.isNotEmpty)
+                                              Text(
+                                                person.email,
+                                                style: TextStyle(
+                                                  fontFamily: 'Sniglet',
+                                                  fontSize: 11,
+                                                  color: textSecondary,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      TaskStatusBadge(isDone: isDone),
+                                    ],
+                                  ),
+                                );
+                              }),
                             ],
                           ),
                         ],
@@ -325,8 +454,9 @@ Future<void> showTaskDetailsModal(
                   // Delete Task Button
                   OutlinedButton.icon(
                     onPressed: () async {
+                      final taskId = currentTask.id;
                       Navigator.pop(ctx);
-                      await onDelete(currentTask.id);
+                      await onDelete(taskId);
                     },
                     icon: const Icon(Icons.delete_outline, size: 20, color: Color(0xFFDC2626)),
                     label: const Text(
@@ -894,30 +1024,21 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
                 ),
                 Row(
                   children: [
-                    _PriorityPill(
-                      label: 'Low',
+                    PriorityChoicePill(
                       value: 'low',
                       current: _selectedPriority,
-                      bgColor: isDark ? const Color(0xFF14291B) : const Color(0xFFE8F5E9),
-                      textColor: isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A),
                       onTap: () => setState(() => _selectedPriority = 'low'),
                     ),
-                    const SizedBox(width: 6),
-                    _PriorityPill(
-                      label: 'Med',
+                    const SizedBox(width: 8),
+                    PriorityChoicePill(
                       value: 'medium',
                       current: _selectedPriority,
-                      bgColor: isDark ? const Color(0xFF382C13) : const Color(0xFFFEF3C7),
-                      textColor: isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
                       onTap: () => setState(() => _selectedPriority = 'medium'),
                     ),
-                    const SizedBox(width: 6),
-                    _PriorityPill(
-                      label: 'High',
+                    const SizedBox(width: 8),
+                    PriorityChoicePill(
                       value: 'high',
                       current: _selectedPriority,
-                      bgColor: isDark ? const Color(0xFF381A1A) : const Color(0xFFFEE2E2),
-                      textColor: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
                       onTap: () => setState(() => _selectedPriority = 'high'),
                     ),
                   ],
@@ -993,50 +1114,6 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _PriorityPill extends StatelessWidget {
-  final String label;
-  final String value;
-  final String current;
-  final Color bgColor;
-  final Color textColor;
-  final VoidCallback onTap;
-
-  const _PriorityPill({
-    required this.label,
-    required this.value,
-    required this.current,
-    required this.bgColor,
-    required this.textColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isSel = current == value;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(16),
-          border: isSel ? Border.all(color: textColor, width: 1.5) : null,
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Sniglet',
-            fontSize: 13,
-            fontWeight: isSel ? FontWeight.bold : FontWeight.w600,
-            color: textColor,
-          ),
         ),
       ),
     );

@@ -7,6 +7,7 @@ interface FriendUser {
   name?: string;
   email: string;
   avatar?: string;
+  isProfilePublic?: boolean;
 }
 
 interface FriendItem {
@@ -220,7 +221,7 @@ export default function FriendsView({ authFetch, onCountUpdate }: FriendsViewPro
       });
       const data = await res.json();
       if (res.ok) {
-        setModalFeedback({ text: data.message || "Friend request sent!" });
+        setModalFeedback({ text: data.message || "Request sent 🐾" });
         setSearchResults((prev) =>
           prev.map((u) => (u.email === email ? { ...u, friendshipStatus: "pending_sent" } : u))
         );
@@ -291,7 +292,7 @@ export default function FriendsView({ authFetch, onCountUpdate }: FriendsViewPro
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => handleAcceptRequest(req.friendshipId)}
-                      className="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                      className="bg-white hover:bg-neutral-200 text-neutral-950 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
                     >
                       Accept
                     </button>
@@ -402,7 +403,7 @@ export default function FriendsView({ authFetch, onCountUpdate }: FriendsViewPro
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="text-xs font-semibold text-white truncate">{displayName}</p>
-                          <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded font-medium">
+                          <span className="text-[10px] text-neutral-300 bg-neutral-800 border border-neutral-700/60 px-2 py-0.5 rounded-md font-medium">
                             Friend
                           </span>
                         </div>
@@ -479,13 +480,14 @@ export default function FriendsView({ authFetch, onCountUpdate }: FriendsViewPro
             <div className="mt-4 space-y-4">
               {modalFeedback && (
                 <div
-                  className={`p-2.5 rounded-xl text-xs ${
+                  className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
                     modalFeedback.error
                       ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                      : "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                      : "bg-neutral-800 text-neutral-200 border border-neutral-700"
                   }`}
                 >
-                  {modalFeedback.text}
+                  <span>{modalFeedback.error ? "⚠️" : "🐾"}</span>
+                  <span>{modalFeedback.text}</span>
                 </div>
               )}
 
@@ -526,8 +528,8 @@ export default function FriendsView({ authFetch, onCountUpdate }: FriendsViewPro
 
                       <div className="shrink-0">
                         {user.friendshipStatus === "accepted" ? (
-                          <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded font-medium">
-                            Friends
+                          <span className="text-[10px] text-neutral-300 bg-neutral-800 border border-neutral-700/60 px-2 py-0.5 rounded-md font-medium">
+                            Friends 🐾
                           </span>
                         ) : user.friendshipStatus === "pending_sent" ? (
                           <span className="text-[10px] text-neutral-400 bg-neutral-800 px-2 py-0.5 rounded font-medium">

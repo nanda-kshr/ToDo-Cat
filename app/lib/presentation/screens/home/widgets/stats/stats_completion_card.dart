@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/theme/app_colors.dart';
 import '../../../../../models/analytics.dart';
 
 class StatsCompletionCard extends StatelessWidget {
@@ -11,11 +12,7 @@ class StatsCompletionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF171717) : Colors.white;
-    final cardBorder = isDark ? const Color(0xFF262626) : const Color(0xFFE5E7EB);
-    final textPrimary = isDark ? Colors.white : const Color(0xFF4B5563);
-    final textSecondary = isDark ? const Color(0xFFA3A3A3) : const Color(0xFF9CA3AF);
+    final palette = AppColors.of(context);
 
     return Column(
       children: [
@@ -23,16 +20,16 @@ class StatsCompletionCard extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: cardBg,
+            color: palette.surface,
             borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: cardBorder),
+            border: Border.all(color: palette.cardBorder),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Completion Rate',
-                style: TextStyle(fontFamily: 'Sniglet', color: textSecondary, fontSize: 13),
+                style: TextStyle(fontFamily: 'Sniglet', color: palette.textSecondary, fontSize: 13),
               ),
               const SizedBox(height: 4),
               Text(
@@ -41,7 +38,7 @@ class StatsCompletionCard extends StatelessWidget {
                   fontFamily: 'Sniglet',
                   fontSize: 36,
                   fontWeight: FontWeight.w900,
-                  color: textPrimary,
+                  color: palette.textPrimary,
                 ),
               ),
               const SizedBox(height: 10),
@@ -50,10 +47,8 @@ class StatsCompletionCard extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: (summary.total == 0 ? 0.0 : (summary.completed / summary.total)).clamp(0.0, 1.0),
                   minHeight: 10,
-                  backgroundColor: isDark ? const Color(0xFF282828) : const Color(0xFFE5E7EB),
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    isDark ? Colors.white : const Color(0xFF4B5563),
-                  ),
+                  backgroundColor: palette.cardBorder,
+                  valueColor: AlwaysStoppedAnimation<Color>(palette.iconPrimary),
                 ),
               ),
               const SizedBox(height: 12),
@@ -62,11 +57,11 @@ class StatsCompletionCard extends StatelessWidget {
                 children: [
                   Text(
                     '${summary.completed} completed',
-                    style: TextStyle(fontFamily: 'Sniglet', color: textSecondary, fontSize: 12),
+                    style: TextStyle(fontFamily: 'Sniglet', color: palette.textSecondary, fontSize: 12),
                   ),
                   Text(
                     '${summary.pending} pending',
-                    style: TextStyle(fontFamily: 'Sniglet', color: textSecondary, fontSize: 12),
+                    style: TextStyle(fontFamily: 'Sniglet', color: palette.textSecondary, fontSize: 12),
                   ),
                 ],
               ),
@@ -78,11 +73,32 @@ class StatsCompletionCard extends StatelessWidget {
         // 3 Metric Cards: Total, Done, Active
         Row(
           children: [
-            _StatMetricCard(label: 'Total', value: '${summary.total}', cardBg: cardBg, cardBorder: cardBorder, textPrimary: textPrimary, textSecondary: textSecondary),
+            _StatMetricCard(
+              label: 'Total',
+              value: '${summary.total}',
+              cardBg: palette.surface,
+              cardBorder: palette.cardBorder,
+              textPrimary: palette.textPrimary,
+              textSecondary: palette.textSecondary,
+            ),
             const SizedBox(width: 8),
-            _StatMetricCard(label: 'Done', value: '${summary.completed}', cardBg: cardBg, cardBorder: cardBorder, textPrimary: textPrimary, textSecondary: textSecondary),
+            _StatMetricCard(
+              label: 'Done',
+              value: '${summary.completed}',
+              cardBg: palette.surface,
+              cardBorder: palette.cardBorder,
+              textPrimary: palette.textPrimary,
+              textSecondary: palette.textSecondary,
+            ),
             const SizedBox(width: 8),
-            _StatMetricCard(label: 'Active', value: '${summary.pending}', cardBg: cardBg, cardBorder: cardBorder, textPrimary: textPrimary, textSecondary: textSecondary),
+            _StatMetricCard(
+              label: 'Active',
+              value: '${summary.pending}',
+              cardBg: palette.surface,
+              cardBorder: palette.cardBorder,
+              textPrimary: palette.textPrimary,
+              textSecondary: palette.textSecondary,
+            ),
           ],
         ),
       ],
@@ -120,21 +136,21 @@ class _StatMetricCard extends StatelessWidget {
         child: Column(
           children: [
             Text(
-              value,
-              style: TextStyle(
-                fontFamily: 'Sniglet',
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: textPrimary,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
               label,
               style: TextStyle(
                 fontFamily: 'Sniglet',
                 fontSize: 12,
                 color: textSecondary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: TextStyle(
+                fontFamily: 'Sniglet',
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: textPrimary,
               ),
             ),
           ],

@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import { Task } from "@/models/Task";
 import { getUserFromRequest } from "@/lib/auth";
 import { getCachedTasks } from "@/lib/taskCache";
+import mongoose from "mongoose";
 
 export async function GET(request: Request) {
   try {
@@ -12,6 +13,54 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url);
+    const friendId = searchParams.get("friendId");
+    let targetUserId = payload.userId;
+    let friendInfo: { _id: string; name?: string; email: string; avatar?: string; isProfilePublic: boolean } | null = null;
+
+    if (friendId && friendId !== payload.userId) {
+      await connectDB();
+      const { Friendship } = await import("@/models/Friendship");
+      const { User } = await import("@/models/User");
+      const currentObjId = new mongoose.Types.ObjectId(payload.userId);
+      const friendObjId = new mongoose.Types.ObjectId(friendId);
+
+      const friendship = await Friendship.findOne({
+        $or: [
+          { requester: currentObjId, recipient: friendObjId },
+          { requester: friendObjId, recipient: currentObjId },
+        ],
+        status: "accepted",
+      });
+
+      if (!friendship) {
+        return NextResponse.json(
+          { message: "You are not friends with this user" },
+          { status: 403 }
+        );
+      }
+
+      const friendUser = await User.findById(friendId);
+      if (!friendUser) {
+        return NextResponse.json({ message: "Friend not found" }, { status: 404 });
+      }
+
+      if (!friendUser.isProfilePublic) {
+        return NextResponse.json(
+          { message: "This friend's stats are private", isProfilePublic: false },
+          { status: 403 }
+        );
+      }
+
+      targetUserId = friendId;
+      friendInfo = {
+        _id: friendUser._id.toString(),
+        name: friendUser.name,
+        email: friendUser.email,
+        avatar: friendUser.avatar,
+        isProfilePublic: true,
+      };
+    }
+
     const fromParam = searchParams.get("from") || searchParams.get("startDate");
     const toParam = searchParams.get("to") || searchParams.get("endDate");
     const period = searchParams.get("period")?.toLowerCase();
@@ -74,8 +123,8 @@ export async function GET(request: Request) {
     let tasks: TaskLike[] = [];
     let cacheHit = false;
 
-    // Use task cache if no custom date filter is active and cache is available
-    if (!hasDateFilter) {
+    // Use task cache for self if no custom date filter is active and cache is available
+    if (!hasDateFilter && targetUserId === payload.userId) {
       const cached = getCachedTasks(payload.userId);
       if (cached) {
         tasks = cached as TaskLike[];
@@ -85,7 +134,7 @@ export async function GET(request: Request) {
 
     if (!cacheHit) {
       await connectDB();
-      const filter: Record<string, unknown> = { userId: payload.userId };
+      const filter: Record<string, unknown> = { userId: targetUserId };
 
       if (hasDateFilter) {
         const dateCondition: Record<string, Date> = {};
@@ -213,6 +262,7 @@ export async function GET(request: Request) {
           noDueDate,
         },
         completionTrend,
+        friend: friendInfo,
       },
       { headers: { "X-Cache": cacheHit ? "HIT" : "MISS" } }
     );

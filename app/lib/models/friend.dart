@@ -5,6 +5,7 @@ class FriendUser {
   final String? avatar;
   final String friendshipStatus; // 'none', 'accepted', 'pending_sent', 'pending_received'
   final String? friendshipId;
+  final bool isProfilePublic;
 
   const FriendUser({
     required this.id,
@@ -13,6 +14,7 @@ class FriendUser {
     this.avatar,
     this.friendshipStatus = 'none',
     this.friendshipId,
+    this.isProfilePublic = false,
   });
 
   factory FriendUser.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,7 @@ class FriendUser {
       avatar: json['avatar'],
       friendshipStatus: json['friendshipStatus'] ?? 'none',
       friendshipId: json['friendshipId']?.toString(),
+      isProfilePublic: json['isProfilePublic'] == true,
     );
   }
 

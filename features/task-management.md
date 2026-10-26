@@ -13,9 +13,9 @@ last_updated: 2026-10-25
 Allows users to create, view, edit, filter, and complete tasks with rich scheduling attributes:
 - **Deadline Handling**: Defaults to `null` (no deadline). Can be set with optional specific time of day.
 - **Recurrence**: Supports `none`, `daily`, `weekly`, `monthly`, and `yearly` recurrences via popup dropdowns.
-- **Priority**: Categorized as `low`, `medium`, or `high`.
+- **Priority**: Categorized as `low`, `medium`, or `high`, rendered visually as custom outlined SVG art (flame, balance bars, calm chevron) with no text.
 - **Category**: Custom category labels (e.g. `General`, `Work`, `Personal`).
-- **Completion**: Fast toggle with instant UI feedback and cat animation triggers.
+- **Completion**: Fast toggle with instant UI feedback, textless outlined SVG status indicators (`Completed`, `Pending`), and cat animation triggers.
 
 ## Components & Architecture
 - **Web Backend**:

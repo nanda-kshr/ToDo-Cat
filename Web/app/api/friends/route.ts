@@ -33,8 +33,8 @@ export async function GET(request: Request) {
       $or: [{ requester: currentUserId }, { recipient: currentUserId }],
       status: { $in: ["accepted", "pending"] },
     })
-      .populate("requester", "_id name email avatar")
-      .populate("recipient", "_id name email avatar")
+      .populate("requester", "_id name email avatar isProfilePublic")
+      .populate("recipient", "_id name email avatar isProfilePublic")
       .sort({ updatedAt: -1 });
 
     let allFriends: any[] = [];
@@ -211,7 +211,7 @@ export async function POST(request: Request) {
       senderEmail: currentUser.email,
     }).catch(() => {});
 
-    return NextResponse.json({ message: "Friend request sent successfully" });
+    return NextResponse.json({ message: "Request sent 🐾" });
   } catch (error) {
     console.error("[Friends POST] Error:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });

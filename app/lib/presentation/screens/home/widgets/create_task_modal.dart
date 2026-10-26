@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../models/task.dart';
 import '../../../../models/friend.dart';
 import '../../../../services/api_service.dart';
+import '../../../widgets/app_outlined_icons.dart';
 
 Future<void> showCreateTaskModal(
   BuildContext context, {
@@ -170,11 +172,12 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppColors.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final dialogBg = isDark ? const Color(0xFF181818) : Colors.white;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF4B5563);
-    final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
-    final inputBg = isDark ? const Color(0xFF222222) : const Color(0xFFF4F4F5);
+    final dialogBg = palette.surfaceElevated;
+    final textPrimary = palette.textPrimary;
+    final textSecondary = palette.textSecondary;
+    final inputBg = palette.inputBg;
     final badgeBg = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE4E4E7);
 
     return Dialog(
@@ -576,30 +579,21 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                 ),
                 Row(
                   children: [
-                    PriorityPill(
-                      label: 'Low',
+                    PriorityChoicePill(
                       value: 'low',
                       current: _selectedPriority,
-                      bgColor: isDark ? const Color(0xFF14291B) : const Color(0xFFE8F5E9),
-                      textColor: isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A),
                       onTap: () => setState(() => _selectedPriority = 'low'),
                     ),
-                    const SizedBox(width: 6),
-                    PriorityPill(
-                      label: 'Medium',
+                    const SizedBox(width: 8),
+                    PriorityChoicePill(
                       value: 'medium',
                       current: _selectedPriority,
-                      bgColor: isDark ? const Color(0xFF382C13) : const Color(0xFFFEF3C7),
-                      textColor: isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
                       onTap: () => setState(() => _selectedPriority = 'medium'),
                     ),
-                    const SizedBox(width: 6),
-                    PriorityPill(
-                      label: 'High',
+                    const SizedBox(width: 8),
+                    PriorityChoicePill(
                       value: 'high',
                       current: _selectedPriority,
-                      bgColor: isDark ? const Color(0xFF381A1A) : const Color(0xFFFEE2E2),
-                      textColor: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
                       onTap: () => setState(() => _selectedPriority = 'high'),
                     ),
                   ],
@@ -851,51 +845,6 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class PriorityPill extends StatelessWidget {
-  final String label;
-  final String value;
-  final String current;
-  final Color bgColor;
-  final Color textColor;
-  final VoidCallback onTap;
-
-  const PriorityPill({
-    super.key,
-    required this.label,
-    required this.value,
-    required this.current,
-    required this.bgColor,
-    required this.textColor,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isSel = current == value;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: bgColor,
-          borderRadius: BorderRadius.circular(16),
-          border: isSel ? Border.all(color: textColor, width: 1.5) : null,
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Sniglet',
-            fontSize: 13,
-            fontWeight: isSel ? FontWeight.bold : FontWeight.w600,
-            color: textColor,
-          ),
         ),
       ),
     );

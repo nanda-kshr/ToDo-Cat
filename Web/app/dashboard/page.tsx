@@ -5,6 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import CatAnimation from "@/components/CatAnimation";
 import FriendsView from "@/components/FriendsView";
+import {
+  TaskPriorityBadge,
+  TaskStatusBadge,
+  PriorityHighIcon,
+  PriorityMediumIcon,
+  PriorityLowIcon,
+} from "@/components/icons/AppIcons";
 
 interface UserProfile {
   id: string;
@@ -15,8 +22,16 @@ interface UserProfile {
 
 export type TaskPriority = "low" | "medium" | "high";
 
+export interface TaskParticipant {
+  _id: string;
+  name?: string;
+  email: string;
+  avatar?: string;
+}
+
 export interface TaskItem {
   _id: string;
+  userId?: TaskParticipant | string;
   title: string;
   description?: string;
   completed: boolean;
@@ -25,6 +40,8 @@ export interface TaskItem {
   recurrence?: string;
   priority: TaskPriority;
   category: string;
+  sharedWith?: TaskParticipant[];
+  completedBy?: (TaskParticipant | string)[];
   createdAt: string;
   updatedAt: string;
 }
@@ -94,6 +111,7 @@ function DashboardContent() {
 
   // Modal State (Create / Edit)
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedSharedTask, setSelectedSharedTask] = useState<TaskItem | null>(null);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -213,30 +231,32 @@ function DashboardContent() {
 
   // Toggle complete
   const handleToggleComplete = async (task: TaskItem) => {
-    const nextCompleted = !task.completed;
-    // Optimistic update
-    setTasks((prev) =>
-      prev.map((t) => (t._id === task._id ? { ...t, completed: nextCompleted } : t))
+    const isShared = Boolean(task.sharedWith && task.sharedWith.length > 0);
+    const myId = user?.id || "";
+    const completedByStrings = (task.completedBy || []).map((u: any) =>
+      typeof u === "string" ? u : u._id?.toString()
     );
+    const myCompleted = completedByStrings.includes(myId);
+    const willComplete = isShared ? !myCompleted : !task.completed;
 
     try {
       const res = await authFetch(`/api/tasks/${task._id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ completed: nextCompleted }),
+        body: JSON.stringify({ completed: willComplete }),
       });
 
-      if (!res.ok) {
-        // Rollback
-        setTasks((prev) =>
-          prev.map((t) => (t._id === task._id ? { ...t, completed: task.completed } : t))
-        );
+      if (res.ok) {
+        const data = await res.json();
+        if (data.task) {
+          setTasks((prev) => prev.map((t) => (t._id === task._id ? data.task : t)));
+          if (selectedSharedTask && selectedSharedTask._id === task._id) {
+            setSelectedSharedTask(data.task);
+          }
+        }
       }
-    } catch {
-      // Rollback
-      setTasks((prev) =>
-        prev.map((t) => (t._id === task._id ? { ...t, completed: task.completed } : t))
-      );
+    } catch (err) {
+      console.error("Failed to toggle task:", err);
     }
   };
 
@@ -734,18 +754,8 @@ function DashboardContent() {
                         {task.title}
                       </span>
 
-                      {/* Priority Badge */}
-                      <span
-                        className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${
-                          task.priority === "high"
-                            ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
-                            : task.priority === "medium"
-                            ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
-                            : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                        }`}
-                      >
-                        {task.priority.toUpperCase()}
-                      </span>
+                      {/* Priority Badge: Outlined SVG art, no text */}
+                      <TaskPriorityBadge priority={task.priority} />
 
                       {/* Category Badge */}
                       {task.category && (
@@ -794,6 +804,28 @@ function DashboardContent() {
                           <span className="capitalize">{task.recurrence}</span>
                         </span>
                       )}
+
+                      {/* Shared Task Badge: x/y completed the task */}
+                      {task.sharedWith && task.sharedWith.length > 0 && (() => {
+                        const total = 1 + task.sharedWith.length;
+                        const doneCount = task.completedBy ? task.completedBy.length : 0;
+                        return (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedSharedTask(task);
+                            }}
+                            className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-200 border border-neutral-700 hover:border-neutral-500 flex items-center gap-1.5 transition"
+                            title="Click to view participants completion"
+                          >
+                            <svg className="w-3 h-3 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            <span>{doneCount}/{total} done</span>
+                          </button>
+                        );
+                      })()}
                     </div>
 
                     {task.description && (
@@ -1005,17 +1037,20 @@ function DashboardContent() {
                       key={p}
                       type="button"
                       onClick={() => setFormPriority(p)}
-                      className={`py-2 rounded-xl text-xs font-medium border capitalize transition ${
+                      className={`py-2 px-3 rounded-xl text-xs font-medium border capitalize flex items-center justify-center gap-1.5 transition ${
                         formPriority === p
                           ? p === "high"
                             ? "bg-rose-500/20 border-rose-500/50 text-rose-300"
                             : p === "medium"
                             ? "bg-amber-500/20 border-amber-500/50 text-amber-300"
-                            : "bg-emerald-500/20 border-emerald-500/50 text-emerald-300"
+                            : "bg-teal-500/20 border-teal-500/50 text-teal-300"
                           : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-neutral-200"
                       }`}
                     >
-                      {p}
+                      {p === "high" && <PriorityHighIcon size={14} />}
+                      {p === "medium" && <PriorityMediumIcon size={14} />}
+                      {p === "low" && <PriorityLowIcon size={14} />}
+                      <span>{p}</span>
                     </button>
                   ))}
                 </div>
@@ -1046,6 +1081,134 @@ function DashboardContent() {
           </div>
         </div>
       )}
+
+      {/* Shared Task Details Modal */}
+      {selectedSharedTask && (() => {
+        const creator: TaskParticipant =
+          typeof selectedSharedTask.userId === "object" && selectedSharedTask.userId !== null
+            ? (selectedSharedTask.userId as TaskParticipant)
+            : { _id: (selectedSharedTask.userId as string) || "", email: "Task Creator" };
+
+        const allParticipants: { person: TaskParticipant; isCreator: boolean }[] = [];
+        if (creator._id) {
+          allParticipants.push({ person: creator, isCreator: true });
+        }
+        for (const s of selectedSharedTask.sharedWith || []) {
+          if (!allParticipants.some((p) => p.person._id === s._id)) {
+            allParticipants.push({ person: s, isCreator: false });
+          }
+        }
+
+        const completedIds = (selectedSharedTask.completedBy || []).map((u: any) =>
+          typeof u === "string" ? u : u._id?.toString()
+        );
+        const total = 1 + (selectedSharedTask.sharedWith || []).length;
+        const doneCount = completedIds.length;
+        const myId = user?.id || "";
+        const isMyDone = completedIds.includes(myId);
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl w-full max-w-md p-6 shadow-2xl relative">
+              <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
+                <div className="min-w-0 pr-3">
+                  <h3 className="text-base font-bold text-white truncate">
+                    {selectedSharedTask.title}
+                  </h3>
+                  <p className="text-xs text-neutral-400 mt-0.5">
+                    {doneCount}/{total} done
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedSharedTask(null)}
+                  className="text-neutral-500 hover:text-neutral-300 p-1 rounded-lg"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {selectedSharedTask.description && (
+                <p className="text-xs text-neutral-300 mt-3 whitespace-pre-wrap bg-neutral-950 p-3 rounded-xl border border-neutral-800">
+                  {selectedSharedTask.description}
+                </p>
+              )}
+
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-semibold text-neutral-300">Participants Completion</span>
+                  <span className="text-[11px] text-neutral-500">
+                    {selectedSharedTask.completed ? "Task Complete ✓" : "Task Pending ⏳"}
+                  </span>
+                </div>
+
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {allParticipants.map(({ person, isCreator }) => {
+                    const isDone = completedIds.includes(person._id);
+                    const isMe = person._id === myId;
+                    return (
+                      <div
+                        key={person._id}
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-neutral-950 border border-neutral-800"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-7 h-7 rounded-full bg-neutral-800 flex items-center justify-center text-xs font-bold text-neutral-200 shrink-0">
+                            {person.avatar ? (
+                              <img src={person.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+                            ) : (
+                              (person.name?.[0] || person.email?.[0] || "?").toUpperCase()
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-medium text-white truncate">
+                                {person.name || person.email?.split("@")[0] || "Friend"}
+                              </span>
+                              {isMe && (
+                                <span className="text-[10px] text-neutral-400 bg-neutral-800 px-1.5 py-0.2 rounded">
+                                  You
+                                </span>
+                              )}
+                              {isCreator && (
+                                <span className="text-[10px] text-neutral-500 bg-neutral-800/80 px-1.5 py-0.2 rounded">
+                                  Creator
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-neutral-400 truncate">{person.email}</p>
+                          </div>
+                        </div>
+
+                        <TaskStatusBadge isDone={isDone} />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="mt-5 pt-3 border-t border-neutral-800 flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleToggleComplete(selectedSharedTask)}
+                  className={`px-4 py-2 rounded-xl text-xs font-medium transition ${
+                    isMyDone
+                      ? "bg-neutral-800 hover:bg-neutral-700 text-neutral-300"
+                      : "bg-white hover:bg-neutral-200 text-neutral-950 font-semibold"
+                  }`}
+                >
+                  {isMyDone ? "Mark My Part Incomplete" : "Mark My Part Complete ✓"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedSharedTask(null)}
+                  className="px-3 py-2 rounded-xl text-xs font-medium text-neutral-400 hover:text-white"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

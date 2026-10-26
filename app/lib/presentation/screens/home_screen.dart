@@ -16,8 +16,8 @@ import 'home/widgets/create_task_modal.dart';
 import 'home/widgets/friends_view.dart';
 import 'home/widgets/home_bottom_bar.dart';
 import 'home/widgets/home_tasks_view.dart';
+import 'home/widgets/profile_view.dart';
 import 'home/widgets/settings_modal.dart';
-import 'home/widgets/stats_view.dart';
 import 'home/widgets/task_details_modal.dart';
 import 'home/widgets/widget_choice_dialog.dart';
 import 'login_screen.dart';
@@ -346,27 +346,26 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _toggleTask(Task task) async {
-    final nextCompleted = !task.completed;
-    final now = DateTime.now();
-    setState(() {
-      _tasks = _tasks.map((t) {
-        return t.id == task.id
-            ? t.copyWith(completed: nextCompleted, updatedAt: now)
-            : t;
-      }).toList();
-    });
-    _syncWidget();
+    final myId = _user?.id ?? '';
+    final isMyPartCompleted = myId.isNotEmpty && task.completedBy.contains(myId);
+    final willComplete = task.isShared ? !isMyPartCompleted : !task.completed;
 
     try {
-      await _apiService.toggleTask(task);
-    } catch (e) {
+      final updatedTask = await _apiService.updateTask(
+        task.id,
+        completed: willComplete,
+      );
       if (mounted) {
         setState(() {
-          _tasks = _tasks.map((t) {
-            return t.id == task.id ? t.copyWith(completed: task.completed) : t;
-          }).toList();
+          _tasks = _tasks.map((t) => t.id == task.id ? updatedTask : t).toList();
+          _cachedFiltered = null;
+          _cachedTodayTasks = null;
+          _cachedEarlierTasks = null;
         });
         _syncWidget();
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to update task: $e')),
         );
@@ -377,7 +376,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _deleteTask(String id) async {
     final original = List<Task>.from(_tasks);
     setState(() {
-      _tasks.removeWhere((t) => t.id == id);
+      _tasks = _tasks.where((t) => t.id != id).toList();
+      _cachedFiltered = null;
+      _cachedTodayTasks = null;
+      _cachedEarlierTasks = null;
     });
     _syncWidget();
 
@@ -387,6 +389,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (mounted) {
         setState(() {
           _tasks = original;
+          _cachedFiltered = null;
+          _cachedTodayTasks = null;
+          _cachedEarlierTasks = null;
         });
         _syncWidget();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -517,11 +522,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _logout() async {
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
+    }
     await _apiService.logout();
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
   }
 
   void _showSettingsModal() {
@@ -585,6 +592,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     showTaskDetailsModal(
       context,
       task: task,
+      currentUserId: _user?.id,
       getTasks: () => _tasks,
       onToggle: _toggleTask,
       onDelete: _deleteTask,
@@ -709,6 +717,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         todayTasks: todayTasks,
                         earlierTasks: earlierTasks,
                         isLoadingMore: _isLoadingMore,
+                        currentUserId: _user?.id,
                         onToggleTask: _toggleTask,
                         onTaskTap: _showTaskDetailsModal,
                         onDeleteTask: _deleteTask,
@@ -716,7 +725,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                     TickerMode(
                       enabled: _currentTab == 1,
-                      child: StatsView(
+                      child: ProfileView(
+                        user: _user,
+                        onUserUpdated: (updated) {
+                          setState(() => _user = updated);
+                        },
                         analytics: _analytics,
                         tasks: _tasks,
                         loadingAnalytics: _loadingAnalytics,

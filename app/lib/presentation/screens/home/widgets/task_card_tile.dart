@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../models/task.dart';
+import '../../../widgets/app_outlined_icons.dart';
 
 class TaskCardTile extends StatelessWidget {
   final Task task;
+  final String? currentUserId;
   final VoidCallback onToggle;
   final VoidCallback onTap;
   final VoidCallback onDismissed;
@@ -11,6 +14,7 @@ class TaskCardTile extends StatelessWidget {
   const TaskCardTile({
     super.key,
     required this.task,
+    this.currentUserId,
     required this.onToggle,
     required this.onTap,
     required this.onDismissed,
@@ -18,11 +22,11 @@ class TaskCardTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF171717) : Colors.white;
-    final cardBorder = isDark ? const Color(0xFF262626) : const Color(0xFFE5E7EB);
-    final textPrimary = isDark ? Colors.white : const Color(0xFF4B5563);
-    final textSecondary = isDark ? const Color(0xFFA3A3A3) : const Color(0xFF9CA3AF);
+    final palette = AppColors.of(context);
+
+    final isChecked = task.isShared
+        ? (currentUserId != null && task.completedBy.contains(currentUserId))
+        : task.completed;
 
     final formattedDate = formatDueDate(task.dueDate, hasTime: task.hasTime);
 
@@ -34,7 +38,7 @@ class TaskCardTile extends StatelessWidget {
         padding: const EdgeInsets.only(right: 20),
         alignment: Alignment.centerRight,
         decoration: BoxDecoration(
-          color: const Color(0xFFDC2626),
+          color: palette.priorityHigh,
           borderRadius: BorderRadius.circular(18),
         ),
         child: const Icon(Icons.delete_outline, color: Colors.white, size: 24),
@@ -47,9 +51,9 @@ class TaskCardTile extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           decoration: BoxDecoration(
-            color: cardBg,
+            color: palette.surface,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: cardBorder),
+            border: Border.all(color: palette.cardBorder),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -63,21 +67,21 @@ class TaskCardTile extends StatelessWidget {
                   height: 26,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8),
-                    color: task.completed
-                        ? (isDark ? Colors.white : const Color(0xFF4B5563))
+                    color: isChecked
+                        ? palette.checkboxCheckedBg
                         : Colors.transparent,
                     border: Border.all(
-                      color: task.completed
+                      color: isChecked
                           ? Colors.transparent
-                          : (isDark ? const Color(0xFF3F3F46) : const Color(0xFFD4D4D8)),
+                          : palette.checkboxBorder,
                       width: 2,
                     ),
                   ),
-                  child: task.completed
+                  child: isChecked
                       ? Icon(
                           Icons.check,
                           size: 16,
-                          color: isDark ? Colors.black : Colors.white,
+                          color: palette.checkboxCheckedIcon,
                         )
                       : null,
                 ),
@@ -96,19 +100,24 @@ class TaskCardTile extends StatelessWidget {
                         fontFamily: 'Sniglet',
                         fontSize: 16,
                         fontWeight: FontWeight.normal,
-                        color: task.completed ? textSecondary : textPrimary,
-                        decoration: task.completed ? TextDecoration.lineThrough : null,
+                        color: task.completed
+                            ? palette.textMuted
+                            : palette.textPrimary,
+                        decoration:
+                            task.completed ? TextDecoration.lineThrough : null,
                       ),
                     ),
-                    if (formattedDate.isNotEmpty || task.isRecurring) ...[
-                      const SizedBox(height: 3),
+                    if (formattedDate.isNotEmpty ||
+                        task.isRecurring ||
+                        task.isShared) ...[
+                      const SizedBox(height: 4),
                       Row(
                         children: [
                           if (formattedDate.isNotEmpty) ...[
-                            Icon(
-                              Icons.calendar_today_outlined,
+                            AppOutlinedIcon(
+                              svgString: AppOutlinedSvgStrings.calendar,
                               size: 12,
-                              color: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
+                              color: palette.calendarIcon,
                             ),
                             const SizedBox(width: 4),
                             Text(
@@ -117,46 +126,49 @@ class TaskCardTile extends StatelessWidget {
                                 fontFamily: 'Sniglet',
                                 fontSize: 12,
                                 fontWeight: FontWeight.normal,
-                                color: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
+                                color: palette.calendarText,
                               ),
                             ),
                           ],
                           if (task.isRecurring) ...[
-                            if (formattedDate.isNotEmpty) const SizedBox(width: 8),
-                            Icon(
-                              Icons.repeat_rounded,
+                            if (formattedDate.isNotEmpty)
+                              const SizedBox(width: 8),
+                            AppOutlinedIcon(
+                              svgString: AppOutlinedSvgStrings.recurrence,
                               size: 12,
-                              color: isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                              color: palette.recurrenceIcon,
                             ),
                             const SizedBox(width: 3),
                             Text(
-                              task.recurrence[0].toUpperCase() + task.recurrence.substring(1),
+                              task.recurrence[0].toUpperCase() +
+                                  task.recurrence.substring(1),
                               style: TextStyle(
                                 fontFamily: 'Sniglet',
                                 fontSize: 11,
-                                color: isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A),
+                                color: palette.recurrenceText,
                               ),
                             ),
                           ],
                           if (task.isShared) ...[
-                            if (formattedDate.isNotEmpty || task.isRecurring) const SizedBox(width: 8),
+                            if (formattedDate.isNotEmpty || task.isRecurring)
+                              const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 7, vertical: 2),
                               decoration: BoxDecoration(
-                                color: task.completed
-                                    ? (isDark ? const Color(0xFF14532D) : const Color(0xFFDCFCE7))
-                                    : (isDark ? const Color(0xFF27272A) : const Color(0xFFF3F4F6)),
+                                color: palette.sharedBadgeBg,
                                 borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: palette.sharedBadgeBorder,
+                                ),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(
-                                    Icons.people_alt_rounded,
+                                  AppOutlinedIcon(
+                                    svgString: AppOutlinedSvgStrings.shared,
                                     size: 11,
-                                    color: task.completed
-                                        ? const Color(0xFF16A34A)
-                                        : (isDark ? Colors.white70 : const Color(0xFF4B5563)),
+                                    color: palette.sharedBadgeText,
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
@@ -165,9 +177,7 @@ class TaskCardTile extends StatelessWidget {
                                       fontFamily: 'Sniglet',
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
-                                      color: task.completed
-                                          ? const Color(0xFF16A34A)
-                                          : (isDark ? Colors.white70 : const Color(0xFF4B5563)),
+                                      color: palette.sharedBadgeText,
                                     ),
                                   ),
                                 ],
@@ -182,7 +192,7 @@ class TaskCardTile extends StatelessWidget {
               ),
               const SizedBox(width: 8),
 
-              // Priority Pill Badge
+              // Priority Pill Badge (SVG Outlined Art, No text)
               TaskPriorityBadge(priority: task.priority),
               const SizedBox(width: 6),
 
@@ -190,60 +200,10 @@ class TaskCardTile extends StatelessWidget {
               Icon(
                 Icons.chevron_right,
                 size: 18,
-                color: isDark ? const Color(0xFF52525B) : const Color(0xFFA1A1AA),
+                color: palette.iconMuted,
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class TaskPriorityBadge extends StatelessWidget {
-  final String priority;
-
-  const TaskPriorityBadge({super.key, required this.priority});
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    Color bg;
-    Color fg;
-    String text;
-
-    switch (priority.toLowerCase()) {
-      case 'high':
-        bg = isDark ? const Color(0xFF381A1A) : const Color(0xFFFEE2E2);
-        fg = isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626);
-        text = 'High';
-        break;
-      case 'low':
-        bg = isDark ? const Color(0xFF14291B) : const Color(0xFFE8F5E9);
-        fg = isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A);
-        text = 'Low';
-        break;
-      case 'medium':
-      default:
-        bg = isDark ? const Color(0xFF382C13) : const Color(0xFFFEF3C7);
-        fg = isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706);
-        text = 'Medium';
-        break;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontFamily: 'Sniglet',
-          fontSize: 11,
-          fontWeight: FontWeight.normal,
-          color: fg,
         ),
       ),
     );

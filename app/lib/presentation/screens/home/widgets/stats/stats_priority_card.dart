@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/theme/app_colors.dart';
 import '../../../../../models/analytics.dart';
+import '../../../../widgets/app_outlined_icons.dart';
 
 class StatsPriorityCard extends StatelessWidget {
   final Map<String, PriorityStats> byPriority;
@@ -11,11 +13,7 @@ class StatsPriorityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF171717) : Colors.white;
-    final cardBorder = isDark ? const Color(0xFF262626) : const Color(0xFFE5E7EB);
-    final textPrimary = isDark ? Colors.white : const Color(0xFF4B5563);
-    final textSecondary = isDark ? const Color(0xFFA3A3A3) : const Color(0xFF9CA3AF);
+    final palette = AppColors.of(context);
 
     final high = byPriority['high'] ?? PriorityStats(total: 0, completed: 0, pending: 0);
     final med = byPriority['medium'] ?? PriorityStats(total: 0, completed: 0, pending: 0);
@@ -30,16 +28,16 @@ class StatsPriorityCard extends StatelessWidget {
             fontFamily: 'Sniglet',
             fontSize: 16,
             fontWeight: FontWeight.bold,
-            color: textPrimary,
+            color: palette.textPrimary,
           ),
         ),
         const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: cardBg,
+            color: palette.surface,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: cardBorder),
+            border: Border.all(color: palette.cardBorder),
           ),
           child: Column(
             children: [
@@ -47,27 +45,36 @@ class StatsPriorityCard extends StatelessWidget {
                 label: 'High Priority',
                 count: '${high.total}',
                 subtext: '${high.completed} done · ${high.pending} pending',
-                dotColor: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
-                textPrimary: textPrimary,
-                textSecondary: textSecondary,
+                svgString: AppOutlinedSvgStrings.priorityHigh,
+                iconColor: palette.priorityHigh,
+                bgColor: palette.priorityHighBg,
+                borderColor: palette.priorityHighBorder,
+                textPrimary: palette.textPrimary,
+                textSecondary: palette.textSecondary,
               ),
-              Divider(color: cardBorder, height: 20),
+              Divider(color: palette.cardBorder, height: 20),
               _PriorityStatRow(
                 label: 'Medium Priority',
                 count: '${med.total}',
                 subtext: '${med.completed} done · ${med.pending} pending',
-                dotColor: isDark ? const Color(0xFFFBBF24) : const Color(0xFFD97706),
-                textPrimary: textPrimary,
-                textSecondary: textSecondary,
+                svgString: AppOutlinedSvgStrings.priorityMedium,
+                iconColor: palette.priorityMedium,
+                bgColor: palette.priorityMediumBg,
+                borderColor: palette.priorityMediumBorder,
+                textPrimary: palette.textPrimary,
+                textSecondary: palette.textSecondary,
               ),
-              Divider(color: cardBorder, height: 20),
+              Divider(color: palette.cardBorder, height: 20),
               _PriorityStatRow(
                 label: 'Low Priority',
                 count: '${low.total}',
                 subtext: '${low.completed} done · ${low.pending} pending',
-                dotColor: isDark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A),
-                textPrimary: textPrimary,
-                textSecondary: textSecondary,
+                svgString: AppOutlinedSvgStrings.priorityLow,
+                iconColor: palette.priorityLow,
+                bgColor: palette.priorityLowBg,
+                borderColor: palette.priorityLowBorder,
+                textPrimary: palette.textPrimary,
+                textSecondary: palette.textSecondary,
               ),
             ],
           ),
@@ -81,7 +88,10 @@ class _PriorityStatRow extends StatelessWidget {
   final String label;
   final String count;
   final String subtext;
-  final Color dotColor;
+  final String svgString;
+  final Color iconColor;
+  final Color bgColor;
+  final Color borderColor;
   final Color textPrimary;
   final Color textSecondary;
 
@@ -89,7 +99,10 @@ class _PriorityStatRow extends StatelessWidget {
     required this.label,
     required this.count,
     required this.subtext,
-    required this.dotColor,
+    required this.svgString,
+    required this.iconColor,
+    required this.bgColor,
+    required this.borderColor,
     required this.textPrimary,
     required this.textSecondary,
   });
@@ -102,9 +115,17 @@ class _PriorityStatRow extends StatelessWidget {
         Row(
           children: [
             Container(
-              width: 10,
-              height: 10,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: dotColor),
+              padding: const EdgeInsets.all(5),
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: borderColor, width: 1),
+              ),
+              child: AppOutlinedIcon(
+                svgString: svgString,
+                size: 13,
+                color: iconColor,
+              ),
             ),
             const SizedBox(width: 10),
             Column(

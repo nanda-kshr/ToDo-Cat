@@ -41,8 +41,8 @@ class HomeBottomBar extends StatelessWidget {
           ),
           _NavItem(
             index: 1,
-            icon: Icons.bar_chart_rounded,
-            label: 'Stats',
+            icon: Icons.person_rounded,
+            label: 'Profile',
             isSelected: currentTab == 1,
             onSelected: onTabSelected,
             isDark: isDark,

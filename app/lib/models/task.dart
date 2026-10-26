@@ -11,6 +11,7 @@ class Task {
   final String recurrence;
   final String priority;
   final String category;
+  final FriendUser? creator;
   final List<FriendUser> sharedWith;
   final List<String> completedBy;
   final DateTime? createdAt;
@@ -26,6 +27,7 @@ class Task {
     this.recurrence = 'none',
     this.priority = 'medium',
     this.category = 'General',
+    this.creator,
     this.sharedWith = const [],
     this.completedBy = const [],
     this.createdAt,
@@ -39,6 +41,16 @@ class Task {
         return DateTime.tryParse(val)?.toLocal();
       }
       return null;
+    }
+
+    FriendUser? creatorUser;
+    final rawUserId = json['userId'];
+    if (rawUserId != null) {
+      if (rawUserId is Map<String, dynamic>) {
+        creatorUser = FriendUser.fromJson(rawUserId);
+      } else if (rawUserId is String && rawUserId.isNotEmpty) {
+        creatorUser = FriendUser(id: rawUserId, email: '');
+      }
     }
 
     final rawSharedWith = json['sharedWith'] as List? ?? [];
@@ -67,6 +79,7 @@ class Task {
       recurrence: json['recurrence'] as String? ?? 'none',
       priority: json['priority'] ?? 'medium',
       category: json['category'] ?? 'General',
+      creator: creatorUser,
       sharedWith: sharedWithList,
       completedBy: completedByList,
       createdAt: parseDate(json['createdAt']),
@@ -103,6 +116,7 @@ class Task {
     String? recurrence,
     String? priority,
     String? category,
+    FriendUser? creator,
     List<FriendUser>? sharedWith,
     List<String>? completedBy,
     DateTime? createdAt,
@@ -118,6 +132,7 @@ class Task {
       recurrence: recurrence ?? this.recurrence,
       priority: priority ?? this.priority,
       category: category ?? this.category,
+      creator: creator ?? this.creator,
       sharedWith: sharedWith ?? this.sharedWith,
       completedBy: completedBy ?? this.completedBy,
       createdAt: createdAt ?? this.createdAt,
@@ -129,7 +144,20 @@ class Task {
   bool isCompletedBy(String userId) => completedBy.contains(userId);
   int get totalParticipants => 1 + sharedWith.length;
   int get completedParticipantsCount => completedBy.length;
-  String get dualProgressText => '$completedParticipantsCount/$totalParticipants completed';
+  String get dualProgressText => '$completedParticipantsCount/$totalParticipants done';
+
+  List<FriendUser> get allParticipants {
+    final list = <FriendUser>[];
+    if (creator != null && creator!.id.isNotEmpty) {
+      list.add(creator!);
+    }
+    for (final s in sharedWith) {
+      if (!list.any((u) => u.id == s.id)) {
+        list.add(s);
+      }
+    }
+    return list;
+  }
 
   bool get isRecurring => recurrence.isNotEmpty && recurrence != 'none';
   bool get isToday => date_utils.isToday(dueDate);

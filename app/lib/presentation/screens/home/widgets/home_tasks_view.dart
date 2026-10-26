@@ -1,7 +1,6 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../../../../models/task.dart';
+import 'curvy_dashed_background.dart';
 import 'home_search_filter_bar.dart';
 import 'home_status_banner.dart';
 import 'task_card_tile.dart';
@@ -25,6 +24,7 @@ class HomeTasksView extends StatefulWidget {
   final List<Task> todayTasks;
   final List<Task> earlierTasks;
   final bool isLoadingMore;
+  final String? currentUserId;
   final ValueChanged<Task> onToggleTask;
   final ValueChanged<Task> onTaskTap;
   final ValueChanged<String> onDeleteTask;
@@ -49,6 +49,7 @@ class HomeTasksView extends StatefulWidget {
     required this.todayTasks,
     required this.earlierTasks,
     required this.isLoadingMore,
+    this.currentUserId,
     required this.onToggleTask,
     required this.onTaskTap,
     required this.onDeleteTask,
@@ -94,10 +95,20 @@ class _HomeTasksViewState extends State<HomeTasksView> {
       onRefresh: onRefresh,
       color: isDark ? Colors.white : const Color(0xFF4B5563),
       backgroundColor: cardBg,
-      child: CustomScrollView(
-        controller: scrollController,
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: IgnorePointer(
+              child: CurvyDashedBackground(
+                scrollController: scrollController,
+                isDark: isDark,
+              ),
+            ),
+          ),
+          CustomScrollView(
+            controller: scrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
           // Header Controls (Status Banner, Filter Tabs, Search Bar)
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -214,6 +225,7 @@ class _HomeTasksViewState extends State<HomeTasksView> {
                   final task = todayTasks[index];
                   return TaskCardTile(
                     task: task,
+                    currentUserId: widget.currentUserId,
                     onToggle: () => onToggleTask(task),
                     onTap: () => onTaskTap(task),
                     onDismissed: () => onDeleteTask(task.id),
@@ -303,6 +315,7 @@ class _HomeTasksViewState extends State<HomeTasksView> {
                       final task = earlierTasks[index];
                       return TaskCardTile(
                         task: task,
+                        currentUserId: widget.currentUserId,
                         onToggle: () => onToggleTask(task),
                         onTap: () => onTaskTap(task),
                         onDismissed: () => onDeleteTask(task.id),
@@ -313,16 +326,12 @@ class _HomeTasksViewState extends State<HomeTasksView> {
             ],
           ],
 
-          // Footer with loading indicator and grass illustration
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                if (isLoadingMore)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Center(
+          // Footer with loading indicator and bottom clearance
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.only(top: 16, bottom: 84),
+              child: isLoadingMore
+                  ? Center(
                       child: SizedBox(
                         width: 24,
                         height: 24,
@@ -333,29 +342,14 @@ class _HomeTasksViewState extends State<HomeTasksView> {
                               : const Color(0xFF4B5563),
                         ),
                       ),
-                    ),
-                  ),
-                const SizedBox(height: 24),
-                IgnorePointer(
-                  child: RepaintBoundary(
-                    child: ImageFiltered(
-                      imageFilter: ImageFilter.blur(sigmaX: 2.0, sigmaY: 2.0),
-                      child: AspectRatio(
-                        aspectRatio: 1024 / 434,
-                        child: SvgPicture.asset(
-                          'assets/grass.svg',
-                          fit: BoxFit.fitWidth,
-                          alignment: Alignment.bottomCenter,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+                    )
+                  : const SizedBox.shrink(),
             ),
           ),
         ],
       ),
-    );
+    ],
+  ),
+);
   }
 }

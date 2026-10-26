@@ -3,12 +3,14 @@ class User {
   final String email;
   final String? name;
   final String? avatar;
+  final bool isProfilePublic;
 
   User({
     required this.id,
     required this.email,
     this.name,
     this.avatar,
+    this.isProfilePublic = false,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -17,6 +19,7 @@ class User {
       email: json['email'] ?? '',
       name: json['name'],
       avatar: json['avatar'],
+      isProfilePublic: json['isProfilePublic'] == true,
     );
   }
 
@@ -26,6 +29,7 @@ class User {
       'email': email,
       if (name != null) 'name': name,
       if (avatar != null) 'avatar': avatar,
+      'isProfilePublic': isProfilePublic,
     };
   }
 }

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../models/friend.dart';
 import '../../../../services/api_service.dart';
+import 'friend_stats_sheet.dart';
 
 class FriendsView extends StatefulWidget {
   final VoidCallback? onFriendsUpdated;
@@ -141,21 +142,39 @@ class FriendsViewState extends State<FriendsView> {
     try {
       await _apiService.respondFriendRequest(friendshipId, action);
       if (mounted) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              action == 'accept' ? 'Added $name as friend!' : 'Declined request.',
-              style: const TextStyle(fontFamily: 'Sniglet'),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            backgroundColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFF374151),
+            content: Row(
+              children: [
+                const Text('🐾 ', style: TextStyle(fontSize: 15)),
+                Expanded(
+                  child: Text(
+                    action == 'accept' ? 'Added $name as friend!' : 'Declined request.',
+                    style: const TextStyle(fontFamily: 'Sniglet', color: Colors.white, fontSize: 13),
+                  ),
+                ),
+              ],
             ),
+            duration: const Duration(seconds: 2),
           ),
         );
         _loadFriends(reset: true);
       }
     } catch (e) {
       if (mounted) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e', style: const TextStyle(fontFamily: 'Sniglet')),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            backgroundColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFF374151),
+            content: Text('Error: $e', style: const TextStyle(fontFamily: 'Sniglet', color: Colors.white)),
           ),
         );
       }
@@ -189,18 +208,39 @@ class FriendsViewState extends State<FriendsView> {
       try {
         await _apiService.removeFriend(item.friendshipId);
         if (mounted) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Removed ${item.user.displayName}', style: const TextStyle(fontFamily: 'Sniglet')),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              backgroundColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFF374151),
+              content: Row(
+                children: [
+                  const Text('🐾 ', style: TextStyle(fontSize: 15)),
+                  Expanded(
+                    child: Text(
+                      'Removed ${item.user.displayName}',
+                      style: const TextStyle(fontFamily: 'Sniglet', color: Colors.white, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+              duration: const Duration(seconds: 2),
             ),
           );
           _loadFriends(reset: true);
         }
       } catch (e) {
         if (mounted) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error: $e', style: const TextStyle(fontFamily: 'Sniglet')),
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              backgroundColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFF374151),
+              content: Text('Error: $e', style: const TextStyle(fontFamily: 'Sniglet', color: Colors.white)),
             ),
           );
         }
@@ -555,17 +595,26 @@ class FriendsViewState extends State<FriendsView> {
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.check_circle_rounded, color: Color(0xFF10B981), size: 24),
+          ElevatedButton(
             onPressed: () => _respondRequest(req.friendshipId, 'accept', req.user.displayName),
-            tooltip: 'Accept',
-            visualDensity: VisualDensity.compact,
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              backgroundColor: isDark ? Colors.white : const Color(0xFF374151),
+              foregroundColor: isDark ? Colors.black : Colors.white,
+              elevation: 0,
+              visualDensity: VisualDensity.compact,
+            ),
+            child: const Text('Accept', style: TextStyle(fontFamily: 'Sniglet', fontSize: 11, fontWeight: FontWeight.bold)),
           ),
-          IconButton(
-            icon: Icon(Icons.cancel_outlined, color: textSecondary, size: 22),
+          const SizedBox(width: 4),
+          TextButton(
             onPressed: () => _respondRequest(req.friendshipId, 'decline', req.user.displayName),
-            tooltip: 'Decline',
-            visualDensity: VisualDensity.compact,
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              visualDensity: VisualDensity.compact,
+            ),
+            child: Text('Decline', style: TextStyle(fontFamily: 'Sniglet', fontSize: 11, color: textSecondary)),
           ),
         ],
       ),
@@ -580,7 +629,6 @@ class FriendsViewState extends State<FriendsView> {
   ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF262626) : const Color(0xFFF9FAFB),
         borderRadius: BorderRadius.circular(14),
@@ -588,72 +636,153 @@ class FriendsViewState extends State<FriendsView> {
           color: isDark ? const Color(0xFF333333) : const Color(0xFFF3F4F6),
         ),
       ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: isDark ? const Color(0xFF333333) : const Color(0xFFE5E7EB),
-            backgroundImage: item.user.avatar != null && item.user.avatar!.isNotEmpty
-                ? NetworkImage(item.user.avatar!)
-                : null,
-            child: item.user.avatar == null || item.user.avatar!.isEmpty
-                ? Text(
-                    item.user.displayName.isNotEmpty ? item.user.displayName[0].toUpperCase() : '?',
-                    style: TextStyle(fontFamily: 'Sniglet', fontWeight: FontWeight.bold, color: textPrimary, fontSize: 13),
-                  )
-                : null,
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.user.displayName,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () {
+          if (item.user.isProfilePublic) {
+            showFriendStatsSheet(context, friend: item.user);
+          } else {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                title: Row(
+                  children: [
+                    const Icon(Icons.lock_outline, size: 22, color: Color(0xFFA1A1AA)),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Private Stats',
+                      style: TextStyle(
+                        fontFamily: 'Sniglet',
+                        fontSize: 18,
+                        color: textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                content: Text(
+                  '${item.user.displayName} has kept their stats private.',
                   style: TextStyle(
                     fontFamily: 'Sniglet',
                     fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: textPrimary,
-                  ),
-                ),
-                Text(
-                  item.user.email,
-                  style: TextStyle(
-                    fontFamily: 'Sniglet',
-                    fontSize: 11,
                     color: textSecondary,
                   ),
                 ),
-              ],
-            ),
-          ),
-          PopupMenuButton<String>(
-            icon: Icon(Icons.more_vert, size: 18, color: textSecondary),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            color: isDark ? const Color(0xFF262626) : Colors.white,
-            onSelected: (val) {
-              if (val == 'remove') {
-                _removeFriend(item);
-              }
-            },
-            itemBuilder: (ctx) => [
-              const PopupMenuItem(
-                value: 'remove',
-                child: Row(
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('OK', style: TextStyle(fontFamily: 'Sniglet')),
+                  ),
+                ],
+              ),
+            );
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: isDark ? const Color(0xFF333333) : const Color(0xFFE5E7EB),
+                backgroundImage: item.user.avatar != null && item.user.avatar!.isNotEmpty
+                    ? NetworkImage(item.user.avatar!)
+                    : null,
+                child: item.user.avatar == null || item.user.avatar!.isEmpty
+                    ? Text(
+                        item.user.displayName.isNotEmpty ? item.user.displayName[0].toUpperCase() : '?',
+                        style: TextStyle(fontFamily: 'Sniglet', fontWeight: FontWeight.bold, color: textPrimary, fontSize: 13),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.person_remove_outlined, size: 16, color: Colors.red),
-                    SizedBox(width: 8),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            item.user.displayName,
+                            style: TextStyle(
+                              fontFamily: 'Sniglet',
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: textPrimary,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        if (item.user.isProfilePublic)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.bar_chart_rounded, size: 10, color: Color(0xFF10B981)),
+                                SizedBox(width: 2),
+                                Text(
+                                  'Stats',
+                                  style: TextStyle(
+                                    fontFamily: 'Sniglet',
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF10B981),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          Icon(Icons.lock_outline, size: 12, color: textSecondary.withValues(alpha: 0.6)),
+                      ],
+                    ),
                     Text(
-                      'Remove Friend',
-                      style: TextStyle(fontFamily: 'Sniglet', color: Colors.red, fontSize: 13),
+                      item.user.email,
+                      style: TextStyle(
+                        fontFamily: 'Sniglet',
+                        fontSize: 11,
+                        color: textSecondary,
+                      ),
                     ),
                   ],
                 ),
               ),
+              PopupMenuButton<String>(
+                icon: Icon(Icons.more_vert, size: 18, color: textSecondary),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                color: isDark ? const Color(0xFF262626) : Colors.white,
+                onSelected: (val) {
+                  if (val == 'remove') {
+                    _removeFriend(item);
+                  }
+                },
+                itemBuilder: (ctx) => [
+                  const PopupMenuItem(
+                    value: 'remove',
+                    child: Row(
+                      children: [
+                        Icon(Icons.person_remove_outlined, size: 16, color: Colors.red),
+                        SizedBox(width: 8),
+                        Text(
+                          'Remove Friend',
+                          style: TextStyle(fontFamily: 'Sniglet', color: Colors.red, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -722,7 +851,7 @@ class _AddFriendBottomSheetState extends State<_AddFriendBottomSheet> {
       await _apiService.sendFriendRequest(email);
       if (mounted) {
         setState(() {
-          _feedback = 'Friend request sent to $email!';
+          _feedback = 'Request sent to $email 🐾';
           _isError = false;
           _results = _results.map((u) {
             if (u.email.toLowerCase() == email.toLowerCase()) {
@@ -798,23 +927,31 @@ class _AddFriendBottomSheetState extends State<_AddFriendBottomSheet> {
           if (_feedback != null)
             Container(
               margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
               decoration: BoxDecoration(
                 color: _isError
-                    ? Colors.red.withAlpha(25)
-                    : const Color(0xFF10B981).withAlpha(25),
-                borderRadius: BorderRadius.circular(12),
+                    ? Colors.red.withAlpha(20)
+                    : (isDark ? const Color(0xFF262626) : const Color(0xFFF3F4F6)),
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: _isError ? Colors.red.withAlpha(80) : const Color(0xFF10B981).withAlpha(80),
+                  color: _isError ? Colors.red.withAlpha(80) : cardBorder,
                 ),
               ),
-              child: Text(
-                _feedback!,
-                style: TextStyle(
-                  fontFamily: 'Sniglet',
-                  fontSize: 12,
-                  color: _isError ? Colors.red : const Color(0xFF10B981),
-                ),
+              child: Row(
+                children: [
+                  Text(_isError ? '⚠️ ' : '🐾 ', style: const TextStyle(fontSize: 13)),
+                  Expanded(
+                    child: Text(
+                      _feedback!,
+                      style: TextStyle(
+                        fontFamily: 'Sniglet',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: _isError ? Colors.red : textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
 
@@ -867,7 +1004,7 @@ class _AddFriendBottomSheetState extends State<_AddFriendBottomSheet> {
               child: ListView.separated(
                 shrinkWrap: true,
                 itemCount: _results.length,
-                separatorBuilder: (_, __) => Divider(color: cardBorder, height: 1),
+                separatorBuilder: (context, index) => Divider(color: cardBorder, height: 1),
                 itemBuilder: (ctx, idx) {
                   final u = _results[idx];
                   return Padding(
@@ -915,16 +1052,16 @@ class _AddFriendBottomSheetState extends State<_AddFriendBottomSheet> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF10B981).withAlpha(25),
+                              color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE5E7EB),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Text(
-                              'Friends ✓',
+                            child: Text(
+                              'Friends 🐾',
                               style: TextStyle(
                                 fontFamily: 'Sniglet',
                                 fontSize: 11,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF10B981),
+                                color: textPrimary,
                               ),
                             ),
                           )

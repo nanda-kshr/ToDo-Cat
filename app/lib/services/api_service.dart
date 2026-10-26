@@ -253,6 +253,35 @@ class ApiService {
     }
   }
 
+  Future<User> updateProfile({String? name, bool? isProfilePublic}) async {
+    try {
+      final body = <String, dynamic>{};
+      if (name != null) body['name'] = name;
+      if (isProfilePublic != null) body['isProfilePublic'] = isProfilePublic;
+
+      final response = await _authenticatedRequest(
+        (headers) => _client.patch(
+          Uri.parse(ApiConfig.me),
+          headers: headers,
+          body: jsonEncode(body),
+        ),
+      );
+
+      final data = jsonDecode(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return User.fromJson(data['user']);
+      } else {
+        throw ApiException(
+          data['message'] ?? 'Failed to update profile',
+          response.statusCode,
+        );
+      }
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ApiException('Failed to update profile: $e');
+    }
+  }
+
   bool _googleInitialized = false;
 
   Future<void> _initGoogleSignIn() async {
@@ -319,19 +348,33 @@ class ApiService {
   }
 
   Future<void> logout() async {
-    try {
-      await _client.post(
-        Uri.parse(ApiConfig.logout),
-        headers: await _getHeaders(),
-      );
-    } catch (_) {
-      // Ignore network errors on logout
-    } finally {
-      await clearTokens();
+    final headers = await _getHeaders();
+    final refreshToken = await getRefreshToken();
+
+    // Clear tokens immediately for instant local logout
+    await clearTokens();
+
+    // Perform remote logout and Google SignOut asynchronously in the background
+    unawaited(() async {
       try {
-        await GoogleSignIn.instance.signOut();
+        final body = <String, dynamic>{};
+        if (refreshToken != null) body['refreshToken'] = refreshToken;
+
+        await _client
+            .post(
+              Uri.parse(ApiConfig.logout),
+              headers: headers,
+              body: jsonEncode(body),
+            )
+            .timeout(const Duration(seconds: 2));
       } catch (_) {}
-    }
+
+      try {
+        await GoogleSignIn.instance
+            .signOut()
+            .timeout(const Duration(seconds: 2));
+      } catch (_) {}
+    }());
   }
 
   // --- Tasks API ---
@@ -504,6 +547,7 @@ class ApiService {
     String? from,
     String? to,
     String? dateField,
+    String? friendId,
   }) async {
     try {
       final baseUri = Uri.parse(ApiConfig.analytics);
@@ -512,6 +556,7 @@ class ApiService {
       if (from != null && from.isNotEmpty) queryParams['from'] = from;
       if (to != null && to.isNotEmpty) queryParams['to'] = to;
       if (dateField != null && dateField.isNotEmpty) queryParams['dateField'] = dateField;
+      if (friendId != null && friendId.isNotEmpty) queryParams['friendId'] = friendId;
 
       final uri = queryParams.isEmpty
           ? baseUri
