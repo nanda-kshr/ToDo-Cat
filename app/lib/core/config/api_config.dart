@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart';
+
 class ApiConfig {
-  static const String baseUrl = 'http://localhost:3000';//'https://todocat.instaroid.page';
+  static const String baseUrl =
+      kIsWeb ? 'http://localhost:3000' : 'https://todocat.instaroid.page';
 
   // Web Application Client ID for Google Sign-In serverClientId (ID Token audience)
   static const String googleServerClientId =

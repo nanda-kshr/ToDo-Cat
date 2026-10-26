@@ -34,6 +34,7 @@ flutter:
     - assets/grass.svg
     - assets/runners/cat/
     - assets/runners/cat_white/
+    - assets/svg/
 
   fonts:
     - family: Sniglet

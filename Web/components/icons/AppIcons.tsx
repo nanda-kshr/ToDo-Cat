@@ -145,6 +145,45 @@ export function CalendarOutlinedIcon({ size = 14, className, ...props }: IconPro
   );
 }
 
+export function HandwrittenTickIcon({ size = 16, className, ...props }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      {...props}
+    >
+      <path d="M4.5 12.8c1.6 1.4 3.4 3.6 4.9 5.7 3.5-5.6 7.5-10.4 10.6-13" />
+    </svg>
+  );
+}
+
+export function HandwrittenCrossIcon({ size = 16, className, ...props }: IconProps) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      {...props}
+    >
+      <path d="M6.5 6.5c3 3.3 7.8 8.4 11 11" />
+      <path d="M17.5 6.8c-3.2 3.5-7.7 8.2-11 10.7" />
+    </svg>
+  );
+}
+
 export function RecurrenceOutlinedIcon({ size = 14, className, ...props }: IconProps) {
   return (
     <svg

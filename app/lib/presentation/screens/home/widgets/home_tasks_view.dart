@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../models/task.dart';
-import 'curvy_dashed_background.dart';
 import 'home_search_filter_bar.dart';
 import 'home_status_banner.dart';
 import 'task_card_tile.dart';
@@ -87,28 +87,19 @@ class _HomeTasksViewState extends State<HomeTasksView> {
     final onDeleteTask = widget.onDeleteTask;
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF161616) : Colors.white;
-    final cardBorder = isDark ? const Color(0xFF242424) : const Color(0xFFE5E7EB);
-    final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+    final palette = AppColors.of(context);
+    final cardBg = palette.surface;
+    final cardBorder = palette.cardBorder;
+    final textSecondary = palette.textSecondary;
 
     return RefreshIndicator(
       onRefresh: onRefresh,
-      color: isDark ? Colors.white : const Color(0xFF4B5563),
+      color: palette.iconPrimary,
       backgroundColor: cardBg,
-      child: Stack(
-        children: [
-          Positioned.fill(
-            child: IgnorePointer(
-              child: CurvyDashedBackground(
-                scrollController: scrollController,
-                isDark: isDark,
-              ),
-            ),
-          ),
-          CustomScrollView(
-            controller: scrollController,
-            physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
+      child: CustomScrollView(
+        controller: scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
           // Header Controls (Status Banner, Filter Tabs, Search Bar)
           SliverPadding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -329,7 +320,7 @@ class _HomeTasksViewState extends State<HomeTasksView> {
           // Footer with loading indicator and bottom clearance
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.only(top: 16, bottom: 84),
+              padding: const EdgeInsets.only(top: 16, bottom: 110),
               child: isLoadingMore
                   ? Center(
                       child: SizedBox(
@@ -348,8 +339,6 @@ class _HomeTasksViewState extends State<HomeTasksView> {
           ),
         ],
       ),
-    ],
-  ),
-);
+    );
   }
 }

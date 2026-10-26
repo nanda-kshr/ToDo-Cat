@@ -491,7 +491,21 @@ function DashboardContent() {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
+          {user?.avatar ? (
+            <div className="w-9 h-9 rounded-full overflow-hidden border border-neutral-700 bg-neutral-800 shrink-0 shadow-sm">
+              <img
+                src={user.avatar}
+                alt={user.name || "Profile"}
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+          ) : (
+            <div className="w-9 h-9 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-xs font-bold text-neutral-200 shrink-0">
+              {(user?.name?.[0] || user?.email?.[0] || "?").toUpperCase()}
+            </div>
+          )}
           <div className="text-right hidden sm:block">
             <div className="text-sm font-medium text-neutral-200">
               {user?.name || user?.email?.split("@")[0]}
@@ -517,15 +531,7 @@ function DashboardContent() {
               <span className="text-xs uppercase tracking-wider font-semibold text-neutral-400">
                 Cat Speed & Activity
               </span>
-              <span
-                className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                  catSpeedPercent === 0
-                    ? "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20"
-                    : catSpeedPercent >= 100
-                    ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                    : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                }`}
-              >
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-200 border border-neutral-700">
                 {catSpeedPercent}% Speed
               </span>
               <span className="text-xs text-neutral-500">
@@ -534,19 +540,9 @@ function DashboardContent() {
             </div>
 
             <div className="flex items-center gap-2">
-              {catSpeedPercent === 0 ? (
-                <svg className="w-4 h-4 text-indigo-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                </svg>
-              ) : catSpeedPercent >= 100 ? (
-                <svg className="w-4 h-4 text-rose-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              ) : (
-                <svg className="w-4 h-4 text-amber-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                </svg>
-              )}
+              <svg className="w-4 h-4 text-neutral-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
               <p className="text-sm font-medium text-neutral-200">{catSpeedMessage}</p>
             </div>
           </div>
@@ -555,13 +551,7 @@ function DashboardContent() {
         <div className="flex-1 max-w-xs md:max-w-sm flex items-center gap-3">
           <div className="w-full bg-neutral-800 rounded-full h-2.5 overflow-hidden">
             <div
-              className={`h-2.5 rounded-full transition-all duration-500 ${
-                catSpeedPercent === 0
-                  ? "bg-indigo-500/40 w-0"
-                  : catSpeedPercent >= 100
-                  ? "bg-gradient-to-r from-amber-500 to-rose-500"
-                  : "bg-gradient-to-r from-emerald-400 to-amber-500"
-              }`}
+              className="h-2.5 rounded-full transition-all duration-500 bg-white"
               style={{ width: `${catSpeedPercent}%` }}
             />
           </div>
@@ -729,7 +719,7 @@ function DashboardContent() {
                     onClick={() => handleToggleComplete(task)}
                     className={`mt-0.5 w-5 h-5 rounded-lg border flex items-center justify-center transition shrink-0 ${
                       task.completed
-                        ? "bg-emerald-500 border-emerald-500 text-black"
+                        ? "bg-white border-white text-black"
                         : "border-neutral-700 hover:border-neutral-500 bg-neutral-800/50"
                     }`}
                   >
@@ -769,12 +759,8 @@ function DashboardContent() {
                         <span
                           className={`text-[10px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1.5 border ${
                             isDueOverdue
-                              ? "bg-red-500/10 text-red-400 border-red-500/20 font-semibold"
-                              : isDueToday
-                              ? "bg-amber-500/10 text-amber-300 border-amber-500/20 font-semibold"
-                              : isDueUpcoming
-                              ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                              : "bg-neutral-800 text-neutral-400 border-neutral-700"
+                              ? "bg-neutral-800 text-white border-neutral-600 font-semibold"
+                              : "bg-neutral-800 text-neutral-300 border-neutral-700"
                           }`}
                         >
                           <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -1039,11 +1025,7 @@ function DashboardContent() {
                       onClick={() => setFormPriority(p)}
                       className={`py-2 px-3 rounded-xl text-xs font-medium border capitalize flex items-center justify-center gap-1.5 transition ${
                         formPriority === p
-                          ? p === "high"
-                            ? "bg-rose-500/20 border-rose-500/50 text-rose-300"
-                            : p === "medium"
-                            ? "bg-amber-500/20 border-amber-500/50 text-amber-300"
-                            : "bg-teal-500/20 border-teal-500/50 text-teal-300"
+                          ? "bg-neutral-800 border-neutral-500 text-white font-semibold"
                           : "bg-neutral-950 border-neutral-800 text-neutral-400 hover:text-neutral-200"
                       }`}
                     >

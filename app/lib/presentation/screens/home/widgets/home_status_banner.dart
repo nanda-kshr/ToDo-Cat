@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../widgets/cat_animation.dart';
 
 class HomeStatusBanner extends StatelessWidget {
@@ -19,11 +20,11 @@ class HomeStatusBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF161616) : Colors.white;
-    final cardBorder = isDark ? const Color(0xFF242424) : const Color(0xFFE5E7EB);
-    final textPrimary = isDark ? Colors.white : const Color(0xFF4B5563);
-    final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+    final palette = AppColors.of(context);
+    final cardBg = palette.surface;
+    final cardBorder = palette.cardBorder;
+    final textPrimary = palette.textPrimary;
+    final textSecondary = palette.textSecondary;
 
     final progress = (todayTotalCount == 0
             ? 0.0
@@ -79,12 +80,8 @@ class HomeStatusBanner extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: progress,
                     minHeight: 8,
-                    backgroundColor: isDark
-                        ? const Color(0xFF282828)
-                        : const Color(0xFFE5E7EB),
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      isDark ? Colors.white : const Color(0xFF4B5563),
-                    ),
+                    backgroundColor: palette.progressTrack,
+                    valueColor: AlwaysStoppedAnimation<Color>(palette.progressFill),
                   ),
                 ),
                 const SizedBox(height: 8),

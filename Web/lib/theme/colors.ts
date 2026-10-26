@@ -1,7 +1,7 @@
 /**
  * Central theme palette for TodoCat Web application.
- * All element colors, SVGs, texts, and badges are configured here for both
- * light (white theme) and dark themes.
+ * - In Dark mode: Crisp whitish tones on carbon background (no glowing yellow/green/red).
+ * - In White mode: Warm, soothing cream tones with rich espresso/charcoal accents (no glowing yellow/green/red).
  */
 
 export interface ThemeColors {
@@ -54,110 +54,125 @@ export interface ThemeColors {
   checkboxBorder: string;
   checkboxCheckedBg: string;
   checkboxCheckedIcon: string;
+
+  // Subtle Whitish Green / Sage Accents (Stats visibility, public stats badges, globe indicator)
+  subtleGreen: string;
+  subtleGreenBg: string;
+  subtleGreenBorder: string;
 }
 
 export const lightColors: ThemeColors = {
-  background: "#F9FAFB",
-  surface: "#FFFFFF",
-  surfaceElevated: "#FFFFFF",
-  cardBorder: "#E5E7EB",
-  divider: "#E5E7EB",
-  inputBg: "#F3F4F6",
+  background: "#FAF8F5",
+  surface: "#FFFDFB",
+  surfaceElevated: "#FFFDFB",
+  cardBorder: "#E8E2D8",
+  divider: "#E8E2D8",
+  inputBg: "#F3EFE8",
 
-  textPrimary: "#18181B",
-  textSecondary: "#71717A",
-  textMuted: "#9CA3AF",
+  textPrimary: "#292524",
+  textSecondary: "#78716C",
+  textMuted: "#A8A29E",
 
-  iconPrimary: "#18181B",
-  iconSecondary: "#71717A",
-  iconMuted: "#A1A1AA",
+  iconPrimary: "#292524",
+  iconSecondary: "#78716C",
+  iconMuted: "#A8A29E",
 
-  // Completed: Outlined clean emerald
-  completed: "#059669",
-  completedBg: "#ECFDF5",
-  completedBorder: "#D1FAE5",
+  // Completed: Warm charcoal outline in soft cream pill
+  completed: "#292524",
+  completedBg: "#EFEBE2",
+  completedBorder: "#DDD7CB",
 
-  // Pending: Outlined subtle slate-indigo
-  pending: "#6366F1",
-  pendingBg: "#EEF2FF",
-  pendingBorder: "#E0E7FF",
+  // Pending: Warm stone outline in pale cream pill
+  pending: "#78716C",
+  pendingBg: "#F7F4EE",
+  pendingBorder: "#EAE5DC",
 
-  // High Priority: Outlined coral flame
-  priorityHigh: "#E11D48",
-  priorityHighBg: "#FFF1F2",
-  priorityHighBorder: "#FFE4E6",
+  // High Priority: Deep charcoal outline in warm cream pill
+  priorityHigh: "#1C1917",
+  priorityHighBg: "#EAE4D8",
+  priorityHighBorder: "#DCD4C5",
 
-  // Medium Priority: Outlined warm amber balance
-  priorityMedium: "#D97706",
-  priorityMediumBg: "#FFFBEB",
-  priorityMediumBorder: "#FEF3C7",
+  // Medium Priority: Warm stone outline in soft cream pill
+  priorityMedium: "#57534E",
+  priorityMediumBg: "#F4F0E6",
+  priorityMediumBorder: "#E6E0D4",
 
-  // Low Priority: Outlined calm teal / slate
-  priorityLow: "#0D9488",
-  priorityLowBg: "#F0FDFA",
-  priorityLowBorder: "#CCFBF1",
+  // Low Priority: Soft stone outline in pale cream pill
+  priorityLow: "#78716C",
+  priorityLowBg: "#FAF7F2",
+  priorityLowBorder: "#EBE6DC",
 
   // Shared badge
-  sharedBadgeText: "#4B5563",
-  sharedBadgeBg: "#F3F4F6",
-  sharedBadgeBorder: "#E5E7EB",
+  sharedBadgeText: "#44403C",
+  sharedBadgeBg: "#F4F0E8",
+  sharedBadgeBorder: "#E6DFD4",
 
   // Checkbox
-  checkboxBorder: "#D4D4D8",
-  checkboxCheckedBg: "#18181B",
-  checkboxCheckedIcon: "#FFFFFF",
+  checkboxBorder: "#D6CEC2",
+  checkboxCheckedBg: "#292524",
+  checkboxCheckedIcon: "#FAF8F5",
+
+  // Subtle Sage / Muted Cream Green (Public stats, globe indicator, visibility switch)
+  subtleGreen: "#476251",
+  subtleGreenBg: "#EDF3EE",
+  subtleGreenBorder: "#D8E4DC",
 };
 
 export const darkColors: ThemeColors = {
   background: "#0A0A0A",
-  surface: "#161616",
-  surfaceElevated: "#1C1C1C",
+  surface: "#141414",
+  surfaceElevated: "#1A1A1A",
   cardBorder: "#262626",
   divider: "#262626",
-  inputBg: "#202020",
+  inputBg: "#1F1F1F",
 
   textPrimary: "#F4F4F5",
   textSecondary: "#A1A1AA",
   textMuted: "#71717A",
 
-  iconPrimary: "#F4F4F5",
+  iconPrimary: "#FFFFFF",
   iconSecondary: "#A1A1AA",
   iconMuted: "#52525B",
 
-  // Completed: Outlined luminous emerald
-  completed: "#34D399",
-  completedBg: "#0A2216",
-  completedBorder: "#144D32",
+  // Completed: Crisp pure white outline in dark whitish pill
+  completed: "#FFFFFF",
+  completedBg: "#242424",
+  completedBorder: "#404040",
 
-  // Pending: Outlined soft indigo
-  pending: "#818CF8",
-  pendingBg: "#14162B",
-  pendingBorder: "#242750",
+  // Pending: Soft whitish silver outline in subtle dark pill
+  pending: "#A1A1AA",
+  pendingBg: "#1C1C1C",
+  pendingBorder: "#333333",
 
-  // High Priority: Outlined luminous rose flame
-  priorityHigh: "#FB7185",
-  priorityHighBg: "#2E1216",
-  priorityHighBorder: "#4E1D25",
+  // High Priority: Crisp white outline in stylish whitish pill
+  priorityHigh: "#FFFFFF",
+  priorityHighBg: "#282828",
+  priorityHighBorder: "#525252",
 
-  // Medium Priority: Outlined warm amber balance
-  priorityMedium: "#FBBF24",
-  priorityMediumBg: "#271C08",
-  priorityMediumBorder: "#4B340B",
+  // Medium Priority: Soft off-white outline in subtle pill
+  priorityMedium: "#E4E4E7",
+  priorityMediumBg: "#202020",
+  priorityMediumBorder: "#3F3F46",
 
-  // Low Priority: Outlined soft teal
-  priorityLow: "#2DD4BF",
-  priorityLowBg: "#0B2423",
-  priorityLowBorder: "#154844",
+  // Low Priority: Muted whitish outline in dark pill
+  priorityLow: "#A1A1AA",
+  priorityLowBg: "#181818",
+  priorityLowBorder: "#2E2E2E",
 
   // Shared badge
-  sharedBadgeText: "#D4D4D8",
-  sharedBadgeBg: "#27272A",
-  sharedBadgeBorder: "#3F3F46",
+  sharedBadgeText: "#E4E4E7",
+  sharedBadgeBg: "#202020",
+  sharedBadgeBorder: "#383838",
 
   // Checkbox
   checkboxBorder: "#3F3F46",
   checkboxCheckedBg: "#FFFFFF",
   checkboxCheckedIcon: "#0A0A0A",
+
+  // Subtle Whitish Green / Soft Sage (Public stats, globe indicator, visibility switch)
+  subtleGreen: "#D4E7DC",
+  subtleGreenBg: "#1B241F",
+  subtleGreenBorder: "#2C3B32",
 };
 
 export const AppColors = {

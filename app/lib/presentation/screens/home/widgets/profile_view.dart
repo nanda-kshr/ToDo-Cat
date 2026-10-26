@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../models/analytics.dart';
 import '../../../../models/task.dart';
 import '../../../../models/user.dart';
@@ -124,6 +125,7 @@ class _ProfileViewState extends State<ProfileView> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppColors.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF161616) : Colors.white;
     final cardBorder = isDark ? const Color(0xFF242424) : const Color(0xFFE5E7EB);
@@ -138,11 +140,15 @@ class _ProfileViewState extends State<ProfileView> {
 
     final data = _getEffectiveAnalytics();
 
-    return SingleChildScrollView(
-      controller: widget.scrollController,
-      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
-      child: Column(
+    return RefreshIndicator(
+      onRefresh: () async => widget.onRefresh(),
+      color: isDark ? Colors.white : const Color(0xFF4B5563),
+      backgroundColor: cardBg,
+      child: SingleChildScrollView(
+        controller: widget.scrollController,
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 110),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // 1. Profile Header Card
@@ -162,6 +168,9 @@ class _ProfileViewState extends State<ProfileView> {
                       backgroundColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE5E7EB),
                       backgroundImage: user?.avatar != null && user!.avatar!.isNotEmpty
                           ? NetworkImage(user.avatar!)
+                          : null,
+                      onBackgroundImageError: user?.avatar != null && user!.avatar!.isNotEmpty
+                          ? (exception, stackTrace) {}
                           : null,
                       child: user?.avatar == null || user!.avatar!.isEmpty
                           ? Text(
@@ -220,7 +229,7 @@ class _ProfileViewState extends State<ProfileView> {
                     Icon(
                       _isPublic ? Icons.public : Icons.lock_outline,
                       size: 20,
-                      color: _isPublic ? const Color(0xFF10B981) : const Color(0xFFA1A1AA),
+                      color: _isPublic ? palette.subtleGreen : palette.textSecondary,
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -243,9 +252,14 @@ class _ProfileViewState extends State<ProfileView> {
                                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                                 decoration: BoxDecoration(
                                   color: _isPublic
-                                      ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                                      : const Color(0xFF71717A).withValues(alpha: 0.15),
+                                      ? palette.subtleGreenBg
+                                      : (isDark ? const Color(0xFF262626) : const Color(0xFFF3EFE8)),
                                   borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color: _isPublic
+                                        ? palette.subtleGreenBorder
+                                        : (isDark ? const Color(0xFF333333) : const Color(0xFFE5E0D5)),
+                                  ),
                                 ),
                                 child: Text(
                                   _isPublic ? 'Public' : 'Private',
@@ -253,7 +267,7 @@ class _ProfileViewState extends State<ProfileView> {
                                     fontFamily: 'Sniglet',
                                     fontSize: 10,
                                     fontWeight: FontWeight.bold,
-                                    color: _isPublic ? const Color(0xFF10B981) : textSecondary,
+                                    color: _isPublic ? palette.subtleGreen : textSecondary,
                                   ),
                                 ),
                               ),
@@ -285,7 +299,8 @@ class _ProfileViewState extends State<ProfileView> {
                     else
                       Switch.adaptive(
                         value: _isPublic,
-                        activeThumbColor: const Color(0xFF10B981),
+                        activeThumbColor: palette.subtleGreen,
+                        activeTrackColor: palette.subtleGreen.withValues(alpha: 0.35),
                         onChanged: _togglePrivacy,
                       ),
                   ],
@@ -372,6 +387,7 @@ class _ProfileViewState extends State<ProfileView> {
           ],
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

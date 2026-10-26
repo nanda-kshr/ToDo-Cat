@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../models/friend.dart';
 import '../../../../services/api_service.dart';
+import '../../../widgets/app_outlined_icons.dart';
 import 'friend_stats_sheet.dart';
 
 class FriendsView extends StatefulWidget {
@@ -27,6 +29,8 @@ class FriendsViewState extends State<FriendsView> {
   bool _loadingMore = false;
   String? _error;
   Timer? _searchDebounce;
+  String? _topMessage;
+  Timer? _topMessageTimer;
 
   @override
   void initState() {
@@ -37,6 +41,7 @@ class FriendsViewState extends State<FriendsView> {
 
   @override
   void dispose() {
+    _topMessageTimer?.cancel();
     _searchController.dispose();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
@@ -125,8 +130,8 @@ class FriendsViewState extends State<FriendsView> {
     });
   }
 
-  void openAddFriendDialog() {
-    showModalBottomSheet(
+  void openAddFriendDialog() async {
+    final sentEmail = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -136,6 +141,24 @@ class FriendsViewState extends State<FriendsView> {
         },
       ),
     );
+
+    if (sentEmail != null && mounted) {
+      _showTopNotification('Request sent to $sentEmail');
+    }
+  }
+
+  void _showTopNotification(String message) {
+    _topMessageTimer?.cancel();
+    setState(() {
+      _topMessage = message;
+    });
+    _topMessageTimer = Timer(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() {
+          _topMessage = null;
+        });
+      }
+    });
   }
 
   Future<void> _respondRequest(String friendshipId, String action, String name) async {
@@ -149,16 +172,9 @@ class FriendsViewState extends State<FriendsView> {
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
             backgroundColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFF374151),
-            content: Row(
-              children: [
-                const Text('🐾 ', style: TextStyle(fontSize: 15)),
-                Expanded(
-                  child: Text(
-                    action == 'accept' ? 'Added $name as friend!' : 'Declined request.',
-                    style: const TextStyle(fontFamily: 'Sniglet', color: Colors.white, fontSize: 13),
-                  ),
-                ),
-              ],
+            content: Text(
+              action == 'accept' ? 'Added $name as friend!' : 'Declined request.',
+              style: const TextStyle(fontFamily: 'Sniglet', color: Colors.white, fontSize: 13),
             ),
             duration: const Duration(seconds: 2),
           ),
@@ -215,16 +231,9 @@ class FriendsViewState extends State<FriendsView> {
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               backgroundColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFF374151),
-              content: Row(
-                children: [
-                  const Text('🐾 ', style: TextStyle(fontSize: 15)),
-                  Expanded(
-                    child: Text(
-                      'Removed ${item.user.displayName}',
-                      style: const TextStyle(fontFamily: 'Sniglet', color: Colors.white, fontSize: 13),
-                    ),
-                  ),
-                ],
+              content: Text(
+                'Removed ${item.user.displayName}',
+                style: const TextStyle(fontFamily: 'Sniglet', color: Colors.white, fontSize: 13),
               ),
               duration: const Duration(seconds: 2),
             ),
@@ -257,7 +266,9 @@ class FriendsViewState extends State<FriendsView> {
     final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF6B7280);
     final inputBg = isDark ? const Color(0xFF262626) : const Color(0xFFF3F4F6);
 
-    return RefreshIndicator(
+    return Stack(
+      children: [
+        RefreshIndicator(
       onRefresh: () => _loadFriends(reset: true),
       child: SingleChildScrollView(
         controller: _scrollController,
@@ -547,11 +558,81 @@ class FriendsViewState extends State<FriendsView> {
               ),
             ),
 
-            const SizedBox(height: 88), // Space for FAB & Bottom Bar
+            const SizedBox(height: 110), // Space for FAB & Bottom Bar
           ],
         ),
       ),
-    );
+    ),
+    Positioned(
+      top: 10,
+      left: 16,
+      right: 16,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 250),
+        transitionBuilder: (child, animation) {
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, -0.4),
+              end: Offset.zero,
+            ).animate(
+              CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              ),
+            ),
+            child: FadeTransition(
+              opacity: animation,
+              child: child,
+            ),
+          );
+        },
+        child: _topMessage == null
+            ? const SizedBox.shrink(key: ValueKey('empty_top_msg'))
+            : Container(
+                key: ValueKey(_topMessage),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF222222) : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: cardBorder),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(isDark ? 80 : 25),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _topMessage!,
+                        style: TextStyle(
+                          fontFamily: 'Sniglet',
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: textPrimary,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () {
+                        _topMessageTimer?.cancel();
+                        setState(() => _topMessage = null);
+                      },
+                      child: Icon(Icons.close, size: 16, color: textSecondary),
+                    ),
+                  ],
+                ),
+              ),
+      ),
+    ),
+  ],
+);
   }
 
   Widget _buildIncomingRequestTile(
@@ -595,26 +676,57 @@ class FriendsViewState extends State<FriendsView> {
               ],
             ),
           ),
-          ElevatedButton(
-            onPressed: () => _respondRequest(req.friendshipId, 'accept', req.user.displayName),
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              backgroundColor: isDark ? Colors.white : const Color(0xFF374151),
-              foregroundColor: isDark ? Colors.black : Colors.white,
-              elevation: 0,
-              visualDensity: VisualDensity.compact,
+          // Accept (Handwritten Tick) Button
+          Tooltip(
+            message: 'Accept',
+            child: InkWell(
+              onTap: () => _respondRequest(req.friendshipId, 'accept', req.user.displayName),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF242424) : const Color(0xFFEFEBE2),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF404040) : const Color(0xFFDDD7CB),
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: AppOutlinedIcon(
+                  svgString: AppOutlinedSvgStrings.handwrittenTick,
+                  size: 16,
+                  color: isDark ? Colors.white : const Color(0xFF292524),
+                ),
+              ),
             ),
-            child: const Text('Accept', style: TextStyle(fontFamily: 'Sniglet', fontSize: 11, fontWeight: FontWeight.bold)),
           ),
-          const SizedBox(width: 4),
-          TextButton(
-            onPressed: () => _respondRequest(req.friendshipId, 'decline', req.user.displayName),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              visualDensity: VisualDensity.compact,
+          const SizedBox(width: 8),
+
+          // Decline (Handwritten Cross) Button
+          Tooltip(
+            message: 'Decline',
+            child: InkWell(
+              onTap: () => _respondRequest(req.friendshipId, 'decline', req.user.displayName),
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF7F4EE),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? const Color(0xFF333333) : const Color(0xFFEAE5DC),
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: AppOutlinedIcon(
+                  svgString: AppOutlinedSvgStrings.handwrittenCross,
+                  size: 16,
+                  color: isDark ? const Color(0xFFA1A1AA) : const Color(0xFF78716C),
+                ),
+              ),
             ),
-            child: Text('Decline', style: TextStyle(fontFamily: 'Sniglet', fontSize: 11, color: textSecondary)),
           ),
         ],
       ),
@@ -627,6 +739,7 @@ class FriendsViewState extends State<FriendsView> {
     Color textPrimary,
     Color textSecondary,
   ) {
+    final palette = AppColors.of(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
@@ -720,21 +833,22 @@ class FriendsViewState extends State<FriendsView> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                              color: palette.subtleGreenBg,
                               borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: palette.subtleGreenBorder),
                             ),
-                            child: const Row(
+                            child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.bar_chart_rounded, size: 10, color: Color(0xFF10B981)),
-                                SizedBox(width: 2),
+                                Icon(Icons.bar_chart_rounded, size: 10, color: palette.subtleGreen),
+                                const SizedBox(width: 2),
                                 Text(
                                   'Stats',
                                   style: TextStyle(
                                     fontFamily: 'Sniglet',
                                     fontSize: 9,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF10B981),
+                                    color: palette.subtleGreen,
                                   ),
                                 ),
                               ],
@@ -805,6 +919,7 @@ class _AddFriendBottomSheetState extends State<_AddFriendBottomSheet> {
   Timer? _debounce;
   String? _feedback;
   bool _isError = false;
+  String? _sendingEmail;
 
   @override
   void dispose() {
@@ -816,7 +931,9 @@ class _AddFriendBottomSheetState extends State<_AddFriendBottomSheet> {
   void _onSearchChanged(String val) {
     _debounce?.cancel();
     final query = val.trim();
-    if (query.length < 2) {
+    final isCompleteEmail = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$').hasMatch(query);
+
+    if (!isCompleteEmail) {
       setState(() {
         _results = [];
         _searching = false;
@@ -825,7 +942,7 @@ class _AddFriendBottomSheetState extends State<_AddFriendBottomSheet> {
       return;
     }
 
-    _debounce = Timer(const Duration(milliseconds: 350), () async {
+    _debounce = Timer(const Duration(milliseconds: 300), () async {
       setState(() => _searching = true);
       try {
         final users = await _apiService.searchFriends(query);
@@ -842,7 +959,9 @@ class _AddFriendBottomSheetState extends State<_AddFriendBottomSheet> {
   }
 
   Future<void> _sendRequest(String email) async {
+    if (_sendingEmail != null) return;
     setState(() {
+      _sendingEmail = email;
       _feedback = null;
       _isError = false;
     });
@@ -850,27 +969,13 @@ class _AddFriendBottomSheetState extends State<_AddFriendBottomSheet> {
     try {
       await _apiService.sendFriendRequest(email);
       if (mounted) {
-        setState(() {
-          _feedback = 'Request sent to $email 🐾';
-          _isError = false;
-          _results = _results.map((u) {
-            if (u.email.toLowerCase() == email.toLowerCase()) {
-              return FriendUser(
-                id: u.id,
-                email: u.email,
-                name: u.name,
-                avatar: u.avatar,
-                friendshipStatus: 'pending_sent',
-              );
-            }
-            return u;
-          }).toList();
-        });
         widget.onFriendAdded?.call();
+        Navigator.of(context).pop(email);
       }
     } catch (e) {
       if (mounted) {
         setState(() {
+          _sendingEmail = null;
           _feedback = e.toString();
           _isError = true;
         });
@@ -939,7 +1044,8 @@ class _AddFriendBottomSheetState extends State<_AddFriendBottomSheet> {
               ),
               child: Row(
                 children: [
-                  Text(_isError ? '⚠️ ' : '🐾 ', style: const TextStyle(fontSize: 13)),
+                  if (_isError)
+                    const Text('⚠️ ', style: TextStyle(fontSize: 13)),
                   Expanded(
                     child: Text(
                       _feedback!,
@@ -1056,7 +1162,7 @@ class _AddFriendBottomSheetState extends State<_AddFriendBottomSheet> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              'Friends 🐾',
+                              'Friends',
                               style: TextStyle(
                                 fontFamily: 'Sniglet',
                                 fontSize: 11,
@@ -1079,21 +1185,30 @@ class _AddFriendBottomSheetState extends State<_AddFriendBottomSheet> {
                           )
                         else
                           ElevatedButton(
-                            onPressed: () => _sendRequest(u.email),
+                            onPressed: _sendingEmail != null ? null : () => _sendRequest(u.email),
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                               backgroundColor: isDark ? Colors.white : const Color(0xFF374151),
                             ),
-                            child: Text(
-                              '+ Add',
-                              style: TextStyle(
-                                fontFamily: 'Sniglet',
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.black : Colors.white,
-                              ),
-                            ),
+                            child: _sendingEmail == u.email
+                                ? SizedBox(
+                                    width: 14,
+                                    height: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: isDark ? Colors.black : Colors.white,
+                                    ),
+                                  )
+                                : Text(
+                                    '+ Add',
+                                    style: TextStyle(
+                                      fontFamily: 'Sniglet',
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: isDark ? Colors.black : Colors.white,
+                                    ),
+                                  ),
                           ),
                       ],
                     ),
@@ -1105,20 +1220,31 @@ class _AddFriendBottomSheetState extends State<_AddFriendBottomSheet> {
             Padding(
               padding: const EdgeInsets.only(top: 8),
               child: ElevatedButton(
-                onPressed: () => _sendRequest(_searchController.text.trim()),
+                onPressed: _sendingEmail != null
+                    ? null
+                    : () => _sendRequest(_searchController.text.trim()),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   backgroundColor: isDark ? Colors.white : const Color(0xFF374151),
                 ),
-                child: Text(
-                  'Send Friend Request to ${_searchController.text.trim()}',
-                  style: TextStyle(
-                    fontFamily: 'Sniglet',
-                    fontSize: 13,
-                    color: isDark ? Colors.black : Colors.white,
-                  ),
-                ),
+                child: _sendingEmail == _searchController.text.trim()
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: isDark ? Colors.black : Colors.white,
+                        ),
+                      )
+                    : Text(
+                        'Send Friend Request to ${_searchController.text.trim()}',
+                        style: TextStyle(
+                          fontFamily: 'Sniglet',
+                          fontSize: 13,
+                          color: isDark ? Colors.black : Colors.white,
+                        ),
+                      ),
               ),
             ),
         ],

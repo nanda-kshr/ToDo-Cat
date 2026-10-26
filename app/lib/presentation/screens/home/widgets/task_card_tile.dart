@@ -23,6 +23,7 @@ class TaskCardTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final palette = AppColors.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final isChecked = task.isShared
         ? (currentUserId != null && task.completedBy.contains(currentUserId))
@@ -38,10 +39,10 @@ class TaskCardTile extends StatelessWidget {
         padding: const EdgeInsets.only(right: 20),
         alignment: Alignment.centerRight,
         decoration: BoxDecoration(
-          color: palette.priorityHigh,
+          color: isDark ? const Color(0xFF262626) : const Color(0xFFE8E2D8),
           borderRadius: BorderRadius.circular(18),
         ),
-        child: const Icon(Icons.delete_outline, color: Colors.white, size: 24),
+        child: Icon(Icons.delete_outline, color: palette.textPrimary, size: 24),
       ),
       onDismissed: (_) => onDismissed(),
       child: InkWell(

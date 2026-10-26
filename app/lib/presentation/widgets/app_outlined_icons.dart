@@ -2,86 +2,76 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/theme/app_colors.dart';
 
-/// Raw SVG paths crafted with crisp 2.2px rounded outlines.
+/// Central asset paths for all SVG icons stored as separate files in assets/svg/
+class AppSvgAssets {
+  AppSvgAssets._();
+
+  static const String completed = 'assets/svg/completed.svg';
+  static const String pending = 'assets/svg/pending.svg';
+  static const String priorityHigh = 'assets/svg/priority_high.svg';
+  static const String priorityMedium = 'assets/svg/priority_medium.svg';
+  static const String priorityLow = 'assets/svg/priority_low.svg';
+  static const String shared = 'assets/svg/shared.svg';
+  static const String calendar = 'assets/svg/calendar.svg';
+  static const String recurrence = 'assets/svg/recurrence.svg';
+  static const String handwrittenTick = 'assets/svg/tick.svg';
+  static const String handwrittenCross = 'assets/svg/cross.svg';
+  static const String paw = 'assets/svg/paw.svg';
+
+  // Navigation icons
+  static const String homeActive = 'assets/svg/home_active.svg';
+  static const String homeInactive = 'assets/svg/home_inactive.svg';
+  static const String friendsActive = 'assets/svg/friends_active.svg';
+  static const String friendsInactive = 'assets/svg/friends_inactive.svg';
+  static const String profileActive = 'assets/svg/profile_active.svg';
+  static const String profileInactive = 'assets/svg/profile_inactive.svg';
+}
+
+/// Backwards compatibility alias pointing to separate SVG asset files.
 class AppOutlinedSvgStrings {
   AppOutlinedSvgStrings._();
 
-  static const String completed = '''
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-  <circle cx="12" cy="12" r="9"/>
-  <path d="M8.5 12.5l2.5 2.5 5-5"/>
-</svg>
-''';
-
-  static const String pending = '''
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-  <circle cx="12" cy="12" r="9"/>
-  <polyline points="12 7 12 12 15 15"/>
-</svg>
-''';
-
-  static const String priorityHigh = '''
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M12 2c.5 3.5 2.5 5 4.5 7 2 2 3 5 2 8-1 3-4 5-6.5 5S6 20 5 17c-1-3 0-6 2-8 0 2 1.5 3 3 3 0-3 1-6 2-10z"/>
-</svg>
-''';
-
-  static const String priorityMedium = '''
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M5 9.5h14"/>
-  <path d="M5 14.5h14"/>
-</svg>
-''';
-
-  static const String priorityLow = '''
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M7 10l5 5 5-5"/>
-</svg>
-''';
-
-  static const String shared = '''
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-  <circle cx="9" cy="7" r="4"/>
-  <path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/>
-  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-  <path d="M21 21v-2a4 4 0 0 0-3-3.85"/>
-</svg>
-''';
-
-  static const String calendar = '''
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-  <rect x="3" y="4" width="18" height="18" rx="3"/>
-  <path d="M16 2v4M8 2v4M3 10h18"/>
-</svg>
-''';
-
-  static const String recurrence = '''
-<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-  <path d="M17 2l4 4-4 4"/>
-  <path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-  <path d="M7 22l-4-4 4-4"/>
-  <path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-</svg>
-''';
+  static const String completed = AppSvgAssets.completed;
+  static const String pending = AppSvgAssets.pending;
+  static const String priorityHigh = AppSvgAssets.priorityHigh;
+  static const String priorityMedium = AppSvgAssets.priorityMedium;
+  static const String priorityLow = AppSvgAssets.priorityLow;
+  static const String shared = AppSvgAssets.shared;
+  static const String calendar = AppSvgAssets.calendar;
+  static const String recurrence = AppSvgAssets.recurrence;
+  static const String handwrittenTick = AppSvgAssets.handwrittenTick;
+  static const String handwrittenCross = AppSvgAssets.handwrittenCross;
+  static const String paw = AppSvgAssets.paw;
 }
 
-/// Helper widget to render custom outlined SVGs with dynamic tint and sizing.
+/// Helper widget to render custom outlined SVGs from assets or strings with dynamic tint and sizing.
 class AppOutlinedIcon extends StatelessWidget {
-  final String svgString;
+  final String? assetPath;
+  final String? svgString;
   final double size;
   final Color color;
 
   const AppOutlinedIcon({
     super.key,
-    required this.svgString,
+    this.assetPath,
+    this.svgString,
     this.size = 16,
     required this.color,
   });
 
   @override
   Widget build(BuildContext context) {
+    final pathOrContent = assetPath ?? svgString ?? '';
+    if (pathOrContent.startsWith('assets/')) {
+      return SvgPicture.asset(
+        pathOrContent,
+        width: size,
+        height: size,
+        colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+      );
+    }
     return SvgPicture.string(
-      svgString,
+      pathOrContent,
       width: size,
       height: size,
       colorFilter: ColorFilter.mode(color, BlendMode.srcIn),

@@ -15,59 +15,62 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const query = (searchParams.get("email") || "").trim().toLowerCase();
 
-    if (!query || query.length < 2) {
+    // Prevent email scraping/enumeration: require full email address with domain
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!query || !emailRegex.test(query)) {
       return NextResponse.json({ users: [] });
     }
 
     await connectDB();
     const currentUserId = new mongoose.Types.ObjectId(payload.userId);
 
-    // Search users by email prefix or exact match, exclude current user
+    // Exact email match only (exclude current user) to prevent leaking emails
     const users = await User.find({
       _id: { $ne: currentUserId },
-      email: { $regex: query, $options: "i" },
+      email: query,
     })
       .select("_id name email avatar")
-      .limit(10);
+      .limit(1);
 
-    const userIds = users.map((u) => u._id);
+    if (users.length === 0) {
+      return NextResponse.json({ users: [] });
+    }
 
-    // Check existing friendships with these users
-    const existingFriendships = await Friendship.find({
+    const targetUser = users[0];
+
+    // Check existing friendship with this user
+    const friendship = await Friendship.findOne({
       $or: [
-        { requester: currentUserId, recipient: { $in: userIds } },
-        { recipient: currentUserId, requester: { $in: userIds } },
+        { requester: currentUserId, recipient: targetUser._id },
+        { recipient: currentUserId, requester: targetUser._id },
       ],
     });
 
-    const statusMap = new Map<string, { status: string; friendshipId?: string }>();
-    for (const f of existingFriendships) {
-      const isRequester = f.requester.toString() === payload.userId;
-      const otherId = isRequester ? f.recipient.toString() : f.requester.toString();
+    let friendshipStatus = "none";
+    let friendshipId: string | undefined;
 
-      if (f.status === "accepted") {
-        statusMap.set(otherId, { status: "accepted", friendshipId: f._id.toString() });
-      } else if (f.status === "pending") {
-        statusMap.set(otherId, {
-          status: isRequester ? "pending_sent" : "pending_received",
-          friendshipId: f._id.toString(),
-        });
+    if (friendship) {
+      friendshipId = friendship._id.toString();
+      const isRequester = friendship.requester.toString() === payload.userId;
+      if (friendship.status === "accepted") {
+        friendshipStatus = "accepted";
+      } else if (friendship.status === "pending") {
+        friendshipStatus = isRequester ? "pending_sent" : "pending_received";
       }
     }
 
-    const results = users.map((u) => {
-      const fsInfo = statusMap.get(u._id.toString()) || { status: "none" };
-      return {
-        _id: u._id,
-        name: u.name,
-        email: u.email,
-        avatar: u.avatar,
-        friendshipStatus: fsInfo.status,
-        friendshipId: fsInfo.friendshipId,
-      };
+    return NextResponse.json({
+      users: [
+        {
+          _id: targetUser._id,
+          name: targetUser.name,
+          email: targetUser.email,
+          avatar: targetUser.avatar,
+          friendshipStatus,
+          friendshipId,
+        },
+      ],
     });
-
-    return NextResponse.json({ users: results });
   } catch (error) {
     console.error("[Friends Search GET] Error:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });

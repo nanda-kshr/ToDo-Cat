@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'core/theme/app_colors.dart';
 import 'presentation/screens/home_screen.dart';
 import 'services/theme_service.dart';
 import 'services/fcm_service.dart';
@@ -32,51 +33,51 @@ class TodoCatApp extends StatelessWidget {
           theme: ThemeData(
             fontFamily: 'Sniglet',
             brightness: Brightness.light,
-            scaffoldBackgroundColor: const Color(0xFFF9FAFB),
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF4B5563),
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Color(0xFF4B5563),
+            scaffoldBackgroundColor: AppColors.light.background,
+            colorScheme: ColorScheme.light(
+              primary: AppColors.light.textPrimary,
+              onPrimary: AppColors.light.background,
+              surface: AppColors.light.surface,
+              onSurface: AppColors.light.textPrimary,
             ),
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Colors.white,
+            appBarTheme: AppBarTheme(
+              backgroundColor: AppColors.light.background,
               elevation: 0,
-              iconTheme: IconThemeData(color: Color(0xFF4B5563)),
+              iconTheme: IconThemeData(color: AppColors.light.textPrimary),
               titleTextStyle: TextStyle(
                 fontFamily: 'Sniglet',
-                color: Color(0xFF4B5563),
+                color: AppColors.light.textPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            cardColor: Colors.white,
-            dividerColor: const Color(0xFFE5E7EB),
+            cardColor: AppColors.light.surface,
+            dividerColor: AppColors.light.divider,
             pageTransitionsTheme: pageTransitions,
           ),
           darkTheme: ThemeData(
             fontFamily: 'Sniglet',
             brightness: Brightness.dark,
-            scaffoldBackgroundColor: const Color(0xFF0A0A0A),
-            colorScheme: const ColorScheme.dark(
-              primary: Colors.white,
-              onPrimary: Color(0xFF0A0A0A),
-              surface: Color(0xFF171717),
-              onSurface: Colors.white,
+            scaffoldBackgroundColor: AppColors.dark.background,
+            colorScheme: ColorScheme.dark(
+              primary: AppColors.dark.textPrimary,
+              onPrimary: AppColors.dark.background,
+              surface: AppColors.dark.surface,
+              onSurface: AppColors.dark.textPrimary,
             ),
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Color(0xFF0A0A0A),
+            appBarTheme: AppBarTheme(
+              backgroundColor: AppColors.dark.background,
               elevation: 0,
-              iconTheme: IconThemeData(color: Colors.white),
+              iconTheme: IconThemeData(color: AppColors.dark.textPrimary),
               titleTextStyle: TextStyle(
                 fontFamily: 'Sniglet',
-                color: Colors.white,
+                color: AppColors.dark.textPrimary,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            cardColor: const Color(0xFF171717),
-            dividerColor: const Color(0xFF262626),
+            cardColor: AppColors.dark.surface,
+            dividerColor: AppColors.dark.divider,
             pageTransitionsTheme: pageTransitions,
           ),
           home: const HomeScreen(),

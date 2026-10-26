@@ -74,7 +74,7 @@ export async function sendFriendRequestEmail({
     await transporter.sendMail({
       from: fromAddress,
       to: toEmail,
-      subject: `🐾 ${displayName} sent you a friend request on TodoCat`,
+      subject: `${displayName} sent you a friend request on TodoCat`,
       html,
     });
     console.log(`[Email] Friend request sent to ${toEmail}`);
@@ -114,7 +114,7 @@ export async function sendFriendAcceptedEmail({
     await transporter.sendMail({
       from: fromAddress,
       to: toEmail,
-      subject: `🐾 ${displayName} accepted your friend request!`,
+      subject: `${displayName} accepted your friend request!`,
       html,
     });
     console.log(`[Email] Friend accepted notification sent to ${toEmail}`);
@@ -162,7 +162,7 @@ export async function sendSharedTaskEmail({
     await transporter.sendMail({
       from: fromAddress,
       to: toEmail,
-      subject: `🐾 ${displayName} shared a task with you: "${taskTitle}"`,
+      subject: `${displayName} shared a task with you: "${taskTitle}"`,
       html,
     });
     console.log(`[Email] Shared task email sent to ${toEmail}`);

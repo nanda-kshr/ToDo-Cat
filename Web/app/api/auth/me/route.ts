@@ -20,6 +20,8 @@ export async function GET(request: Request) {
     }
 
     const userObj = (user.toObject ? user.toObject() : user) as unknown as Record<string, unknown>;
+    userObj.id = user._id.toString();
+    userObj.avatar = user.avatar || "";
     userObj.isProfilePublic = Boolean(userObj.isProfilePublic);
 
     return NextResponse.json({ user: userObj });
@@ -64,6 +66,8 @@ export async function PATCH(request: Request) {
     }
 
     const userObj = (user.toObject ? user.toObject() : user) as unknown as Record<string, unknown>;
+    userObj.id = user._id.toString();
+    userObj.avatar = user.avatar || "";
     userObj.isProfilePublic = Boolean(userObj.isProfilePublic);
 
     return NextResponse.json({ user: userObj });

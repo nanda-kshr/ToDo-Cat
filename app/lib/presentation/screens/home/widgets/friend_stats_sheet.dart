@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../models/analytics.dart';
 import '../../../../models/friend.dart';
 import '../../../../services/api_service.dart';
@@ -71,6 +72,7 @@ class _FriendStatsSheetState extends State<FriendStatsSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppColors.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final bg = isDark ? const Color(0xFF141414) : Colors.white;
     final textPrimary = isDark ? Colors.white : const Color(0xFF4B5563);
@@ -146,7 +148,7 @@ class _FriendStatsSheetState extends State<FriendStatsSheet> {
                                 ),
                               ),
                               const SizedBox(width: 6),
-                              const Icon(Icons.public, size: 14, color: Color(0xFF10B981)),
+                              Icon(Icons.public, size: 14, color: palette.subtleGreen),
                             ],
                           ),
                           Text(

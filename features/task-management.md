@@ -4,13 +4,14 @@ title: Task Management
 description: Complete CRUD task management with nullable due dates, time precision, recurrence dropdown, priority, and categories.
 tags: [tasks, crud, scheduling, recurrence, priority]
 status: active
-last_updated: 2026-10-25
+last_updated: 2026-10-26
 ---
 
 # Task Management
 
 ## Overview
 Allows users to create, view, edit, filter, and complete tasks with rich scheduling attributes:
+- **Frosted Blur Creation Modal**: The task creation modal applies an ambient frosted glass background blur (`ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0)`) over the background home screen with a soft dark barrier dimming.
 - **Deadline Handling**: Defaults to `null` (no deadline). Can be set with optional specific time of day.
 - **Recurrence**: Supports `none`, `daily`, `weekly`, `monthly`, and `yearly` recurrences via popup dropdowns.
 - **Priority**: Categorized as `low`, `medium`, or `high`, rendered visually as custom outlined SVG art (flame, balance bars, calm chevron) with no text.

@@ -51,7 +51,7 @@ export async function PATCH(
 
       if (requester?.fcmTokens?.length) {
         sendPushNotification(requester.fcmTokens, {
-          title: "Friend Request Accepted! 🐾",
+          title: "Friend Request Accepted!",
           body: `${recipient?.name || recipient?.email || "Your friend"} accepted your friend request!`,
         }).catch(() => {});
       }

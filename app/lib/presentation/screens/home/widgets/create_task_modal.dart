@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/date_utils.dart';
@@ -12,7 +13,8 @@ Future<void> showCreateTaskModal(
 }) {
   return showDialog(
     context: context,
-    barrierColor: Colors.black.withValues(alpha: 0.6),
+    barrierDismissible: true,
+    barrierColor: Colors.black.withValues(alpha: 0.45),
     builder: (ctx) => CreateTaskDialog(onTaskCreated: onTaskCreated),
   );
 }
@@ -180,18 +182,20 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
     final inputBg = palette.inputBg;
     final badgeBg = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE4E4E7);
 
-    return Dialog(
-      backgroundColor: dialogBg,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(28),
-      ),
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(22),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+    return BackdropFilter(
+      filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
+      child: Dialog(
+        backgroundColor: dialogBg,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(22),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             // Header: Create Task Title + Close Button
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -744,7 +748,7 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                                 color: isSel ? textPrimary : textSecondary,
                               ),
                             ),
-                            if (isSel) const Icon(Icons.check, size: 16, color: Color(0xFF10B981)),
+                            if (isSel) Icon(Icons.check, size: 16, color: palette.subtleGreen),
                           ],
                         ),
                       );
@@ -755,7 +759,7 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                         color: inputBg,
                         borderRadius: BorderRadius.circular(18),
                         border: _selectedFriends.isNotEmpty
-                            ? Border.all(color: const Color(0xFF10B981), width: 1.2)
+                            ? Border.all(color: palette.subtleGreen, width: 1.2)
                             : null,
                       ),
                       child: Row(
@@ -764,7 +768,7 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                           Icon(
                             Icons.person_add_alt_1_rounded,
                             size: 14,
-                            color: _selectedFriends.isNotEmpty ? const Color(0xFF10B981) : textSecondary,
+                            color: _selectedFriends.isNotEmpty ? palette.subtleGreen : textSecondary,
                           ),
                           const SizedBox(width: 5),
                           Text(
@@ -775,7 +779,7 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                               fontFamily: 'Sniglet',
                               fontSize: 12,
                               fontWeight: _selectedFriends.isNotEmpty ? FontWeight.bold : FontWeight.normal,
-                              color: _selectedFriends.isNotEmpty ? const Color(0xFF10B981) : textSecondary,
+                              color: _selectedFriends.isNotEmpty ? palette.subtleGreen : textSecondary,
                             ),
                           ),
                           const SizedBox(width: 4),
@@ -847,6 +851,7 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

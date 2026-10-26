@@ -157,7 +157,7 @@ export async function POST(request: Request) {
 
       if (targetUser.fcmTokens?.length) {
         sendPushNotification(targetUser.fcmTokens, {
-          title: "Friend Request Accepted! 🐾",
+          title: "Friend Request Accepted!",
           body: `${currentUser.name || currentUser.email} accepted your friend request.`,
         }).catch(() => {});
       }
@@ -200,7 +200,7 @@ export async function POST(request: Request) {
     // Send push notification to target user
     if (targetUser.fcmTokens?.length) {
       sendPushNotification(targetUser.fcmTokens, {
-        title: "New Friend Request! 🐱",
+        title: "New Friend Request!",
         body: `${currentUser.name || currentUser.email} sent you a friend request.`,
       }).catch(() => {});
     }
@@ -211,7 +211,7 @@ export async function POST(request: Request) {
       senderEmail: currentUser.email,
     }).catch(() => {});
 
-    return NextResponse.json({ message: "Request sent 🐾" });
+    return NextResponse.json({ message: "Request sent" });
   } catch (error) {
     console.error("[Friends POST] Error:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });

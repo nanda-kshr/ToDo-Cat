@@ -12,6 +12,7 @@ import '../../services/floating_cat_service.dart';
 import '../../services/task_sync_service.dart';
 import '../../services/theme_service.dart';
 import '../../services/widget_service.dart';
+import 'home/widgets/cat_trail_background.dart';
 import 'home/widgets/create_task_modal.dart';
 import 'home/widgets/friends_view.dart';
 import 'home/widgets/home_bottom_bar.dart';
@@ -43,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
   final ScrollController _statsScrollController = ScrollController();
 
-  int _currentTab = 0; // 0 = Home, 1 = Stats
+  int _currentTab = 1; // 0 = Friends, 1 = Home, 2 = Profile
   String _filter = 'all'; // all, active, completed
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
@@ -211,7 +212,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         });
         _syncWidget();
         FcmService().syncCurrentToken();
-        if (_currentTab == 1) {
+        if (_currentTab == 2) {
           _loadAnalytics();
         }
       }
@@ -618,6 +619,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         : ((counts.completedToday / counts.todayTotal) * 100).round();
 
     return Scaffold(
+      extendBody: true,
       backgroundColor: scaffoldBg,
       appBar: AppBar(
         backgroundColor: scaffoldBg,
@@ -633,6 +635,37 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           ),
         ),
         actions: [
+          if (_user?.avatar != null && _user!.avatar!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: InkWell(
+                onTap: () => setState(() => _currentTab = 2),
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: cardBorder, width: 1.5),
+                  ),
+                  child: ClipOval(
+                    child: Image.network(
+                      _user!.avatar!,
+                      width: 36,
+                      height: 36,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => CircleAvatar(
+                        backgroundColor: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE5E7EB),
+                        child: Text(
+                          _user!.name?.isNotEmpty == true ? _user!.name![0].toUpperCase() : 'U',
+                          style: TextStyle(fontFamily: 'Sniglet', fontSize: 13, color: textPrimary),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           Padding(
             padding: const EdgeInsets.only(right: 16),
             child: InkWell(
@@ -693,63 +726,72 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                     ),
                   ),
                 )
-              : IndexedStack(
-                  index: _currentTab,
+              : Stack(
                   children: [
-                    TickerMode(
-                      enabled: _currentTab == 0,
-                      child: HomeTasksView(
-                        scrollController: _scrollController,
-                        onRefresh: _loadData,
-                        catSpeed: counts.catSpeed,
-                        activeCount: counts.active,
-                        completedCount: counts.completed,
-                        completedTodayCount: counts.completedToday,
-                        todayTotalCount: counts.todayTotal,
-                        completionPercent: completionPercent,
-                        totalCount: _tasks.length,
-                        currentFilter: _filter,
-                        onFilterChanged: (filter) => setState(() => _filter = filter),
-                        searchController: _searchController,
-                        searchQuery: _searchQuery,
-                        onSearchChanged: (q) => setState(() => _searchQuery = q),
-                        filteredTasks: filtered,
-                        todayTasks: todayTasks,
-                        earlierTasks: earlierTasks,
-                        isLoadingMore: _isLoadingMore,
-                        currentUserId: _user?.id,
-                        onToggleTask: _toggleTask,
-                        onTaskTap: _showTaskDetailsModal,
-                        onDeleteTask: _deleteTask,
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        child: CatTrailBackground(isDark: isDark),
                       ),
                     ),
-                    TickerMode(
-                      enabled: _currentTab == 1,
-                      child: ProfileView(
-                        user: _user,
-                        onUserUpdated: (updated) {
-                          setState(() => _user = updated);
-                        },
-                        analytics: _analytics,
-                        tasks: _tasks,
-                        loadingAnalytics: _loadingAnalytics,
-                        analyticsError: _analyticsError,
-                        statsPeriod: _statsPeriod,
-                        onPeriodChanged: (period) {
-                          setState(() => _statsPeriod = period);
-                          _loadAnalytics(period: period);
-                        },
-                        onRefresh: () => _loadAnalytics(),
-                        scrollController: _statsScrollController,
-                      ),
-                    ),
-                    TickerMode(
-                      enabled: _currentTab == 2,
-                      child: FriendsView(key: _friendsViewKey),
+                    IndexedStack(
+                      index: _currentTab,
+                      children: [
+                        TickerMode(
+                          enabled: _currentTab == 0,
+                          child: FriendsView(key: _friendsViewKey),
+                        ),
+                        TickerMode(
+                          enabled: _currentTab == 1,
+                          child: HomeTasksView(
+                            scrollController: _scrollController,
+                            onRefresh: _loadData,
+                            catSpeed: counts.catSpeed,
+                            activeCount: counts.active,
+                            completedCount: counts.completed,
+                            completedTodayCount: counts.completedToday,
+                            todayTotalCount: counts.todayTotal,
+                            completionPercent: completionPercent,
+                            totalCount: _tasks.length,
+                            currentFilter: _filter,
+                            onFilterChanged: (filter) => setState(() => _filter = filter),
+                            searchController: _searchController,
+                            searchQuery: _searchQuery,
+                            onSearchChanged: (q) => setState(() => _searchQuery = q),
+                            filteredTasks: filtered,
+                            todayTasks: todayTasks,
+                            earlierTasks: earlierTasks,
+                            isLoadingMore: _isLoadingMore,
+                            currentUserId: _user?.id,
+                            onToggleTask: _toggleTask,
+                            onTaskTap: _showTaskDetailsModal,
+                            onDeleteTask: _deleteTask,
+                          ),
+                        ),
+                        TickerMode(
+                          enabled: _currentTab == 2,
+                          child: ProfileView(
+                            user: _user,
+                            onUserUpdated: (updated) {
+                              setState(() => _user = updated);
+                            },
+                            analytics: _analytics,
+                            tasks: _tasks,
+                            loadingAnalytics: _loadingAnalytics,
+                            analyticsError: _analyticsError,
+                            statsPeriod: _statsPeriod,
+                            onPeriodChanged: (period) {
+                              setState(() => _statsPeriod = period);
+                              _loadAnalytics(period: period);
+                            },
+                            onRefresh: () => _loadAnalytics(),
+                            scrollController: _statsScrollController,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-      floatingActionButton: _currentTab == 0
+      floatingActionButton: _currentTab == 1
           ? FloatingActionButton(
               onPressed: _showCreateTaskDialog,
               backgroundColor: isDark ? Colors.white : const Color(0xFF4B5563),
@@ -758,7 +800,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               shape: const CircleBorder(),
               child: const Icon(Icons.add, size: 28),
             )
-          : _currentTab == 2
+          : _currentTab == 0
               ? FloatingActionButton(
                   onPressed: () {
                     _friendsViewKey.currentState?.openAddFriendDialog();
@@ -774,7 +816,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         currentTab: _currentTab,
         onTabSelected: (index) {
           setState(() => _currentTab = index);
-          if (index == 1) {
+          if (index == 2) {
             _loadAnalytics();
           }
         },

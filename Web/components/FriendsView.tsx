@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { HandwrittenTickIcon, HandwrittenCrossIcon } from "@/components/icons/AppIcons";
 
 interface FriendUser {
   _id: string;
@@ -52,6 +53,7 @@ export default function FriendsView({ authFetch, onCountUpdate }: FriendsViewPro
 
   // State for "Add Friend" modal & searching new friends
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [topBanner, setTopBanner] = useState<string | null>(null);
   const [addSearchEmail, setAddSearchEmail] = useState("");
   const [searchResults, setSearchResults] = useState<SearchUserResult[]>([]);
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
@@ -188,7 +190,8 @@ export default function FriendsView({ authFetch, onCountUpdate }: FriendsViewPro
     }
 
     const trimmed = val.trim();
-    if (trimmed.length < 2) {
+    const isCompleteEmail = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(trimmed);
+    if (!isCompleteEmail) {
       setSearchResults([]);
       setIsSearchingUsers(false);
       return;
@@ -221,7 +224,11 @@ export default function FriendsView({ authFetch, onCountUpdate }: FriendsViewPro
       });
       const data = await res.json();
       if (res.ok) {
-        setModalFeedback({ text: data.message || "Request sent 🐾" });
+        setIsAddModalOpen(false);
+        setTopBanner(`Request sent to ${email}`);
+        setTimeout(() => {
+          setTopBanner((curr) => (curr === `Request sent to ${email}` ? null : curr));
+        }, 4000);
         setSearchResults((prev) =>
           prev.map((u) => (u.email === email ? { ...u, friendshipStatus: "pending_sent" } : u))
         );
@@ -236,11 +243,22 @@ export default function FriendsView({ authFetch, onCountUpdate }: FriendsViewPro
 
   return (
     <div className="space-y-6 relative pb-12">
+      {topBanner && (
+        <div className="sticky top-4 z-40 bg-neutral-900 border border-neutral-700 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center justify-between gap-3 text-xs font-semibold animate-in fade-in slide-in-from-top duration-200">
+          <span>{topBanner}</span>
+          <button
+            onClick={() => setTopBanner(null)}
+            className="text-neutral-400 hover:text-white p-0.5 rounded"
+          >
+            ✕
+          </button>
+        </div>
+      )}
       {/* SECTION 1: Pending Friend Requests Card */}
       <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 shadow-sm">
         <div className="flex items-center justify-between pb-3 border-b border-neutral-800">
           <div className="flex items-center gap-2">
-            <span className="text-amber-400">
+            <span className="text-neutral-300">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path
                   strokeLinecap="round"
@@ -251,7 +269,7 @@ export default function FriendsView({ authFetch, onCountUpdate }: FriendsViewPro
               </svg>
             </span>
             <h3 className="text-sm font-semibold text-white">Pending Friend Requests</h3>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-200 border border-neutral-700 font-medium">
               {pendingIncoming.length}
             </span>
           </div>
@@ -292,15 +310,17 @@ export default function FriendsView({ authFetch, onCountUpdate }: FriendsViewPro
                   <div className="flex items-center gap-2 shrink-0">
                     <button
                       onClick={() => handleAcceptRequest(req.friendshipId)}
-                      className="bg-white hover:bg-neutral-200 text-neutral-950 px-3 py-1.5 rounded-lg text-xs font-semibold transition"
+                      title="Accept request"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center bg-neutral-800 hover:bg-neutral-700 border border-neutral-600 text-white font-bold transition shadow-sm"
                     >
-                      Accept
+                      <HandwrittenTickIcon size={16} />
                     </button>
                     <button
                       onClick={() => handleDeclineRequest(req.friendshipId)}
-                      className="bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-white px-3 py-1.5 rounded-lg text-xs font-medium transition"
+                      title="Decline request"
+                      className="w-8 h-8 rounded-lg flex items-center justify-center bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-neutral-400 hover:text-white transition"
                     >
-                      Decline
+                      <HandwrittenCrossIcon size={16} />
                     </button>
                   </div>
                 </div>
@@ -414,7 +434,7 @@ export default function FriendsView({ authFetch, onCountUpdate }: FriendsViewPro
                     <button
                       onClick={() => handleRemoveFriend(item.friendshipId, displayName)}
                       title="Remove friend"
-                      className="p-1.5 rounded-lg text-neutral-500 hover:text-rose-400 hover:bg-neutral-800 transition text-xs"
+                      className="p-1.5 rounded-lg text-neutral-500 hover:text-white hover:bg-neutral-800 transition text-xs"
                     >
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path
@@ -480,13 +500,9 @@ export default function FriendsView({ authFetch, onCountUpdate }: FriendsViewPro
             <div className="mt-4 space-y-4">
               {modalFeedback && (
                 <div
-                  className={`p-2.5 rounded-xl text-xs flex items-center gap-2 ${
-                    modalFeedback.error
-                      ? "bg-rose-500/10 text-rose-400 border border-rose-500/20"
-                      : "bg-neutral-800 text-neutral-200 border border-neutral-700"
-                  }`}
+                  className="p-2.5 rounded-xl text-xs flex items-center gap-2 bg-neutral-800 text-neutral-200 border border-neutral-700"
                 >
-                  <span>{modalFeedback.error ? "⚠️" : "🐾"}</span>
+                  {modalFeedback.error && <span>⚠️</span>}
                   <span>{modalFeedback.text}</span>
                 </div>
               )}

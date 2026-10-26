@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
 
 class HomeSearchFilterBar extends StatelessWidget {
   final String currentFilter;
@@ -24,11 +25,10 @@ class HomeSearchFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF161616) : Colors.white;
-    final cardBorder = isDark ? const Color(0xFF242424) : const Color(0xFFE5E7EB);
-    final textPrimary = isDark ? Colors.white : const Color(0xFF4B5563);
-    final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+    final palette = AppColors.of(context);
+    final cardBorder = palette.cardBorder;
+    final textPrimary = palette.textPrimary;
+    final textSecondary = palette.textSecondary;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -42,10 +42,7 @@ class HomeSearchFilterBar extends StatelessWidget {
               count: totalCount,
               isSelected: currentFilter == 'all',
               onSelected: onFilterChanged,
-              isDark: isDark,
-              cardBg: cardBg,
-              cardBorder: cardBorder,
-              textSecondary: textSecondary,
+              palette: palette,
             ),
             const SizedBox(width: 8),
             _FilterTab(
@@ -54,10 +51,7 @@ class HomeSearchFilterBar extends StatelessWidget {
               count: activeCount,
               isSelected: currentFilter == 'active',
               onSelected: onFilterChanged,
-              isDark: isDark,
-              cardBg: cardBg,
-              cardBorder: cardBorder,
-              textSecondary: textSecondary,
+              palette: palette,
             ),
             const SizedBox(width: 8),
             _FilterTab(
@@ -66,10 +60,7 @@ class HomeSearchFilterBar extends StatelessWidget {
               count: completedCount,
               isSelected: currentFilter == 'completed',
               onSelected: onFilterChanged,
-              isDark: isDark,
-              cardBg: cardBg,
-              cardBorder: cardBorder,
-              textSecondary: textSecondary,
+              palette: palette,
             ),
           ],
         ),
@@ -79,9 +70,16 @@ class HomeSearchFilterBar extends StatelessWidget {
         Container(
           height: 44,
           decoration: BoxDecoration(
-            color: cardBg,
+            color: palette.searchBg,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(color: cardBorder),
+            boxShadow: [
+              BoxShadow(
+                color: palette.softShadow,
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Row(
@@ -132,10 +130,7 @@ class _FilterTab extends StatelessWidget {
   final int count;
   final bool isSelected;
   final ValueChanged<String> onSelected;
-  final bool isDark;
-  final Color cardBg;
-  final Color cardBorder;
-  final Color textSecondary;
+  final AppPalette palette;
 
   const _FilterTab({
     required this.id,
@@ -143,17 +138,15 @@ class _FilterTab extends StatelessWidget {
     required this.count,
     required this.isSelected,
     required this.onSelected,
-    required this.isDark,
-    required this.cardBg,
-    required this.cardBorder,
-    required this.textSecondary,
+    required this.palette,
   });
 
   @override
   Widget build(BuildContext context) {
-    final activeBg = isDark ? Colors.white : const Color(0xFF4B5563);
-    final activeText = isDark ? Colors.black : Colors.white;
-    final activeBadgeBg = isDark ? const Color(0xFFE5E5E5) : const Color(0xFF374151);
+    final activeBg = palette.activeChip;
+    final activeText = palette.activeChipText;
+    final inactiveBg = palette.chipBg;
+    final inactiveText = palette.textSecondary;
 
     return Expanded(
       child: InkWell(
@@ -162,10 +155,10 @@ class _FilterTab extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
-            color: isSelected ? activeBg : cardBg,
+            color: isSelected ? activeBg : inactiveBg,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isSelected ? activeBg : cardBorder,
+              color: isSelected ? activeBg : palette.cardBorder,
             ),
           ),
           child: Row(
@@ -177,7 +170,7 @@ class _FilterTab extends StatelessWidget {
                   fontFamily: 'Sniglet',
                   fontSize: 13,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? activeText : textSecondary,
+                  color: isSelected ? activeText : inactiveText,
                 ),
               ),
               const SizedBox(width: 6),
@@ -185,8 +178,8 @@ class _FilterTab extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? activeBadgeBg
-                      : (isDark ? const Color(0xFF262626) : const Color(0xFFE4E4E7)),
+                      ? activeText.withValues(alpha: 0.20)
+                      : palette.cardBorder,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -195,7 +188,7 @@ class _FilterTab extends StatelessWidget {
                     fontFamily: 'Sniglet',
                     fontSize: 11,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected ? activeText : textSecondary,
+                    color: isSelected ? activeText : inactiveText,
                   ),
                 ),
               ),

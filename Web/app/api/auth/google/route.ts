@@ -55,7 +55,7 @@ export async function POST(request: Request) {
           email = payload.email || email;
           name = payload.name || name;
           googleId = payload.sub || googleId;
-          avatar = payload.picture || avatar;
+          avatar = payload.picture || fallbackAvatar || avatar;
         }
       } catch (err) {
         console.error("Tokeninfo verification error:", err);
@@ -83,9 +83,9 @@ export async function POST(request: Request) {
         avatar,
       });
     } else {
-      if (!user.googleId && googleId) user.googleId = googleId;
-      if (!user.avatar && avatar) user.avatar = avatar;
-      if (!user.name && name) user.name = name;
+      if (googleId) user.googleId = googleId;
+      if (avatar) user.avatar = avatar;
+      if (name && !user.name) user.name = name;
     }
 
     const { accessToken, refreshToken } = generateTokens(user._id.toString());

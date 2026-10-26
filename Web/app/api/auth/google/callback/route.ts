@@ -83,9 +83,9 @@ export async function GET(request: Request) {
         avatar,
       });
     } else {
-      if (!user.googleId) user.googleId = googleId;
-      if (!user.avatar && avatar) user.avatar = avatar;
-      if (!user.name && name) user.name = name;
+      if (googleId) user.googleId = googleId;
+      if (avatar) user.avatar = avatar;
+      if (name && !user.name) user.name = name;
     }
 
     const { accessToken, refreshToken } = generateTokens(user._id.toString());

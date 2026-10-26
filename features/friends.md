@@ -12,13 +12,14 @@ last_updated: 2026-10-26
 ## Overview
 Enables collaborative task management between friends:
 - **Two Vertical Sections Layout**:
-  - **Pending Requests Card**: Displays all incoming pending friend requests with quick Accept/Decline action buttons.
+  - **Pending Requests Card**: Displays all incoming pending friend requests with custom handwritten bold **tick** (accept) and **cross** (decline) SVGs matching the playful Sniglet font aesthetic, with neutral dark/cream color styling.
   - **Existing Friends Card (Lazy Loading)**: Displays the user's accepted friends list with pagination/lazy loading on scroll, badge counts, and removal options.
 - **Existing Friend Search**: Search input specifically searches and filters existing accepted friends by email or name.
 - **Friend Stats Viewing**: Clicking on a friend in the accepted friends list inspects their public stats:
   - If their stats are **Public**, opens a modal sheet displaying their full productivity stats and period breakdown.
+  - Public indicator badges and globe icons use theme-governed subtle whitish green (`#D4E7DC` in dark mode, `#476251` in light mode) without harsh bright or neon tints.
   - If their stats are **Private**, informs the user that the friend has chosen to keep their stats private.
-- **Add Friend FAB**: Bottom-right floating `+` button (styled like the Add Task button) opening an "Add Friend" modal to search registered users across the system by email and send friend requests.
+- **Add Friend FAB**: Bottom-right floating `+` button (styled like the Add Task button) opening an "Add Friend" modal to search registered users across the system by email and send friend requests. Upon sending, the modal automatically closes and displays an animated `Request sent to {email}` notification floating at the top of the view for 4 seconds.
 - **Shared Tasks & Dual Completion**:
   - **Progress Badge**: Displays `x/y completed the task` directly on the task card whenever a task is shared.
   - **Strict Pending State**: Even if one participant has not completed the task, the task remains in the pending/active list (across today, tomorrow, etc.). If the current user completed their part, their checkbox displays the completed tick mark, but the task stays in the active/pending list until all participants complete.
