@@ -20,7 +20,7 @@ class StatsCompletionCard extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: palette.surface,
+            color: palette.taskCardBg,
             borderRadius: BorderRadius.circular(22),
             border: Border.all(color: palette.cardBorder),
           ),
@@ -76,7 +76,7 @@ class StatsCompletionCard extends StatelessWidget {
             _StatMetricCard(
               label: 'Total',
               value: '${summary.total}',
-              cardBg: palette.surface,
+              cardBg: palette.taskCardBg,
               cardBorder: palette.cardBorder,
               textPrimary: palette.textPrimary,
               textSecondary: palette.textSecondary,
@@ -85,7 +85,7 @@ class StatsCompletionCard extends StatelessWidget {
             _StatMetricCard(
               label: 'Done',
               value: '${summary.completed}',
-              cardBg: palette.surface,
+              cardBg: palette.taskCardBg,
               cardBorder: palette.cardBorder,
               textPrimary: palette.textPrimary,
               textSecondary: palette.textSecondary,
@@ -94,7 +94,7 @@ class StatsCompletionCard extends StatelessWidget {
             _StatMetricCard(
               label: 'Active',
               value: '${summary.pending}',
-              cardBg: palette.surface,
+              cardBg: palette.taskCardBg,
               cardBorder: palette.cardBorder,
               textPrimary: palette.textPrimary,
               textSecondary: palette.textSecondary,

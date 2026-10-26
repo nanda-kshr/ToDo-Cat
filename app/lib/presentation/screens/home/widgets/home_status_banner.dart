@@ -18,10 +18,26 @@ class HomeStatusBanner extends StatelessWidget {
     required this.completionPercent,
   });
 
+  String _getSpeechText() {
+    if (todayTotalCount == 0 && activeCount == 0) {
+      return 'Ready for today?';
+    }
+    if (activeCount == 0 && completedTodayCount > 0) {
+      return 'All caught up!';
+    }
+    if (completionPercent >= 50) {
+      return 'Not yet, keep going!';
+    }
+    if (completedTodayCount > 0) {
+      return 'Good start, keep going!';
+    }
+    return 'Let\'s get started!';
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = AppColors.of(context);
-    final cardBg = palette.surface;
+    final cardBg = palette.taskCardBg;
     final cardBorder = palette.cardBorder;
     final textPrimary = palette.textPrimary;
     final textSecondary = palette.textSecondary;
@@ -31,31 +47,58 @@ class HomeStatusBanner extends StatelessWidget {
             : (completedTodayCount / todayTotalCount))
         .clamp(0.0, 1.0);
 
+    final speechText = _getSpeechText();
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       decoration: BoxDecoration(
         color: cardBg,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: cardBorder),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: cardBorder, width: 1.2),
         boxShadow: [
           BoxShadow(
             color: palette.softShadow,
-            blurRadius: 10,
-            offset: const Offset(0, 3),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          RepaintBoundary(
-            child: CatAnimation(
-              speedPercent: catSpeed,
-              size: 88,
-              showContainer: false,
+          // Left Half: Big Cat (50% width)
+          Expanded(
+            flex: 1,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _SpeechBubble(
+                  text: speechText,
+                  bg: cardBg,
+                  border: cardBorder,
+                  textColor: textPrimary,
+                ),
+                const SizedBox(height: 8),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final catSize = (constraints.maxWidth * 0.90).clamp(120.0, 155.0);
+                    return RepaintBoundary(
+                      child: CatAnimation(
+                        speedPercent: catSpeed,
+                        size: catSize,
+                        showContainer: false,
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
+          // Right Half: Big Progress & Stats (50% width)
           Expanded(
+            flex: 1,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -64,8 +107,8 @@ class HomeStatusBanner extends StatelessWidget {
                   '$activeCount Active Tasks',
                   style: TextStyle(
                     fontFamily: 'Sniglet',
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 19,
+                    fontWeight: FontWeight.w700,
                     color: textPrimary,
                   ),
                   maxLines: 1,
@@ -76,29 +119,34 @@ class HomeStatusBanner extends StatelessWidget {
                   '$completionPercent%',
                   style: TextStyle(
                     fontFamily: 'Sniglet',
-                    fontSize: 32,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 48,
+                    fontWeight: FontWeight.w800,
                     color: textPrimary,
+                    height: 1.1,
+                    letterSpacing: -0.5,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                   child: LinearProgressIndicator(
                     value: progress,
-                    minHeight: 8,
+                    minHeight: 16,
                     backgroundColor: palette.progressTrack,
                     valueColor: AlwaysStoppedAnimation<Color>(palette.progressFill),
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Text(
                   '$completedTodayCount done today · $activeCount remaining',
                   style: TextStyle(
                     fontFamily: 'Sniglet',
-                    fontSize: 12,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
                     color: textSecondary,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -107,4 +155,87 @@ class HomeStatusBanner extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SpeechBubble extends StatelessWidget {
+  final String text;
+  final Color bg;
+  final Color border;
+  final Color textColor;
+
+  const _SpeechBubble({
+    required this.text,
+    required this.bg,
+    required this.border,
+    required this.textColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4.5),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: border, width: 1.2),
+          ),
+          child: Text(
+            text,
+            style: TextStyle(
+              fontFamily: 'Sniglet',
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: textColor,
+            ),
+          ),
+        ),
+        Align(
+          alignment: const Alignment(0.2, 0),
+          child: CustomPaint(
+            size: const Size(10, 5),
+            painter: _BubbleTailPainter(bg: bg, border: border),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _BubbleTailPainter extends CustomPainter {
+  final Color bg;
+  final Color border;
+
+  _BubbleTailPainter({required this.bg, required this.border});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..lineTo(size.width, 0)
+      ..close();
+
+    final fillPaint = Paint()
+      ..color = bg
+      ..style = PaintingStyle.fill;
+
+    final strokePaint = Paint()
+      ..color = border
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round;
+
+    canvas.drawPath(path, fillPaint);
+    canvas.drawLine(Offset.zero, Offset(size.width / 2, size.height), strokePaint);
+    canvas.drawLine(Offset(size.width / 2, size.height), Offset(size.width, 0), strokePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _BubbleTailPainter oldDelegate) =>
+      oldDelegate.bg != bg || oldDelegate.border != border;
 }

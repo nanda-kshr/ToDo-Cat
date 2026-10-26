@@ -19,10 +19,10 @@ last_updated: 2026-10-26
     - App Title: Deep warm charcoal-brown `#2B1D16`
     - Main screen background: Pale warm cream `#FDF2DD`
     - Cards / Elevated: Soft ivory/peachy cream `#F7E9DD`
-    - Task items (Home tab): Pure white `#FFFFFF`
+    - Cat card / Home status banner: Pure white `#FFFFFF`
+    - Task items & Profile cards: Pure white `#FFFFFF`
     - Selected status (All, Active, Completed): `#413025` (Text: `#FFF8E8`)
-    - Home status banner (Active tasks, %, progress): `#F7E9DD`
-    - Add task button / FAB: `#F7E9DD` (Symbol: `#2B1D16`)
+    - Add task button / FAB: `#413025` (Symbol/Text: `#FFF8E8`)
     - Primary text: Deep warm charcoal-brown `#2B1D16`
     - Secondary text: Muted warm brown `#8A7867`
     - Borders: Warm beige `#E8D9C2`
@@ -79,6 +79,7 @@ last_updated: 2026-10-26
   - **Light Mode**: widget background `#FDF2DD`, cards `#F7E9DD`, primary text `#2B1D16`, secondary text `#8A7867`, borders `#E8D9C2`, search/input `#F8EEDF`, checkbox outline `#6F5A48`, checked background `#2B1D16`, progress track `#EADCC6`, progress fill `#FFC65C`.
   - **Dark Mode**: widget background `#0E0E0E`, cards `#1A1A1A` / elevated `#222222`, primary text `#F5F5F5`, secondary text `#A6A6A6`, borders `#353535`, search/input `#1C1C1C`, checkbox outline `#353535`, checked background `#F5F5F5`, progress track `#3A3A3A`, progress fill `#FFC65C`.
 - **Dynamic System Adaptation**: Handled via `Configuration.UI_MODE_NIGHT_MASK` and Flutter app preferences for real-time automatic theme switching across both native and Flutter UI components.
+- **Rounded Widget Asset Clipping**: Android widgets enforce `android:clipToOutline="true"` and bottom artwork (`widget_cat_grass.png`, `grass.svg`) has pre-clipped transparent bottom corners (128px radius matching 24dp at widget scale) to guarantee that launcher RemoteViews render smoothly without square corner clipping artifacts.
 
 ## 7. Optimistic Task Deletion & 5-Second Undo
 - **Delayed Deletion Pattern**: Task deletions across Mobile (Flutter) and Web (Next.js) are processed optimistically:

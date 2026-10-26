@@ -18,10 +18,10 @@ TodoCat features a cohesive, playful design aesthetic built around the `Sniglet`
     - App Title: Deep warm charcoal-brown `#2B1D16`
     - Main screen background: Pale warm cream `#FDF2DD`
     - Cards: Soft ivory/peachy cream `#F7E9DD`
-    - Task items (Home tab): Pure white `#FFFFFF`
+    - Cat card / Home status banner: Pure white `#FFFFFF`
+    - Task items & Profile cards: Pure white `#FFFFFF`
     - Selected status (All, Active, Completed): `#413025` (Text: `#FFF8E8`)
-    - Home status banner (Active tasks, %, progress): `#F7E9DD`
-    - Add task button / FAB: `#F7E9DD` (Symbol: `#2B1D16`)
+    - Add task button / FAB: `#413025` (Symbol/Text: `#FFF8E8`)
     - Primary text: Deep warm charcoal-brown `#2B1D16`
     - Secondary text: Muted warm brown `#8A7867`
     - Borders: Warm beige `#E8D9C2`
@@ -82,6 +82,7 @@ TodoCat features a cohesive, playful design aesthetic built around the `Sniglet`
   - `app/lib/presentation/widgets/app_outlined_icons.dart` - Custom 2.2px rounded outlined SVGs, `TaskStatusBadge` (no text), `TaskPriorityBadge` (no text), and `PriorityChoicePill`.
   - `app/lib/presentation/screens/home/widgets/cat_trail_background.dart` - Cat trail and paw prints background painter rendered behind all tabs on `HomeScreen`.
   - `app/lib/presentation/screens/home/widgets/home_tasks_view.dart` - Home tasks scroll layout hosting background stack.
+  - `app/lib/presentation/screens/home/widgets/settings_modal.dart` - Settings modal with live reactive `ValueListenableBuilder<ThemeMode>` updates, immediately syncing palette tokens and UI styles across light, dark, and system modes without modal reopening.
   - `app/lib/services/theme_service.dart` - `ValueNotifier<ThemeMode>` singleton managing theme persistence.
   - `app/assets/fonts/Sniglet-Regular.ttf` - Core brand font.
   - `app/lib/main.dart` - Material theme definitions.

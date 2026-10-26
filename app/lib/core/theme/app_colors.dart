@@ -246,9 +246,9 @@ class AppColors {
     // Kitten blush: Soft pink #F4A6A0
     catBlush: Color(0xFFF4A6A0),
 
-    // 4) Add task button: #f7e9dd (Symbol: #2b1d16)
-    fabBg: Color(0xFFF7E9DD),
-    fabIcon: Color(0xFF2B1D16),
+    // Add task button: Chocolate #413025 (Symbol/Text: #FFF8E8)
+    fabBg: Color(0xFF413025),
+    fabIcon: Color(0xFFFFF8E8),
 
     // Soft shadow: Warm grey-brown #8C7860 at low opacity
     softShadow: Color(0x248C7860),

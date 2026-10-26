@@ -32,8 +32,8 @@
   --cat-blush: #F4A6A0;
 
   /* Floating action button */
-  --fab-bg: #F7E9DD;
-  --fab-icon: #2B1D16;
+  --fab-bg: #413025;
+  --fab-icon: #FFF8E8;
 }
 
 :root[data-theme="dark"] {

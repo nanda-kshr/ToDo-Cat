@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../../core/theme/app_colors.dart';
 import '../../../../../models/analytics.dart';
 
 class StatsDueStatusCard extends StatelessWidget {
@@ -11,11 +12,12 @@ class StatsDueStatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppColors.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF171717) : Colors.white;
-    final cardBorder = isDark ? const Color(0xFF262626) : const Color(0xFFE5E7EB);
-    final textPrimary = isDark ? Colors.white : const Color(0xFF4B5563);
-    final textSecondary = isDark ? const Color(0xFFA3A3A3) : const Color(0xFF9CA3AF);
+    final cardBg = palette.taskCardBg;
+    final cardBorder = palette.cardBorder;
+    final textPrimary = palette.textPrimary;
+    final textSecondary = palette.textSecondary;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

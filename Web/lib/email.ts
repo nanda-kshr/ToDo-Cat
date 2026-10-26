@@ -24,16 +24,18 @@ function getTransporter() {
 }
 
 function emailWrapper(content: string): string {
+  const logoUrl = "https://todocat.instaroid.page/logo.png";
+
   return `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb; padding: 32px 16px; color: #374151;">
-      <div style="max-width: 500px; margin: 0 auto; background: #ffffff; border-radius: 20px; padding: 28px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05); border: 1px solid #e5e7eb;">
-        <div style="text-align: center; margin-bottom: 24px;">
-          <span style="font-size: 36px;">🐾</span>
-          <h1 style="font-size: 24px; font-weight: 800; color: #111827; margin: 6px 0 0 0;">TodoCat</h1>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb; padding: 36px 16px; color: #374151;">
+      <div style="max-width: 500px; margin: 0 auto; background: #ffffff; border-radius: 16px; padding: 32px 28px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04); border: 1px solid #e5e7eb;">
+        <div style="text-align: center; margin-bottom: 26px;">
+          <img src="${logoUrl}" alt="TodoCat" width="56" height="45" style="display: block; margin: 0 auto 10px auto; border: 0; outline: none;" />
+          <h1 style="font-size: 22px; font-weight: 800; color: #111827; margin: 0; letter-spacing: -0.3px;">TodoCat</h1>
         </div>
         ${content}
-        <div style="margin-top: 32px; padding-top: 18px; border-top: 1px solid #f3f4f6; text-align: center; font-size: 12px; color: #9ca3af;">
-          TodoCat — playful task management together.
+        <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #f3f4f6; text-align: center; font-size: 12px; color: #9ca3af; line-height: 1.5;">
+          TodoCat — Collaborative task management.
         </div>
       </div>
     </div>
@@ -56,15 +58,15 @@ export async function sendFriendRequestEmail({
   const fromAddress = process.env.SMTP_FROM || `"TodoCat" <${process.env.SMTP_MAIL || "noreply@todocat.app"}>`;
 
   const html = emailWrapper(`
-    <h2 style="font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 12px;">New Friend Request! 🐱</h2>
+    <h2 style="font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 12px;">New Friend Request</h2>
     <p style="font-size: 14px; line-height: 1.6; color: #4b5563;">
-      <strong>${displayName}</strong> (${senderEmail}) wants to be friends with you on TodoCat!
+      <strong>${displayName}</strong> (${senderEmail}) wants to be friends with you on TodoCat.
     </p>
     <p style="font-size: 14px; line-height: 1.6; color: #4b5563;">
       Once connected, you can share tasks with each other and complete them together.
     </p>
     <div style="text-align: center; margin: 26px 0;">
-      <a href="https://todocat.instaroid.page" style="background-color: #374151; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 14px; font-weight: 600; font-size: 14px; display: inline-block;">
+      <a href="https://todocat.instaroid.page" style="background-color: #374151; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; font-size: 14px; display: inline-block;">
         Open TodoCat
       </a>
     </div>
@@ -99,12 +101,12 @@ export async function sendFriendAcceptedEmail({
   const fromAddress = process.env.SMTP_FROM || `"TodoCat" <${process.env.SMTP_MAIL || "noreply@todocat.app"}>`;
 
   const html = emailWrapper(`
-    <h2 style="font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 12px;">Friend Request Accepted! 🎉</h2>
+    <h2 style="font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 12px;">Friend Request Accepted</h2>
     <p style="font-size: 14px; line-height: 1.6; color: #4b5563;">
-      <strong>${displayName}</strong> accepted your friend request! You can now start sharing tasks and completing them together.
+      <strong>${displayName}</strong> accepted your friend request. You can now start sharing tasks and completing them together.
     </p>
     <div style="text-align: center; margin: 26px 0;">
-      <a href="https://todocat.instaroid.page" style="background-color: #374151; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 14px; font-weight: 600; font-size: 14px; display: inline-block;">
+      <a href="https://todocat.instaroid.page" style="background-color: #374151; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; font-size: 14px; display: inline-block;">
         View Friends on TodoCat
       </a>
     </div>
@@ -114,7 +116,7 @@ export async function sendFriendAcceptedEmail({
     await transporter.sendMail({
       from: fromAddress,
       to: toEmail,
-      subject: `${displayName} accepted your friend request!`,
+      subject: `${displayName} accepted your friend request`,
       html,
     });
     console.log(`[Email] Friend accepted notification sent to ${toEmail}`);
@@ -141,18 +143,18 @@ export async function sendSharedTaskEmail({
   const fromAddress = process.env.SMTP_FROM || `"TodoCat" <${process.env.SMTP_MAIL || "noreply@todocat.app"}>`;
 
   const html = emailWrapper(`
-    <h2 style="font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 12px;">New Shared Task! 🎯</h2>
+    <h2 style="font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 12px;">New Shared Task</h2>
     <p style="font-size: 14px; line-height: 1.6; color: #4b5563;">
       <strong>${displayName}</strong> shared a task with you:
     </p>
     <div style="background-color: #f3f4f6; border-radius: 12px; padding: 14px 18px; margin: 18px 0; font-weight: 600; color: #111827; font-size: 15px;">
-      📌 ${taskTitle}
+      ${taskTitle}
     </div>
     <p style="font-size: 13px; color: #6b7280; line-height: 1.5;">
-      Remember: Both of you need to check this task as completed to finish it!
+      Remember: Both participants need to check this task as completed to finish it.
     </p>
     <div style="text-align: center; margin: 24px 0;">
-      <a href="https://todocat.instaroid.page" style="background-color: #374151; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 14px; font-weight: 600; font-size: 14px; display: inline-block;">
+      <a href="https://todocat.instaroid.page" style="background-color: #374151; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; font-size: 14px; display: inline-block;">
         View Shared Task
       </a>
     </div>
@@ -189,7 +191,7 @@ export async function sendPasswordResetEmail({
   const fromAddress = process.env.SMTP_FROM || `"TodoCat Security" <${process.env.SMTP_MAIL || "noreply@todocat.app"}>`;
 
   const html = emailWrapper(`
-    <h2 style="font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 12px;">Reset Your Password 🔐</h2>
+    <h2 style="font-size: 18px; font-weight: 700; color: #1f2937; margin-bottom: 12px;">Reset Your Password</h2>
     <p style="font-size: 14px; line-height: 1.6; color: #4b5563;">
       Hi <strong>${displayName}</strong>, we received a request to reset your TodoCat password.
     </p>
@@ -211,7 +213,7 @@ export async function sendPasswordResetEmail({
     </p>
 
     <div style="text-align: center; margin: 24px 0;">
-      <a href="${resetLink}" style="background-color: #111827; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 14px; font-weight: 700; font-size: 14px; display: inline-block;">
+      <a href="${resetLink}" style="background-color: #111827; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 12px; font-weight: 700; font-size: 14px; display: inline-block;">
         Reset Password
       </a>
     </div>
@@ -225,7 +227,7 @@ export async function sendPasswordResetEmail({
     await transporter.sendMail({
       from: fromAddress,
       to: toEmail,
-      subject: `🐾 ${otp} is your TodoCat password reset code`,
+      subject: `${otp} is your TodoCat password reset code`,
       html,
     });
     console.log(`[Email] Password reset sent to ${toEmail}`);

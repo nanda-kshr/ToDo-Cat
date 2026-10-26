@@ -934,12 +934,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               backgroundColor: palette.fabBg,
               foregroundColor: palette.fabIcon,
               elevation: 4,
-              shape: CircleBorder(
-                side: BorderSide(
-                  color: isDark ? Colors.transparent : palette.cardBorder,
-                  width: 1.5,
-                ),
-              ),
+              shape: const CircleBorder(),
               child: const Icon(Icons.add, size: 28),
             )
           : _currentTab == 0
@@ -950,12 +945,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   backgroundColor: palette.fabBg,
                   foregroundColor: palette.fabIcon,
                   elevation: 4,
-                  shape: CircleBorder(
-                    side: BorderSide(
-                      color: isDark ? Colors.transparent : palette.cardBorder,
-                      width: 1.5,
-                    ),
-                  ),
+                  shape: const CircleBorder(),
                   child: const Icon(Icons.add, size: 28),
                 )
               : null,

@@ -229,10 +229,21 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
             // Task Title Input
             Container(
               decoration: BoxDecoration(
-                color: inputBg,
+                color: isDark ? inputBg : Colors.white,
                 borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF383838) : palette.cardBorder,
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: palette.softShadow,
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
               child: TextField(
                 controller: _titleController,
                 autofocus: true,
@@ -242,10 +253,11 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                   fontSize: 15,
                 ),
                 decoration: InputDecoration(
-                  hintText: 'Task title...',
+                  icon: Icon(Icons.edit_outlined, size: 18, color: textSecondary),
+                  hintText: 'What needs to be done?...',
                   hintStyle: TextStyle(
                     fontFamily: 'Sniglet',
-                    color: textSecondary,
+                    color: textSecondary.withValues(alpha: 0.7),
                     fontSize: 15,
                   ),
                   border: InputBorder.none,
@@ -302,8 +314,9 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
-                        color: inputBg,
+                        color: isDark ? inputBg : Colors.white,
                         borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: palette.cardBorder, width: 1.2),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -334,11 +347,11 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                         decoration: BoxDecoration(
-                          color: inputBg,
+                          color: isDark ? inputBg : Colors.white,
                           borderRadius: BorderRadius.circular(18),
                           border: Border.all(
-                            color: isDark ? Colors.white24 : const Color(0xFFD4D4D8),
-                            width: 1.2,
+                            color: palette.cardBorder,
+                            width: 1.5,
                           ),
                         ),
                         child: Row(
@@ -410,14 +423,12 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                           decoration: BoxDecoration(
-                            color: inputBg,
+                            color: isDark ? inputBg : Colors.white,
                             borderRadius: BorderRadius.circular(18),
-                            border: _hasTime
-                                ? Border.all(
-                                    color: isDark ? Colors.white30 : const Color(0xFF9CA3AF),
-                                    width: 1.2,
-                                  )
-                                : null,
+                            border: Border.all(
+                              color: palette.cardBorder,
+                              width: 1.2,
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -507,14 +518,12 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                     decoration: BoxDecoration(
-                      color: inputBg,
+                      color: isDark ? inputBg : Colors.white,
                       borderRadius: BorderRadius.circular(18),
-                      border: _selectedRecurrence != 'none'
-                          ? Border.all(
-                              color: isDark ? Colors.white30 : const Color(0xFF9CA3AF),
-                              width: 1.2,
-                            )
-                          : null,
+                      border: Border.all(
+                        color: palette.cardBorder,
+                        width: 1.2,
+                      ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -605,10 +614,21 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
             // Extra Field: Description
             Container(
               decoration: BoxDecoration(
-                color: inputBg,
+                color: isDark ? inputBg : Colors.white,
                 borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: isDark ? const Color(0xFF383838) : palette.cardBorder,
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: palette.softShadow,
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
               child: TextField(
                 controller: _descController,
                 maxLines: 2,
@@ -618,10 +638,11 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                   fontSize: 14,
                 ),
                 decoration: InputDecoration(
+                  icon: Icon(Icons.notes_rounded, size: 18, color: textSecondary),
                   hintText: 'Description (optional)...',
                   hintStyle: TextStyle(
                     fontFamily: 'Sniglet',
-                    color: textSecondary,
+                    color: textSecondary.withValues(alpha: 0.7),
                     fontSize: 14,
                   ),
                   border: InputBorder.none,
@@ -652,9 +673,13 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
                           color: isSel
-                              ? (isDark ? Colors.white : const Color(0xFF4B5563))
-                              : inputBg,
+                              ? palette.activeChip
+                              : (isDark ? inputBg : Colors.white),
                           borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isSel ? Colors.transparent : palette.cardBorder,
+                            width: 1.2,
+                          ),
                         ),
                         child: Text(
                           cat,
@@ -663,7 +688,7 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                             fontSize: 12,
                             fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
                             color: isSel
-                                ? (isDark ? Colors.black : Colors.white)
+                                ? palette.activeChipText
                                 : textSecondary,
                           ),
                         ),
@@ -830,13 +855,10 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                 foregroundColor: palette.fabIcon,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
-                  side: BorderSide(
-                    color: isDark ? Colors.transparent : palette.cardBorder,
-                    width: 1.5,
-                  ),
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                elevation: 0,
+                elevation: 3,
+                shadowColor: palette.softShadow,
               ),
               onPressed: _submit,
               child: const Text(

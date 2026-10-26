@@ -35,7 +35,7 @@ class StatsPriorityCard extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: palette.surface,
+            color: palette.taskCardBg,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(color: palette.cardBorder),
           ),

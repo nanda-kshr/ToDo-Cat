@@ -18,6 +18,7 @@ A dynamic cat companion that animates across the header of the app and can float
 
 ## Components & Architecture
 - **Mobile (Flutter & Android)**:
+  - `app/lib/presentation/screens/home/widgets/home_status_banner.dart` - Home screen big status card with a 50/50 horizontal split: half width for the enlarged animated cat (`size: ~135px`, responsive clamp `120-155px`) with clean speech bubble, and half width for active tasks count, prominent `48px` percentage counter, `16px` pill progress bar, and completion summary.
   - `app/lib/services/floating_cat_service.dart` - MethodChannel bridge for controlling the floating cat overlay.
   - `app/android/app/src/main/kotlin/com/todocat/app/FloatingCatService.kt` - Android overlay implementation using WindowManager and theme-aware UI views.
   - `app/assets/runners/cat/` & `cat_white/` - Sprite sheets for running animations.

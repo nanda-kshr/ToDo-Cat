@@ -120,7 +120,7 @@ class _ProfileViewState extends State<ProfileView> {
   Widget build(BuildContext context) {
     final palette = AppColors.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = palette.surface;
+    final cardBg = palette.taskCardBg;
     final cardBorder = palette.cardBorder;
     final textPrimary = palette.textPrimary;
     final textSecondary = palette.textSecondary;

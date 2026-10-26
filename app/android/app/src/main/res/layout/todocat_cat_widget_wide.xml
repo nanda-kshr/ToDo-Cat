@@ -3,6 +3,7 @@
     android:id="@+id/widget_cat_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:clipToOutline="true"
     android:background="@drawable/widget_cat_background">
 
     <!-- Grass Background Illustration at bottom -->
@@ -10,6 +11,7 @@
         android:id="@+id/widget_cat_grass_bg"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:clipToOutline="true"
         android:scaleType="fitEnd"
         android:src="@drawable/widget_cat_grass" />
 

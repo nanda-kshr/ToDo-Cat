@@ -166,9 +166,9 @@ export const lightColors: ThemeColors = {
   catBody: "#2B1D16",
   catBlush: "#F4A6A0",
 
-  // 4) Add task button: #f7e9dd (Symbol: #2b1d16)
-  fabBg: "#F7E9DD",
-  fabIcon: "#2B1D16",
+  // Add task button: Chocolate #413025 (Symbol/Text: #FFF8E8)
+  fabBg: "#413025",
+  fabIcon: "#FFF8E8",
 
   // Soft shadow: Warm grey-brown #8C7860 at low opacity
   softShadow: "0 4px 16px rgba(140, 120, 96, 0.15)",

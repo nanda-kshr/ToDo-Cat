@@ -29,7 +29,7 @@ Enables collaborative task management between friends:
 
 ## Components & Architecture
 - **Web Backend & API**:
-  - `Web/lib/email.ts` - Nodemailer SMTP integration with templates for friend requests, acceptances, and shared tasks.
+  - `Web/lib/email.ts` - Nodemailer SMTP integration with professional HTML templates (hosting the official TodoCat logo, zero emojis) for friend requests, acceptances, and shared tasks.
   - `Web/models/Friendship.ts` - Friendship schema with unique compound index on `(requester, recipient)`.
   - `Web/models/Task.ts` - `sharedWith` and `completedBy` fields.
   - `Web/app/api/tasks/route.ts` - Supports `sharedWith` querying and populates `userId`, `sharedWith`, and `completedBy`.
