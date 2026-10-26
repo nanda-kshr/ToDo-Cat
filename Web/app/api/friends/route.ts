@@ -5,6 +5,7 @@ import { Friendship } from "@/models/Friendship";
 import { getUserFromRequest } from "@/lib/auth";
 import { sendPushNotification } from "@/lib/firebaseAdmin";
 import { sendFriendRequestEmail, sendFriendAcceptedEmail } from "@/lib/email";
+import { checkRateLimit } from "@/lib/rateLimit";
 import mongoose from "mongoose";
 
 export async function GET(request: Request) {
@@ -12,6 +13,14 @@ export async function GET(request: Request) {
     const payload = getUserFromRequest(request);
     if (!payload?.userId) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = checkRateLimit(`get_friends:${payload.userId}`, 90, 60);
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { message: "Too many requests. Please wait a moment." },
+        { status: 429 }
+      );
     }
 
     const { searchParams } = new URL(request.url);
@@ -116,9 +125,29 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
+    // Rate limit: max 15 friend requests per hour per user
+    const userLimit = checkRateLimit(`friend_req_user:${payload.userId}`, 15, 60 * 60);
+    if (!userLimit.allowed) {
+      return NextResponse.json(
+        { message: `Too many friend requests sent. Please try again in ${Math.ceil(userLimit.resetInSeconds / 60)} minutes.` },
+        { status: 429 }
+      );
+    }
+
     const { email } = await request.json();
     if (!email || typeof email !== "string") {
       return NextResponse.json({ message: "Valid email is required" }, { status: 400 });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Rate limit: max 1 request to the same target email per 60 seconds
+    const targetLimit = checkRateLimit(`friend_req_target:${payload.userId}:${cleanEmail}`, 1, 60);
+    if (!targetLimit.allowed) {
+      return NextResponse.json(
+        { message: "You recently sent a request to this user. Please wait a minute before trying again." },
+        { status: 429 }
+      );
     }
 
     await connectDB();
@@ -129,7 +158,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
     if (cleanEmail === currentUser.email.toLowerCase()) {
       return NextResponse.json({ message: "You cannot add yourself as a friend" }, { status: 400 });
     }

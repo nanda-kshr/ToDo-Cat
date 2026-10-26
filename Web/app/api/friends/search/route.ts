@@ -3,6 +3,7 @@ import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { Friendship } from "@/models/Friendship";
 import { getUserFromRequest } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rateLimit";
 import mongoose from "mongoose";
 
 export async function GET(request: Request) {
@@ -10,6 +11,14 @@ export async function GET(request: Request) {
     const payload = getUserFromRequest(request);
     if (!payload?.userId) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const searchLimit = checkRateLimit(`search_users:${payload.userId}`, 30, 60);
+    if (!searchLimit.allowed) {
+      return NextResponse.json(
+        { message: "Search rate limit exceeded. Please wait a moment." },
+        { status: 429 }
+      );
     }
 
     const { searchParams } = new URL(request.url);

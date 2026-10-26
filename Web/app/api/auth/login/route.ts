@@ -6,9 +6,19 @@ import {
   generateTokens,
   setRefreshTokenCookie,
 } from "@/lib/auth";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+    const ipLimit = checkRateLimit(`login_ip:${ip}`, 10, 15 * 60);
+    if (!ipLimit.allowed) {
+      return NextResponse.json(
+        { message: `Too many login attempts. Please try again in ${ipLimit.resetInSeconds} seconds.` },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { email, password } = body || {};
 

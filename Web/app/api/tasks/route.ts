@@ -11,6 +11,7 @@ import {
 } from "@/lib/taskCache";
 import { sendPushNotification } from "@/lib/firebaseAdmin";
 import { sendSharedTaskEmail } from "@/lib/email";
+import { checkRateLimit } from "@/lib/rateLimit";
 import mongoose from "mongoose";
 
 export async function GET(request: Request) {
@@ -18,6 +19,14 @@ export async function GET(request: Request) {
     const payload = getUserFromRequest(request);
     if (!payload?.userId) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const getLimit = checkRateLimit(`get_tasks:${payload.userId}`, 120, 60);
+    if (!getLimit.allowed) {
+      return NextResponse.json(
+        { message: "Too many requests. Please slow down." },
+        { status: 429 }
+      );
     }
 
     const { searchParams } = new URL(request.url);
@@ -81,6 +90,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
+    // Rate limit: max 120 task creations per hour per user
+    const createLimit = checkRateLimit(`task_create_user:${payload.userId}`, 120, 60 * 60);
+    if (!createLimit.allowed) {
+      return NextResponse.json(
+        { message: "Task creation rate limit exceeded. Please slow down." },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { title, description, dueDate, hasTime, recurrence, priority, category, sharedWith } = body;
 
@@ -102,6 +120,17 @@ export async function POST(request: Request) {
         if (typeof id === "string" && mongoose.Types.ObjectId.isValid(id) && id !== payload.userId) {
           validSharedWith.push(new mongoose.Types.ObjectId(id));
         }
+      }
+    }
+
+    // Rate limit: max 20 shared tasks per hour per user (protects SMTP and FCM quota)
+    if (validSharedWith.length > 0) {
+      const shareLimit = checkRateLimit(`task_share_user:${payload.userId}`, 20, 60 * 60);
+      if (!shareLimit.allowed) {
+        return NextResponse.json(
+          { message: `Too many shared tasks created. Please try again in ${Math.ceil(shareLimit.resetInSeconds / 60)} minutes.` },
+          { status: 429 }
+        );
       }
     }
 
@@ -135,7 +164,7 @@ export async function POST(request: Request) {
         // Push notification
         if (friend.fcmTokens?.length) {
           sendPushNotification(friend.fcmTokens, {
-            title: "New Shared Task! 🐾",
+            title: "New Shared Task!",
             body: `${currentUser?.name || currentUser?.email || "A friend"} shared a task: "${task.title}"`,
             data: { taskId: task._id.toString() },
           }).catch(() => {});

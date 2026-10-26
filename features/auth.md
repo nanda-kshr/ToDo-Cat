@@ -19,7 +19,11 @@ TodoCat provides secure authentication for both Web and Mobile platforms:
   - A branded email is sent via SMTP containing both a 6-digit OTP code and a one-click reset link (15-minute expiration).
   - Web users can reset directly via `/reset-password?token=...` or via OTP.
   - Mobile app users can reset within the app via OTP modal.
-  - **Rate Limiting**: IP-based rate limiting (max 5 requests / 15m) and email throttling (1 request / 60s), plus max 5 OTP failed attempts before lockout. All existing sessions are revoked upon reset.
+  - **Rate Limiting**:
+    - Password reset: IP-based rate limiting (max 5 requests / 15m) and email throttling (1 request / 60s), plus max 5 OTP failed attempts before lockout.
+    - Login: IP-based rate limiting (max 10 attempts / 15m) preventing brute-force password guessing.
+    - Registration: IP-based rate limiting (max 5 new registrations / hour) preventing bot account spam.
+    - All existing sessions are revoked upon reset.
 
 ## Components & Architecture
 - **Web Backend**:

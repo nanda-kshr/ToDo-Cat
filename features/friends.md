@@ -26,6 +26,11 @@ Enables collaborative task management between friends:
   - **Strict Pending State**: Even if one participant has not completed the task, the task remains in the pending/active list (across today, tomorrow, etc.). If the current user completed their part, their checkbox displays the completed tick mark, but the task stays in the active/pending list until all participants complete.
   - **Participant Breakdown Modal**: Clicking a shared task opens a modal detailing all participants (creator and shared friends) with their individual completion status (`Completed ✓` or `Pending ⏳`).
 - **Transactional SMTP Emails**: HTML emails sent via Gmail SMTP for friend requests, request acceptances, and shared tasks.
+- **Abuse & Rate Limiting**:
+  - `POST /api/friends`: Max 15 requests per hour per user, and max 1 request per minute to the same recipient (protects FCM and SMTP quotas).
+  - `GET /api/friends/search`: Max 30 lookups per minute per user.
+  - `GET /api/friends`: Max 90 requests per minute per user.
+  - `POST /api/tasks` (shared): Max 20 shared tasks per hour per user.
 
 ## Components & Architecture
 - **Web Backend & API**:

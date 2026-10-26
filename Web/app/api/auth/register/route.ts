@@ -6,9 +6,19 @@ import {
   generateTokens,
   setRefreshTokenCookie,
 } from "@/lib/auth";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+    const ipLimit = checkRateLimit(`register_ip:${ip}`, 5, 60 * 60);
+    if (!ipLimit.allowed) {
+      return NextResponse.json(
+        { message: `Too many accounts registered from this IP. Please try again in ${Math.ceil(ipLimit.resetInSeconds / 60)} minutes.` },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { email, password, name } = body || {};
 
