@@ -33,7 +33,7 @@
             android:format12Hour="h:mm a"
             android:format24Hour="HH:mm"
             android:includeFontPadding="false"
-            android:textColor="#4B5563"
+            android:textColor="#2B1D16"
             android:textSize="26sp"
             android:textStyle="bold" />
 
@@ -47,7 +47,7 @@
             android:format12Hour="EEE, MMM d"
             android:format24Hour="EEE, MMM d"
             android:includeFontPadding="false"
-            android:textColor="#9CA3AF"
+            android:textColor="#8A7867"
             android:textSize="12sp"
             android:textStyle="bold" />
 
@@ -67,7 +67,7 @@
                 android:fontFamily="sans-serif-rounded"
                 android:includeFontPadding="false"
                 android:text="6/10"
-                android:textColor="#4B5563"
+                android:textColor="#2B1D16"
                 android:textSize="15sp"
                 android:textStyle="bold" />
 
@@ -79,7 +79,7 @@
                 android:fontFamily="sans-serif-rounded"
                 android:includeFontPadding="false"
                 android:text="tasks"
-                android:textColor="#9CA3AF"
+                android:textColor="#8A7867"
                 android:textSize="13sp"
                 android:textStyle="bold" />
         </LinearLayout>

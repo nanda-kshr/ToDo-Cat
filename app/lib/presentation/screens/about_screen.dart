@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../widgets/app_logo.dart';
+import '../widgets/app_toast.dart';
 import 'legal_screen.dart';
 
 class AboutScreen extends StatelessWidget {
@@ -15,15 +16,11 @@ class AboutScreen extends StatelessWidget {
     try {
       final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!launched && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open $githubUrl')),
-        );
+        AppToast.show(context, 'Could not open link', isError: true);
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open $githubUrl')),
-        );
+        AppToast.show(context, 'Could not open link', isError: true);
       }
     }
   }
@@ -33,15 +30,11 @@ class AboutScreen extends StatelessWidget {
     try {
       final launched = await launchUrl(uri);
       if (!launched && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open email client for $email')),
-        );
+        AppToast.show(context, 'Could not open email', isError: true);
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open email client for $email')),
-        );
+        AppToast.show(context, 'Could not open email', isError: true);
       }
     }
   }
@@ -51,15 +44,11 @@ class AboutScreen extends StatelessWidget {
     try {
       final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!launched && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open $coffeeUrl')),
-        );
+        AppToast.show(context, 'Could not open link', isError: true);
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open $coffeeUrl')),
-        );
+        AppToast.show(context, 'Could not open link', isError: true);
       }
     }
   }

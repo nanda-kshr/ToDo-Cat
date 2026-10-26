@@ -22,6 +22,8 @@ import 'home/widgets/profile_view.dart';
 import 'home/widgets/settings_modal.dart';
 import 'home/widgets/task_details_modal.dart';
 import 'home/widgets/widget_choice_dialog.dart';
+import '../widgets/app_toast.dart';
+import '../widgets/in_app_notification_banner.dart';
 import 'login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -59,6 +61,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   StreamSubscription<Uri?>? _widgetClickSubscription;
   final GlobalKey<FriendsViewState> _friendsViewKey = GlobalKey<FriendsViewState>();
 
+  StreamSubscription<InAppNotificationPayload>? _fcmNotificationSubscription;
+  Timer? _friendRequestPollTimer;
+  int _pendingFriendsCount = 0;
+  int _lastKnownPendingRequestsCount = 0;
+  InAppNotificationPayload? _activeInAppNotification;
+  final Map<String, Timer> _pendingDeletions = {};
+
   @override
   void initState() {
     super.initState();
@@ -66,6 +75,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _scrollController.addListener(_onScroll);
     FloatingCatService.initialize();
     FloatingCatService.onTasksUpdated = _onExternalTasksUpdated;
+    _setupInAppNotificationListener();
+    _startFriendRequestPolling();
     _loadCachedTasks().then((_) {
       _checkAuthAndLoad();
     });
@@ -73,8 +84,85 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _initWidgetLaunchHandling();
   }
 
+  void _setupInAppNotificationListener() {
+    _fcmNotificationSubscription?.cancel();
+    _fcmNotificationSubscription = FcmService().onInAppNotification.listen((payload) {
+      if (!mounted) return;
+      setState(() {
+        _activeInAppNotification = payload;
+        if (payload.type == 'friend_request') {
+          _pendingFriendsCount++;
+          _lastKnownPendingRequestsCount++;
+        }
+      });
+
+      if (payload.type == 'friend_request' || payload.type == 'friend_accepted') {
+        if (_currentTab == 0) {
+          _friendsViewKey.currentState?.reload();
+        }
+      } else if (payload.type == 'task_shared') {
+        _loadData();
+      }
+    });
+  }
+
+  void _startFriendRequestPolling() {
+    _friendRequestPollTimer?.cancel();
+    _friendRequestPollTimer = Timer.periodic(const Duration(seconds: 25), (_) {
+      if (mounted) {
+        _checkPendingFriendRequests();
+      }
+    });
+  }
+
+  Future<void> _checkPendingFriendRequests() async {
+    try {
+      final isLoggedIn = await _apiService.isLoggedIn();
+      if (!isLoggedIn) return;
+
+      final data = await _apiService.fetchFriends(limit: 1);
+      if (!mounted) return;
+
+      final pending = data.pendingIncoming;
+      final newCount = pending.length;
+
+      if (newCount > _lastKnownPendingRequestsCount) {
+        final latestReq = pending.isNotEmpty ? pending.first : null;
+        final senderName = latestReq?.user.displayName ?? 'A user';
+        setState(() {
+          _pendingFriendsCount = newCount;
+          _lastKnownPendingRequestsCount = newCount;
+          _activeInAppNotification = InAppNotificationPayload(
+            title: 'New Friend Request!',
+            body: '$senderName sent you a friend request.',
+            type: 'friend_request',
+          );
+        });
+        if (_currentTab == 0) {
+          _friendsViewKey.currentState?.reload();
+        }
+      } else {
+        if (newCount != _pendingFriendsCount) {
+          setState(() {
+            _pendingFriendsCount = newCount;
+            _lastKnownPendingRequestsCount = newCount;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('[HomeScreen] _checkPendingFriendRequests error: $e');
+    }
+  }
+
   @override
   void dispose() {
+    for (final entry in _pendingDeletions.entries) {
+      entry.value.cancel();
+      _apiService.deleteTask(entry.key);
+    }
+    _pendingDeletions.clear();
+    _fcmNotificationSubscription?.cancel();
+    _friendRequestPollTimer?.cancel();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     _statsScrollController.dispose();
@@ -91,6 +179,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _loadCachedTasks();
       _checkAuthAndLoad(showLoading: false);
       _checkFloatingOverlayStatus();
+      _checkPendingFriendRequests();
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+      for (final entry in _pendingDeletions.entries) {
+        entry.value.cancel();
+        _apiService.deleteTask(entry.key);
+      }
+      _pendingDeletions.clear();
     }
   }
 
@@ -213,6 +308,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         });
         _syncWidget();
         FcmService().syncCurrentToken();
+        _checkPendingFriendRequests();
         if (_currentTab == 2) {
           _loadAnalytics();
         }
@@ -368,15 +464,17 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update task: $e')),
-        );
+        AppToast.show(context, 'Failed to update task', isError: true);
       }
     }
   }
 
   Future<void> _deleteTask(String id) async {
-    final original = List<Task>.from(_tasks);
+    final taskIndex = _tasks.indexWhere((t) => t.id == id);
+    if (taskIndex == -1) return;
+    final deletedTask = _tasks[taskIndex];
+
+    // Optimistically remove from state
     setState(() {
       _tasks = _tasks.where((t) => t.id != id).toList();
       _cachedFiltered = null;
@@ -385,30 +483,57 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     });
     _syncWidget();
 
-    try {
-      await _apiService.deleteTask(id);
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _tasks = original;
-          _cachedFiltered = null;
-          _cachedTodayTasks = null;
-          _cachedEarlierTasks = null;
-        });
-        _syncWidget();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete task: $e')),
-        );
+    // Cancel any previous timer for this ID
+    _pendingDeletions[id]?.cancel();
+
+    bool isUndone = false;
+
+    // Start 5-second undo timer
+    final timer = Timer(const Duration(seconds: 5), () async {
+      _pendingDeletions.remove(id);
+      if (!isUndone) {
+        try {
+          await _apiService.deleteTask(id);
+        } catch (e) {
+          debugPrint('[HomeScreen] deleteTask on server failed: $e');
+        }
       }
+    });
+    _pendingDeletions[id] = timer;
+
+    if (mounted) {
+      AppToast.show(
+        context,
+        'Task deleted',
+        duration: const Duration(seconds: 5),
+        actionLabel: 'Undo',
+        onAction: () {
+          isUndone = true;
+          _pendingDeletions[id]?.cancel();
+          _pendingDeletions.remove(id);
+
+          if (mounted) {
+            setState(() {
+              final newTasks = List<Task>.from(_tasks);
+              final insertIndex = taskIndex <= newTasks.length ? taskIndex : newTasks.length;
+              newTasks.insert(insertIndex, deletedTask);
+              _tasks = newTasks;
+              _cachedFiltered = null;
+              _cachedTodayTasks = null;
+              _cachedEarlierTasks = null;
+            });
+            _syncWidget();
+            AppToast.show(context, 'Task restored');
+          }
+        },
+      );
     }
   }
 
   Future<bool> _toggleFloatingCat() async {
     if (!FloatingCatService.isSupported) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Floating cat overlay is supported on Android devices')),
-        );
+        AppToast.show(context, 'Android only');
       }
       return false;
     }
@@ -418,9 +543,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       await FloatingCatService.stop();
       _syncWidget();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Floating Cat closed')),
-        );
+        AppToast.show(context, 'Floating cat closed');
       }
       return false;
     }
@@ -488,31 +611,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     _syncWidget();
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Floating Cat active! Tap to expand tasks, drag to bottom to remove.'),
-          duration: Duration(seconds: 3),
-        ),
-      );
+      AppToast.show(context, 'Floating cat active');
     }
     return true;
   }
 
   Future<void> _pinWidget({bool isCatWidget = false}) async {
     _syncWidget();
-    final messenger = ScaffoldMessenger.of(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     final pinned = await WidgetService.requestPinWidget(isCatWidget: isCatWidget);
     if (!pinned && mounted) {
-      messenger.showSnackBar(
-        SnackBar(
-          content: const Text(
-            'To add the widget, long-press home screen > Widgets > TodoCat.',
-          ),
-          backgroundColor: isDark ? const Color(0xFF171717) : const Color(0xFF4B5563),
-        ),
-      );
+      AppToast.show(context, 'Long-press home screen for widget');
     }
   }
 
@@ -631,7 +739,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           'Todocat',
           style: TextStyle(
             fontFamily: 'Sniglet',
-            color: textPrimary,
+            color: palette.appTitle,
             fontSize: 24,
             fontWeight: FontWeight.w600,
           ),
@@ -694,7 +802,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       body: _loading
           ? Center(
               child: CircularProgressIndicator(
-                color: isDark ? Colors.white : const Color(0xFF4B5563),
+                color: palette.appTitle,
               ),
             )
           : _error != null
@@ -707,7 +815,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         Icon(
                           Icons.cloud_off,
                           size: 48,
-                          color: isDark ? Colors.white38 : const Color(0xFF9CA3AF),
+                          color: isDark ? Colors.white38 : palette.textMuted,
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -719,8 +827,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ElevatedButton(
                           onPressed: _loadData,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: isDark ? Colors.white : const Color(0xFF4B5563),
-                            foregroundColor: isDark ? Colors.black : Colors.white,
+                            backgroundColor: palette.fabBg,
+                            foregroundColor: palette.fabIcon,
                           ),
                           child: const Text('Retry'),
                         ),
@@ -740,7 +848,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                       children: [
                         TickerMode(
                           enabled: _currentTab == 0,
-                          child: FriendsView(key: _friendsViewKey),
+                          child: FriendsView(
+                            key: _friendsViewKey,
+                            onFriendsUpdated: _checkPendingFriendRequests,
+                          ),
                         ),
                         TickerMode(
                           enabled: _currentTab == 1,
@@ -791,6 +902,30 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         ),
                       ],
                     ),
+                    if (_activeInAppNotification != null)
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        child: InAppNotificationBanner(
+                          key: ValueKey('${_activeInAppNotification!.title}_${_activeInAppNotification!.body}'),
+                          title: _activeInAppNotification!.title,
+                          body: _activeInAppNotification!.body,
+                          type: _activeInAppNotification!.type,
+                          onAction: () {
+                            setState(() {
+                              _activeInAppNotification = null;
+                              _currentTab = 0;
+                            });
+                            _friendsViewKey.currentState?.reload();
+                          },
+                          onDismiss: () {
+                            setState(() {
+                              _activeInAppNotification = null;
+                            });
+                          },
+                        ),
+                      ),
                   ],
                 ),
       floatingActionButton: _currentTab == 1
@@ -799,7 +934,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               backgroundColor: palette.fabBg,
               foregroundColor: palette.fabIcon,
               elevation: 4,
-              shape: const CircleBorder(),
+              shape: CircleBorder(
+                side: BorderSide(
+                  color: isDark ? Colors.transparent : palette.cardBorder,
+                  width: 1.5,
+                ),
+              ),
               child: const Icon(Icons.add, size: 28),
             )
           : _currentTab == 0
@@ -810,15 +950,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   backgroundColor: palette.fabBg,
                   foregroundColor: palette.fabIcon,
                   elevation: 4,
-                  shape: const CircleBorder(),
+                  shape: CircleBorder(
+                    side: BorderSide(
+                      color: isDark ? Colors.transparent : palette.cardBorder,
+                      width: 1.5,
+                    ),
+                  ),
                   child: const Icon(Icons.add, size: 28),
                 )
               : null,
       bottomNavigationBar: HomeBottomBar(
         currentTab: _currentTab,
+        pendingFriendsCount: _pendingFriendsCount,
         onTabSelected: (index) {
           setState(() => _currentTab = index);
-          if (index == 2) {
+          if (index == 0) {
+            _checkPendingFriendRequests();
+          } else if (index == 2) {
             _loadAnalytics();
           }
         },

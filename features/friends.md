@@ -20,6 +20,7 @@ Enables collaborative task management between friends:
   - Public indicator badges and globe icons use theme-governed subtle whitish green (`#D4E7DC` in dark mode, `#476251` in light mode) without harsh bright or neon tints.
   - If their stats are **Private**, informs the user that the friend has chosen to keep their stats private.
 - **Add Friend FAB**: Bottom-right floating `+` button (styled like the Add Task button) opening an "Add Friend" modal to search registered users across the system by email and send friend requests. Upon sending, the modal automatically closes and displays an animated `Request sent to {email}` notification floating at the top of the view for 4 seconds.
+- **Real-Time In-App Friend Request Notifications**: Displays an animated floating notification banner at the top of the screen when an incoming friend request is received (via FCM foreground event or real-time polling fallback), with a 'View' action that jumps directly to the Friends tab, accompanied by a pending count badge on the Friends navigation icon.
 - **Shared Tasks & Dual Completion**:
   - **Progress Badge**: Displays `x/y completed the task` directly on the task card whenever a task is shared.
   - **Strict Pending State**: Even if one participant has not completed the task, the task remains in the pending/active list (across today, tomorrow, etc.). If the current user completed their part, their checkbox displays the completed tick mark, but the task stays in the active/pending list until all participants complete.
@@ -38,12 +39,12 @@ Enables collaborative task management between friends:
   - `Web/app/api/friends/search/route.ts` - Strict registered user search for adding friends. Rejects partial searches to prevent email scraping; requires a full email address with valid domain and returns an exact match only.
 - **Web Frontend (Next.js)**:
   - `Web/app/dashboard/page.tsx` - Added "Friends" view tab, shared task `x/y completed the task` badges, and shared task participants breakdown modal.
-  - `Web/components/FriendsView.tsx` - Two-card layout (pending requests + lazy-loading friends with existing friends search) and "Add New Friend" modal.
+  - `Web/components/FriendsView.tsx` - Two-card layout (pending requests + lazy-loading friends with existing friends search) and "Add New Friend" modal without unverified fallback dispatch buttons.
 - **Mobile (Flutter)**:
   - `app/lib/models/friend.dart` - `FriendUser`, `FriendItem`, `PendingFriendRequest`, `FriendsData` with pagination support (`total`, `hasMore`, `page`).
   - `app/lib/models/task.dart` - `creator`, `sharedWith`, `completedBy`, `allParticipants`, `dualProgressText` (`x/y completed the task`).
   - `app/lib/services/api_service.dart` - `fetchFriends({int? page, int? limit, String? search})` with query parameters.
   - `app/lib/presentation/screens/home/widgets/task_card_tile.dart` - Renders `x/y completed the task` badge for shared tasks.
   - `app/lib/presentation/screens/home/widgets/task_details_modal.dart` - Displays all participants with individual `Completed ✓` and `Pending ⏳` status badges.
-  - `app/lib/presentation/screens/home/widgets/friends_view.dart` - Two-card vertical layout (pending requests card + lazy loading friends card with existing friends email search) and `_AddFriendBottomSheet`.
+  - `app/lib/presentation/screens/home/widgets/friends_view.dart` - Two-card vertical layout (pending requests card + lazy loading friends card with existing friends email search) and `_AddFriendBottomSheet` strictly sending to verified registered user search results.
   - `app/lib/presentation/screens/home_screen.dart` - Handles shared task completion toggling per participant and floating `+` button.

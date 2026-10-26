@@ -28,7 +28,7 @@
         android:maxLines="1"
         android:text="Sample Task"
         android:fontFamily="sans-serif-rounded"
-        android:textColor="#FFFFFF"
+        android:textColor="#F5F5F5"
         android:textSize="16sp" />
 
 </LinearLayout>

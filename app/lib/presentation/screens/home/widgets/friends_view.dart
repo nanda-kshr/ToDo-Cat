@@ -5,6 +5,7 @@ import '../../../../models/friend.dart';
 import '../../../../services/api_service.dart';
 import '../../../widgets/app_outlined_icons.dart';
 import 'friend_stats_sheet.dart';
+import '../../../widgets/app_toast.dart';
 
 class FriendsView extends StatefulWidget {
   final VoidCallback? onFriendsUpdated;
@@ -29,8 +30,6 @@ class FriendsViewState extends State<FriendsView> {
   bool _loadingMore = false;
   String? _error;
   Timer? _searchDebounce;
-  String? _topMessage;
-  Timer? _topMessageTimer;
 
   @override
   void initState() {
@@ -41,7 +40,6 @@ class FriendsViewState extends State<FriendsView> {
 
   @override
   void dispose() {
-    _topMessageTimer?.cancel();
     _searchController.dispose();
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
@@ -55,6 +53,10 @@ class FriendsViewState extends State<FriendsView> {
         _loadMoreFriends();
       }
     }
+  }
+
+  void reload() {
+    _loadFriends(reset: true);
   }
 
   Future<void> _loadFriends({bool reset = true}) async {
@@ -143,56 +145,20 @@ class FriendsViewState extends State<FriendsView> {
     );
 
     if (sentEmail != null && mounted) {
-      _showTopNotification('Request sent to $sentEmail');
+      AppToast.show(context, 'Friend request sent');
     }
-  }
-
-  void _showTopNotification(String message) {
-    _topMessageTimer?.cancel();
-    setState(() {
-      _topMessage = message;
-    });
-    _topMessageTimer = Timer(const Duration(seconds: 4), () {
-      if (mounted) {
-        setState(() {
-          _topMessage = null;
-        });
-      }
-    });
   }
 
   Future<void> _respondRequest(String friendshipId, String action, String name) async {
     try {
       await _apiService.respondFriendRequest(friendshipId, action);
       if (mounted) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            backgroundColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFF374151),
-            content: Text(
-              action == 'accept' ? 'Added $name as friend!' : 'Declined request.',
-              style: const TextStyle(fontFamily: 'Sniglet', color: Colors.white, fontSize: 13),
-            ),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        AppToast.show(context, action == 'accept' ? 'Added friend' : 'Request declined');
         _loadFriends(reset: true);
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            backgroundColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFF374151),
-            content: Text('Error: $e', style: const TextStyle(fontFamily: 'Sniglet', color: Colors.white)),
-          ),
-        );
+        AppToast.show(context, 'Failed to update request', isError: true);
       }
     }
   }
@@ -224,34 +190,12 @@ class FriendsViewState extends State<FriendsView> {
       try {
         await _apiService.removeFriend(item.friendshipId);
         if (mounted) {
-          final isDark = Theme.of(context).brightness == Brightness.dark;
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              backgroundColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFF374151),
-              content: Text(
-                'Removed ${item.user.displayName}',
-                style: const TextStyle(fontFamily: 'Sniglet', color: Colors.white, fontSize: 13),
-              ),
-              duration: const Duration(seconds: 2),
-            ),
-          );
+          AppToast.show(context, 'Friend removed');
           _loadFriends(reset: true);
         }
-      } catch (e) {
+      } catch (_) {
         if (mounted) {
-          final isDark = Theme.of(context).brightness == Brightness.dark;
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              backgroundColor: isDark ? const Color(0xFF2C2C2C) : const Color(0xFF374151),
-              content: Text('Error: $e', style: const TextStyle(fontFamily: 'Sniglet', color: Colors.white)),
-            ),
-          );
+          AppToast.show(context, 'Failed to remove friend', isError: true);
         }
       }
     }
@@ -266,9 +210,7 @@ class FriendsViewState extends State<FriendsView> {
     final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF6B7280);
     final inputBg = isDark ? const Color(0xFF262626) : const Color(0xFFF3F4F6);
 
-    return Stack(
-      children: [
-        RefreshIndicator(
+    return RefreshIndicator(
       onRefresh: () => _loadFriends(reset: true),
       child: SingleChildScrollView(
         controller: _scrollController,
@@ -562,77 +504,7 @@ class FriendsViewState extends State<FriendsView> {
           ],
         ),
       ),
-    ),
-    Positioned(
-      top: 10,
-      left: 16,
-      right: 16,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 250),
-        transitionBuilder: (child, animation) {
-          return SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, -0.4),
-              end: Offset.zero,
-            ).animate(
-              CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              ),
-            ),
-            child: FadeTransition(
-              opacity: animation,
-              child: child,
-            ),
-          );
-        },
-        child: _topMessage == null
-            ? const SizedBox.shrink(key: ValueKey('empty_top_msg'))
-            : Container(
-                key: ValueKey(_topMessage),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF222222) : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: cardBorder),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(isDark ? 80 : 25),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _topMessage!,
-                        style: TextStyle(
-                          fontFamily: 'Sniglet',
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: textPrimary,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () {
-                        _topMessageTimer?.cancel();
-                        setState(() => _topMessage = null);
-                      },
-                      child: Icon(Icons.close, size: 16, color: textSecondary),
-                    ),
-                  ],
-                ),
-              ),
-      ),
-    ),
-  ],
-);
+    );
   }
 
   Widget _buildIncomingRequestTile(
@@ -1214,37 +1086,6 @@ class _AddFriendBottomSheetState extends State<_AddFriendBottomSheet> {
                     ),
                   );
                 },
-              ),
-            )
-          else if (_searchController.text.trim().contains('@') && !_searching)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: ElevatedButton(
-                onPressed: _sendingEmail != null
-                    ? null
-                    : () => _sendRequest(_searchController.text.trim()),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  backgroundColor: isDark ? Colors.white : const Color(0xFF374151),
-                ),
-                child: _sendingEmail == _searchController.text.trim()
-                    ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: isDark ? Colors.black : Colors.white,
-                        ),
-                      )
-                    : Text(
-                        'Send Friend Request to ${_searchController.text.trim()}',
-                        style: TextStyle(
-                          fontFamily: 'Sniglet',
-                          fontSize: 13,
-                          color: isDark ? Colors.black : Colors.white,
-                        ),
-                      ),
               ),
             ),
         ],

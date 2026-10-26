@@ -89,20 +89,20 @@ class TodoCatListWidgetProvider : HomeWidgetProvider() {
 
                 if (isDark) {
                     setInt(R.id.widget_list_root, "setBackgroundResource", R.drawable.widget_background)
-                    setTextColor(R.id.widget_list_title, Color.parseColor("#FFFFFF"))
-                    setTextColor(R.id.widget_list_count, Color.parseColor("#888888"))
+                    setTextColor(R.id.widget_list_title, Color.parseColor("#F5F5F5"))
+                    setTextColor(R.id.widget_list_count, Color.parseColor("#A6A6A6"))
                     setImageViewResource(R.id.widget_list_divider, R.drawable.widget_divider)
                     setInt(R.id.widget_list_btn_add, "setBackgroundResource", R.drawable.widget_add_btn_bg)
                     setImageViewResource(R.id.widget_list_btn_add, R.drawable.ic_widget_add)
-                    setTextColor(R.id.widget_list_empty, Color.parseColor("#737373"))
+                    setTextColor(R.id.widget_list_empty, Color.parseColor("#777777"))
                 } else {
                     setInt(R.id.widget_list_root, "setBackgroundResource", R.drawable.widget_background_light)
-                    setTextColor(R.id.widget_list_title, Color.parseColor("#4B5563"))
-                    setTextColor(R.id.widget_list_count, Color.parseColor("#9CA3AF"))
+                    setTextColor(R.id.widget_list_title, Color.parseColor("#2B1D16"))
+                    setTextColor(R.id.widget_list_count, Color.parseColor("#8A7867"))
                     setImageViewResource(R.id.widget_list_divider, R.drawable.widget_divider_light)
                     setInt(R.id.widget_list_btn_add, "setBackgroundResource", R.drawable.widget_add_btn_bg_light)
                     setImageViewResource(R.id.widget_list_btn_add, R.drawable.ic_widget_add_grey)
-                    setTextColor(R.id.widget_list_empty, Color.parseColor("#9CA3AF"))
+                    setTextColor(R.id.widget_list_empty, Color.parseColor("#8A7867"))
                 }
 
                 val serviceIntent = Intent(context, TodoCatWidgetService::class.java).apply {

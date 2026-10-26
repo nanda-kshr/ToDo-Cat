@@ -53,7 +53,14 @@ export async function PATCH(
         sendPushNotification(requester.fcmTokens, {
           title: "Friend Request Accepted!",
           body: `${recipient?.name || recipient?.email || "Your friend"} accepted your friend request!`,
-        }).catch(() => {});
+          data: {
+            type: "friend_accepted",
+            friendshipId: friendship._id.toString(),
+            friendName: recipient?.name || recipient?.email || "Your friend",
+          },
+        }).catch((err) => {
+          console.error("[FCM Friend Accept Error]:", err);
+        });
       }
 
       if (requester?.email) {

@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import '../../../../core/theme/app_colors.dart';
 
 void showWidgetChoiceDialog(
   BuildContext context, {
   required ValueChanged<bool> onSelectWidget,
 }) {
   final isDark = Theme.of(context).brightness == Brightness.dark;
-  final cardBg = isDark ? const Color(0xFF171717) : Colors.white;
-  final textPrimary = isDark ? Colors.white : const Color(0xFF4B5563);
-  final textSecondary = isDark ? const Color(0xFF737373) : const Color(0xFF6B7280);
+  final palette = AppColors.of(context);
+  final cardBg = palette.surfaceElevated;
+  final textPrimary = palette.textPrimary;
+  final textSecondary = palette.textSecondary;
 
   showModalBottomSheet(
     context: context,
@@ -39,7 +41,7 @@ void showWidgetChoiceDialog(
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF262626) : const Color(0xFFF3F4F6),
+                  color: isDark ? const Color(0xFF262626) : palette.chipBg,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(Icons.checklist, color: textPrimary, size: 22),
@@ -73,7 +75,7 @@ void showWidgetChoiceDialog(
                 width: 42,
                 height: 42,
                 decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF262626) : const Color(0xFFF3F4F6),
+                  color: isDark ? const Color(0xFF262626) : palette.chipBg,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(Icons.pets, color: textPrimary, size: 22),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'app_toast.dart';
 import 'cat_animation.dart';
 
 class DraggableFloatingCat extends StatefulWidget {
@@ -50,27 +51,7 @@ class _DraggableFloatingCatState extends State<DraggableFloatingCat> {
           });
         },
         onTap: () {
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: [
-                  const Icon(Icons.pets, size: 16, color: Colors.white),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      widget.speedMessage,
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                ],
-              ),
-              duration: const Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: const Color(0xFF1F1F1F),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          );
+          AppToast.show(context, widget.speedMessage);
         },
         child: Material(
           elevation: 6,

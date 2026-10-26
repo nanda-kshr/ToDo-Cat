@@ -17,6 +17,12 @@ Allows users to create, view, edit, filter, and complete tasks with rich schedul
 - **Priority**: Categorized as `low`, `medium`, or `high`, rendered visually as custom outlined SVG art (flame, balance bars, calm chevron) with no text.
 - **Category**: Custom category labels (e.g. `General`, `Work`, `Personal`).
 - **Completion**: Fast toggle with instant UI feedback, textless outlined SVG status indicators (`Completed`, `Pending`), and cat animation triggers.
+- **5-Second Undo Deletion**:
+  - Deleting a task immediately removes it from the UI optimistically.
+  - Displays a 5-second toast/banner notification with an **"Undo"** action.
+  - Tapping **Undo** cancels the deletion timer and restores the task to its exact position in the list without sending any DELETE request to the backend.
+  - If 5 seconds elapse without undo, the task deletion is permanently committed via `DELETE /api/tasks/:id`.
+  - Pending deletions are automatically flushed if the app enters background or page unloads.
 
 ## Components & Architecture
 - **Web Backend**:

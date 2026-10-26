@@ -25,7 +25,7 @@
             android:layout_height="wrap_content"
             android:fontFamily="@font/sniglet"
             android:text="New Task"
-            android:textColor="#FFFFFF"
+            android:textColor="#F5F5F5"
             android:textSize="19sp"
             android:textStyle="bold" />
 
@@ -36,7 +36,7 @@
             android:layout_marginTop="2dp"
             android:fontFamily="@font/sniglet"
             android:text="Add a task directly from your home screen"
-            android:textColor="#888888"
+            android:textColor="#A6A6A6"
             android:textSize="12sp" />
 
         <EditText
@@ -47,7 +47,7 @@
             android:background="@drawable/quick_add_input_bg"
             android:fontFamily="@font/sniglet"
             android:hint="What do you need to do?"
-            android:textColorHint="#737373"
+            android:textColorHint="#777777"
             android:imeOptions="actionDone"
             android:inputType="textCapSentences"
             android:maxLines="3"
@@ -55,7 +55,7 @@
             android:paddingTop="12dp"
             android:paddingEnd="14dp"
             android:paddingBottom="12dp"
-            android:textColor="#FFFFFF"
+            android:textColor="#F5F5F5"
             android:textCursorDrawable="@null"
             android:textSize="14sp" />
 
@@ -76,7 +76,7 @@
                 android:paddingEnd="16dp"
                 android:paddingBottom="10dp"
                 android:text="Cancel"
-                android:textColor="#A3A3A3"
+                android:textColor="#A6A6A6"
                 android:textSize="13sp" />
 
             <TextView
@@ -91,7 +91,7 @@
                 android:paddingEnd="18dp"
                 android:paddingBottom="10dp"
                 android:text="+ Add Task"
-                android:textColor="#000000"
+                android:textColor="#0E0E0E"
                 android:textSize="13sp"
                 android:textStyle="bold" />
         </LinearLayout>

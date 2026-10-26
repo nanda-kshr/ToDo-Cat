@@ -19,7 +19,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="TodoCat"
-            android:textColor="#FFFFFF"
+            android:textColor="#F5F5F5"
             android:textSize="14sp"
             android:textStyle="bold" />
 
@@ -29,7 +29,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:text="0 pending • 0 completed"
-            android:textColor="#888888"
+            android:textColor="#A6A6A6"
             android:textSize="12sp" />
     </LinearLayout>
 
@@ -44,7 +44,7 @@
         android:paddingEnd="12dp"
         android:paddingBottom="6dp"
         android:text="+ Add Task"
-        android:textColor="#000000"
+        android:textColor="#0E0E0E"
         android:textSize="12sp"
         android:textStyle="bold" />
 

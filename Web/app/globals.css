@@ -3,15 +3,17 @@
 :root,
 :root[data-theme="light"] {
   /* Backgrounds */
-  --bg: #FBF1DC;
-  --card: #FFF8E8;
-  --card-elevated: #FFF8E8;
+  --bg: #FDF2DD;
+  --card: #F7E9DD;
+  --card-elevated: #F7E9DD;
+  --task-card: #FFFFFF;
   --search-bg: #F8EEDF;
-  --chip-bg: #F4E8D3;
+  --chip-bg: #FFFFFF;
   --nav-bg: #FFF8E8;
 
   /* Typography */
-  --text-primary: #3A2F28;
+  --app-title: #2B1D16;
+  --text-primary: #2B1D16;
   --text-secondary: #8A7867;
 
   /* Borders and shadows */
@@ -21,17 +23,17 @@
   /* Interactive elements */
   --accent: #FFC65C;
   --progress-track: #EADCC6;
-  --active-chip: #3A2F28;
+  --active-chip: #413025;
   --active-chip-text: #FFF8E8;
 
   /* Illustrations */
   --paw: #B49A83;
-  --cat-body: #3A2F28;
+  --cat-body: #2B1D16;
   --cat-blush: #F4A6A0;
 
   /* Floating action button */
-  --fab-bg: #3A2F28;
-  --fab-icon: #FFF8E8;
+  --fab-bg: #F7E9DD;
+  --fab-icon: #2B1D16;
 }
 
 :root[data-theme="dark"] {
@@ -39,11 +41,13 @@
   --bg: #0E0E0E;
   --card: #1A1A1A;
   --card-elevated: #222222;
+  --task-card: #1A1A1A;
   --search-bg: #1C1C1C;
   --chip-bg: #242424;
   --nav-bg: #181818;
 
   /* Typography */
+  --app-title: #F5F5F5;
   --text-primary: #F5F5F5;
   --text-secondary: #A6A6A6;
 

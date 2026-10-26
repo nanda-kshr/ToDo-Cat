@@ -64,28 +64,30 @@ class QuickAddActivity : Activity() {
         val density = resources.displayMetrics.density
 
         card.background = android.graphics.drawable.GradientDrawable().apply {
-            setColor(android.graphics.Color.WHITE)
+            setColor(android.graphics.Color.parseColor("#F7E9DD"))
             cornerRadius = 24 * density
-            setStroke((1 * density).toInt(), android.graphics.Color.parseColor("#E5E7EB"))
+            setStroke((1.2f * density).toInt(), android.graphics.Color.parseColor("#E8D9C2"))
         }
 
-        title.setTextColor(android.graphics.Color.parseColor("#111827"))
-        subtitle.setTextColor(android.graphics.Color.parseColor("#6B7280"))
+        title.setTextColor(android.graphics.Color.parseColor("#2B1D16"))
+        subtitle.setTextColor(android.graphics.Color.parseColor("#8A7867"))
 
         input.background = android.graphics.drawable.GradientDrawable().apply {
-            setColor(android.graphics.Color.parseColor("#F3F4F6"))
+            setColor(android.graphics.Color.parseColor("#F8EEDF"))
             cornerRadius = 14 * density
+            setStroke((1 * density).toInt(), android.graphics.Color.parseColor("#E8D9C2"))
         }
-        input.setTextColor(android.graphics.Color.parseColor("#111827"))
-        input.setHintTextColor(android.graphics.Color.parseColor("#9CA3AF"))
+        input.setTextColor(android.graphics.Color.parseColor("#2B1D16"))
+        input.setHintTextColor(android.graphics.Color.parseColor("#8A7867"))
 
-        btnCancel.setTextColor(android.graphics.Color.parseColor("#6B7280"))
+        btnCancel.setTextColor(android.graphics.Color.parseColor("#8A7867"))
 
         btnSubmit.background = android.graphics.drawable.GradientDrawable().apply {
-            setColor(android.graphics.Color.parseColor("#111827"))
+            setColor(android.graphics.Color.parseColor("#F7E9DD"))
             cornerRadius = 18 * density
+            setStroke((1.5f * density).toInt(), android.graphics.Color.parseColor("#E8D9C2"))
         }
-        btnSubmit.setTextColor(android.graphics.Color.WHITE)
+        btnSubmit.setTextColor(android.graphics.Color.parseColor("#2B1D16"))
     }
 
     private fun submitTask(title: String) {

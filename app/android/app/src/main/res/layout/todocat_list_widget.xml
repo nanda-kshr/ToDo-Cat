@@ -28,7 +28,7 @@
                 android:layout_height="wrap_content"
                 android:text="TodoCat"
                 android:fontFamily="sans-serif-rounded"
-                android:textColor="#FFFFFF"
+                android:textColor="#F5F5F5"
                 android:textSize="17sp"
                 android:textStyle="bold" />
 
@@ -38,7 +38,7 @@
                 android:layout_height="wrap_content"
                 android:text="0 pending • 0 completed"
                 android:fontFamily="sans-serif-rounded"
-                android:textColor="#888888"
+                android:textColor="#A6A6A6"
                 android:textSize="12sp" />
         </LinearLayout>
 
@@ -72,7 +72,7 @@
             android:id="@+id/widget_list_view"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:divider="#1E1E1E"
+            android:divider="#353535"
             android:dividerHeight="1dp" />
 
         <TextView
@@ -82,7 +82,7 @@
             android:gravity="center"
             android:fontFamily="sans-serif-rounded"
             android:text="No tasks pending!\nTap + to create one."
-            android:textColor="#737373"
+            android:textColor="#A6A6A6"
             android:textSize="13sp" />
     </FrameLayout>
 

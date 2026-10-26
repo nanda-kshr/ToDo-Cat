@@ -37,6 +37,13 @@ class HomeStatusBanner extends StatelessWidget {
         color: cardBg,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: palette.softShadow,
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Row(
         children: [

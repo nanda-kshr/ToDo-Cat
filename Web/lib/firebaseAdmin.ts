@@ -62,6 +62,13 @@ export async function sendPushNotification(
 
     const messaging = getMessaging();
     const response = await messaging.sendEachForMulticast(message);
+    if (response.failureCount > 0) {
+      response.responses.forEach((resp, idx) => {
+        if (!resp.success) {
+          console.error(`[FirebaseAdmin] FCM failure for token[${idx}]:`, resp.error);
+        }
+      });
+    }
     return response;
   } catch (err) {
     console.error("[FirebaseAdmin] sendPushNotification error:", err);

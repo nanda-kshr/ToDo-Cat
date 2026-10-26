@@ -4,6 +4,7 @@ import '../../../../models/analytics.dart';
 import '../../../../models/task.dart';
 import '../../../../models/user.dart';
 import '../../../../services/api_service.dart';
+import '../../../widgets/app_toast.dart';
 import 'stats/local_analytics_calculator.dart';
 import 'stats/stats_category_card.dart';
 import 'stats/stats_completion_card.dart';
@@ -83,29 +84,21 @@ class _ProfileViewState extends State<ProfileView> {
           _isPublic = updatedUser.isProfilePublic;
           _updatingPrivacy = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              value
-                  ? 'Stats are now Public. Friends can view your stats.'
-                  : 'Stats are now Private. Only you can view your stats.',
-              style: const TextStyle(fontFamily: 'Sniglet'),
-            ),
-            duration: const Duration(seconds: 2),
-          ),
+        AppToast.show(
+          context,
+          value ? 'Stats are public' : 'Stats are private',
         );
       }
-    } catch (e) {
+    } catch (_) {
       if (mounted) {
         setState(() {
           _isPublic = !value; // revert
           _updatingPrivacy = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update privacy: $e'),
-            backgroundColor: Colors.redAccent,
-          ),
+        AppToast.show(
+          context,
+          'Failed to update privacy',
+          isError: true,
         );
       }
     }
@@ -127,10 +120,10 @@ class _ProfileViewState extends State<ProfileView> {
   Widget build(BuildContext context) {
     final palette = AppColors.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF161616) : Colors.white;
-    final cardBorder = isDark ? const Color(0xFF242424) : const Color(0xFFE5E7EB);
-    final textPrimary = isDark ? Colors.white : const Color(0xFF4B5563);
-    final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+    final cardBg = palette.surface;
+    final cardBorder = palette.cardBorder;
+    final textPrimary = palette.textPrimary;
+    final textSecondary = palette.textSecondary;
 
     final user = widget.user;
     final displayName = (user?.name != null && user!.name!.trim().isNotEmpty)
@@ -142,7 +135,7 @@ class _ProfileViewState extends State<ProfileView> {
 
     return RefreshIndicator(
       onRefresh: () async => widget.onRefresh(),
-      color: isDark ? Colors.white : const Color(0xFF4B5563),
+      color: palette.appTitle,
       backgroundColor: cardBg,
       child: SingleChildScrollView(
         controller: widget.scrollController,
@@ -334,7 +327,7 @@ class _ProfileViewState extends State<ProfileView> {
                         height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: isDark ? Colors.white : const Color(0xFF4B5563),
+                          color: palette.appTitle,
                         ),
                       ),
                     ),

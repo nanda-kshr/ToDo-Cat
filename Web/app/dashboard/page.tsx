@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState, useMemo, useCallback } from "react";
+import { Suspense, useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import CatAnimation from "@/components/CatAnimation";
@@ -105,7 +105,15 @@ function DashboardContent() {
   // Filters & Search
   const [activeView, setActiveView] = useState<ViewFilter>("all");
   const [friendsCount, setFriendsCount] = useState<number>(0);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState<number>(0);
+  const [inAppBanner, setInAppBanner] = useState<{ title: string; body: string } | null>(null);
+  const lastPendingCountRef = useRef<number>(0);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Undo deletion state & pending queue
+  const pendingDeletionsRef = useRef<Map<string, { timer: NodeJS.Timeout; task: TaskItem; index: number }>>(new Map());
+  const [undoToast, setUndoToast] = useState<{ id: string; title: string } | null>(null);
+  const undoToastTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
@@ -192,6 +200,36 @@ function DashboardContent() {
     init();
   }, [authFetch, router, searchParams]);
 
+  // Periodic polling for incoming friend requests and friends count
+  useEffect(() => {
+    const interval = setInterval(() => {
+      loadFriendsCount();
+    }, 25000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Auto-dismiss in-app notification banner after 6 seconds
+  useEffect(() => {
+    if (!inAppBanner) return;
+    const timer = setTimeout(() => {
+      setInAppBanner(null);
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [inAppBanner]);
+
+  // Flush pending deletions on window unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      pendingDeletionsRef.current.forEach((val, id) => {
+        clearTimeout(val.timer);
+        fetch(`/api/tasks/${id}`, { method: "DELETE", keepalive: true }).catch(() => {});
+      });
+      pendingDeletionsRef.current.clear();
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, []);
+
   const loadTasks = async () => {
     setLoadingTasks(true);
     try {
@@ -212,7 +250,22 @@ function DashboardContent() {
       const res = await authFetch("/api/friends?limit=1");
       if (res.ok) {
         const data = await res.json();
-        setFriendsCount(data.pagination?.total ?? data.friends?.length ?? 0);
+        const total = data.pagination?.total ?? data.friends?.length ?? 0;
+        setFriendsCount(total);
+
+        const incoming = data.pendingIncoming || [];
+        const incomingCount = incoming.length;
+
+        if (incomingCount > lastPendingCountRef.current && lastPendingCountRef.current !== 0) {
+          const latestReq = incoming[0];
+          const senderName = latestReq?.user?.name || latestReq?.user?.email || "A friend";
+          setInAppBanner({
+            title: "New Friend Request! 🐾",
+            body: `${senderName} sent you a friend request.`,
+          });
+        }
+        lastPendingCountRef.current = incomingCount;
+        setPendingRequestsCount(incomingCount);
       }
     } catch (err) {
       console.error("Failed to load friends count:", err);
@@ -260,19 +313,58 @@ function DashboardContent() {
     }
   };
 
-  // Delete task
-  const handleDeleteTask = async (id: string) => {
-    const originalTasks = tasks;
+  // Delete task with 5-second undo window
+  const handleDeleteTask = (id: string) => {
+    const taskIndex = tasks.findIndex((t) => t._id === id);
+    if (taskIndex === -1) return;
+    const taskToDelete = tasks[taskIndex];
+
+    // Optimistically remove from state
     setTasks((prev) => prev.filter((t) => t._id !== id));
 
-    try {
-      const res = await authFetch(`/api/tasks/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        setTasks(originalTasks);
-      }
-    } catch {
-      setTasks(originalTasks);
+    // Cancel existing timer for this id if any
+    const existing = pendingDeletionsRef.current.get(id);
+    if (existing) {
+      clearTimeout(existing.timer);
     }
+
+    // Set 5-second timer to call DELETE API
+    const timer = setTimeout(async () => {
+      pendingDeletionsRef.current.delete(id);
+      try {
+        await authFetch(`/api/tasks/${id}`, { method: "DELETE" });
+      } catch (err) {
+        console.error("Failed to delete task on server:", err);
+      }
+    }, 5000);
+
+    pendingDeletionsRef.current.set(id, { timer, task: taskToDelete, index: taskIndex });
+
+    // Show Undo toast for 5 seconds
+    setUndoToast({ id, title: taskToDelete.title });
+    if (undoToastTimerRef.current) clearTimeout(undoToastTimerRef.current);
+    undoToastTimerRef.current = setTimeout(() => {
+      setUndoToast(null);
+    }, 5000);
+  };
+
+  const handleUndoDelete = (id: string) => {
+    const pending = pendingDeletionsRef.current.get(id);
+    if (!pending) return;
+
+    clearTimeout(pending.timer);
+    pendingDeletionsRef.current.delete(id);
+
+    // Restore task back to its position
+    setTasks((prev) => {
+      const copy = [...prev];
+      const insertAt = pending.index <= copy.length ? pending.index : copy.length;
+      copy.splice(insertAt, 0, pending.task);
+      return copy;
+    });
+
+    if (undoToastTimerRef.current) clearTimeout(undoToastTimerRef.current);
+    setUndoToast(null);
   };
 
   // Open modal for Create
@@ -478,7 +570,65 @@ function DashboardContent() {
   }
 
   return (
-    <div className="flex-1 flex flex-col w-full max-w-5xl mx-auto p-4 sm:p-6 md:p-8 space-y-6">
+    <div className="flex-1 flex flex-col w-full max-w-5xl mx-auto p-4 sm:p-6 md:p-8 space-y-6 relative">
+      {/* In-App Friend Request Notification Banner */}
+      {inAppBanner && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 max-w-md w-[92%] sm:w-full px-4 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="bg-neutral-900 border border-neutral-700/90 rounded-2xl p-3.5 shadow-2xl flex items-center justify-between gap-3 text-white">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center shrink-0 text-sm">
+                🐾
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold truncate text-white">{inAppBanner.title}</p>
+                <p className="text-[11px] text-neutral-400 truncate">{inAppBanner.body}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => {
+                  setActiveView("friends");
+                  setInAppBanner(null);
+                }}
+                className="px-2.5 py-1 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold text-neutral-200 border border-neutral-700 transition"
+              >
+                View
+              </button>
+              <button
+                onClick={() => setInAppBanner(null)}
+                className="p-1 text-neutral-400 hover:text-white rounded-lg transition"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Undo Deletion Toast */}
+      {undoToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-neutral-900 border border-neutral-700/90 text-white px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3 text-xs">
+            <span className="text-neutral-300 font-medium">Task deleted</span>
+            <button
+              onClick={() => handleUndoDelete(undoToast.id)}
+              className="px-2.5 py-1 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-white font-semibold transition border border-neutral-600"
+            >
+              Undo
+            </button>
+            <button
+              onClick={() => {
+                if (undoToastTimerRef.current) clearTimeout(undoToastTimerRef.current);
+                setUndoToast(null);
+              }}
+              className="text-neutral-500 hover:text-white transition p-0.5"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Top Navigation */}
       <header className="flex items-center justify-between pb-6 border-b border-neutral-800">
         <div className="flex items-center gap-3">
@@ -600,6 +750,11 @@ function DashboardContent() {
                 >
                   {tab.count}
                 </span>
+                {tab.id === "friends" && pendingRequestsCount > 0 && (
+                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-neutral-200 text-neutral-950 font-bold">
+                    {pendingRequestsCount} new
+                  </span>
+                )}
               </button>
             ))}
           </div>

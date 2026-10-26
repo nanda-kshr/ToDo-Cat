@@ -3,6 +3,7 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../models/task.dart';
 import '../../../widgets/app_outlined_icons.dart';
+import '../../../widgets/app_toast.dart';
 
 Future<void> showTaskDetailsModal(
   BuildContext context, {
@@ -609,7 +610,6 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
     if (title.isEmpty) return;
 
     setState(() => _saving = true);
-    final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
 
     try {
@@ -623,11 +623,11 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
                   _selectedTime!.hour,
                   _selectedTime!.minute,
                 )
-              : DateTime(
-                  _selectedDate!.year,
-                  _selectedDate!.month,
-                  _selectedDate!.day,
-                ));
+            : DateTime(
+                _selectedDate!.year,
+                _selectedDate!.month,
+                _selectedDate!.day,
+              ));
 
       await widget.onEdit(
         widget.task,
@@ -639,21 +639,21 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
         priority: _selectedPriority,
         category: _selectedCategory,
       );
-    } catch (e) {
-      messenger.showSnackBar(
-        SnackBar(content: Text('Failed to update task: $e')),
-      );
+      AppToast.show(null, 'Task updated');
+    } catch (_) {
+      AppToast.show(null, 'Failed to update task', isError: true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppColors.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final dialogBg = isDark ? const Color(0xFF181818) : Colors.white;
-    final textPrimary = isDark ? Colors.white : const Color(0xFF4B5563);
-    final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
-    final inputBg = isDark ? const Color(0xFF222222) : const Color(0xFFF4F4F5);
-    final badgeBg = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE4E4E7);
+    final dialogBg = palette.surfaceElevated;
+    final textPrimary = palette.textPrimary;
+    final textSecondary = palette.textSecondary;
+    final inputBg = palette.inputBg;
+    final badgeBg = isDark ? const Color(0xFF2A2A2A) : palette.chipBg;
 
     return Dialog(
       backgroundColor: dialogBg,
@@ -1078,7 +1078,7 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: isSel ? (isDark ? Colors.white : const Color(0xFF4B5563)) : inputBg,
+                          color: isSel ? palette.activeChip : inputBg,
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Text(
@@ -1087,7 +1087,7 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
                             fontFamily: 'Sniglet',
                             fontSize: 12,
                             fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
-                            color: isSel ? (isDark ? Colors.black : Colors.white) : textSecondary,
+                            color: isSel ? palette.activeChipText : textSecondary,
                           ),
                         ),
                       ),
@@ -1101,9 +1101,15 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
             // Save Button
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: isDark ? Colors.white : const Color(0xFF4B5563),
-                foregroundColor: isDark ? Colors.black : Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                backgroundColor: palette.fabBg,
+                foregroundColor: palette.fabIcon,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(
+                    color: isDark ? Colors.transparent : palette.cardBorder,
+                    width: 1.5,
+                  ),
+                ),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 elevation: 0,
               ),

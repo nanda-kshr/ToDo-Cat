@@ -86,12 +86,13 @@ class TodoCatListRemoteViewsFactory(
             val span = SpannableString(task.title)
             span.setSpan(StrikethroughSpan(), 0, span.length, 0)
             views.setTextViewText(R.id.widget_item_title, span)
-            val completedColor = if (isDark) Color.parseColor("#737373") else Color.parseColor("#9CA3AF")
+            val completedColor = if (isDark) Color.parseColor("#777777") else Color.parseColor("#8A7867")
             views.setTextColor(R.id.widget_item_title, completedColor)
-            views.setInt(R.id.widget_item_check, "setBackgroundResource", R.drawable.widget_checkbox_checked_bg)
+            val checkDoneBg = if (isDark) R.drawable.widget_checkbox_checked_bg else R.drawable.widget_checkbox_checked_bg_light
+            views.setInt(R.id.widget_item_check, "setBackgroundResource", checkDoneBg)
         } else {
             views.setTextViewText(R.id.widget_item_title, task.title)
-            val activeColor = if (isDark) Color.WHITE else Color.parseColor("#4B5563")
+            val activeColor = if (isDark) Color.parseColor("#F5F5F5") else Color.parseColor("#2B1D16")
             views.setTextColor(R.id.widget_item_title, activeColor)
             val checkBg = if (isDark) R.drawable.widget_checkbox_bg else R.drawable.widget_checkbox_bg_light
             views.setInt(R.id.widget_item_check, "setBackgroundResource", checkBg)

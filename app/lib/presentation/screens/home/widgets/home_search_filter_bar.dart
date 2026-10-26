@@ -158,8 +158,18 @@ class _FilterTab extends StatelessWidget {
             color: isSelected ? activeBg : inactiveBg,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: isSelected ? activeBg : palette.cardBorder,
+              color: isSelected ? palette.cardBorder : palette.cardBorder.withValues(alpha: 0.6),
+              width: isSelected ? 1.5 : 1.0,
             ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: palette.softShadow,
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../services/api_service.dart';
+import '../../../widgets/app_toast.dart';
 
 class ForgotPasswordDialog extends StatefulWidget {
   final String initialEmail;
@@ -94,17 +95,15 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
     });
 
     try {
-      final msg = await _apiService.resetPasswordWithOtp(
+      await _apiService.resetPasswordWithOtp(
         email: email,
         otp: otp,
         newPassword: newPassword,
       );
       if (mounted) {
         widget.onPasswordReset?.call(email);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg)),
-        );
         Navigator.of(context).pop();
+        AppToast.show(context, 'Password reset successful');
       }
     } catch (e) {
       if (mounted) {

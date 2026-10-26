@@ -6,6 +6,7 @@ import '../../../../models/task.dart';
 import '../../../../models/friend.dart';
 import '../../../../services/api_service.dart';
 import '../../../widgets/app_outlined_icons.dart';
+import '../../../widgets/app_toast.dart';
 
 Future<void> showCreateTaskModal(
   BuildContext context, {
@@ -116,7 +117,6 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
     final title = _titleController.text.trim();
     if (title.isEmpty) return;
 
-    final messenger = ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
 
     final dueDate = _selectedDate == null
@@ -147,6 +147,7 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
         sharedWith: _selectedFriends.map((f) => f.id).toList(),
       );
       widget.onTaskCreated(newTask);
+      AppToast.show(null, 'Created task');
     } catch (_) {
       // Offline fallback: save locally and notify user
       final offlineTask = Task(
@@ -163,12 +164,7 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
         updatedAt: DateTime.now(),
       );
       widget.onTaskCreated(offlineTask);
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Saved offline. Will sync when back online.'),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      AppToast.show(null, 'Saved offline');
     }
   }
 
@@ -830,10 +826,14 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
             // Add Task Action Button
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: isDark ? Colors.white : const Color(0xFF4B5563),
-                foregroundColor: isDark ? Colors.black : Colors.white,
+                backgroundColor: palette.fabBg,
+                foregroundColor: palette.fabIcon,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
+                  side: BorderSide(
+                    color: isDark ? Colors.transparent : palette.cardBorder,
+                    width: 1.5,
+                  ),
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 elevation: 0,

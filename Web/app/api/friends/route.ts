@@ -159,7 +159,14 @@ export async function POST(request: Request) {
         sendPushNotification(targetUser.fcmTokens, {
           title: "Friend Request Accepted!",
           body: `${currentUser.name || currentUser.email} accepted your friend request.`,
-        }).catch(() => {});
+          data: {
+            type: "friend_accepted",
+            senderId: currentUser._id.toString(),
+            senderName: currentUser.name || currentUser.email,
+          },
+        }).catch((err) => {
+          console.error("[FCM Friend Accept Error]:", err);
+        });
       }
 
       sendFriendAcceptedEmail({
@@ -202,7 +209,15 @@ export async function POST(request: Request) {
       sendPushNotification(targetUser.fcmTokens, {
         title: "New Friend Request!",
         body: `${currentUser.name || currentUser.email} sent you a friend request.`,
-      }).catch(() => {});
+        data: {
+          type: "friend_request",
+          senderId: currentUser._id.toString(),
+          senderName: currentUser.name || currentUser.email,
+          senderEmail: currentUser.email,
+        },
+      }).catch((err) => {
+        console.error("[FCM Friend Request Error]:", err);
+      });
     }
 
     sendFriendRequestEmail({

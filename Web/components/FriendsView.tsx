@@ -144,6 +144,10 @@ export default function FriendsView({ authFetch, onCountUpdate }: FriendsViewPro
       });
       if (res.ok) {
         fetchFriends(1, searchQuery, false);
+        setTopBanner("Added friend");
+        setTimeout(() => {
+          setTopBanner((curr) => (curr === "Added friend" ? null : curr));
+        }, 2500);
       }
     } catch (err) {
       console.error("Failed to accept friend request:", err);
@@ -160,6 +164,10 @@ export default function FriendsView({ authFetch, onCountUpdate }: FriendsViewPro
       });
       if (res.ok) {
         setPendingIncoming((prev) => prev.filter((r) => r.friendshipId !== friendshipId));
+        setTopBanner("Request declined");
+        setTimeout(() => {
+          setTopBanner((curr) => (curr === "Request declined" ? null : curr));
+        }, 2500);
       }
     } catch (err) {
       console.error("Failed to decline friend request:", err);
@@ -175,6 +183,10 @@ export default function FriendsView({ authFetch, onCountUpdate }: FriendsViewPro
       });
       if (res.ok) {
         fetchFriends(1, searchQuery, false);
+        setTopBanner("Friend removed");
+        setTimeout(() => {
+          setTopBanner((curr) => (curr === "Friend removed" ? null : curr));
+        }, 2500);
       }
     } catch (err) {
       console.error("Failed to remove friend:", err);
@@ -225,10 +237,10 @@ export default function FriendsView({ authFetch, onCountUpdate }: FriendsViewPro
       const data = await res.json();
       if (res.ok) {
         setIsAddModalOpen(false);
-        setTopBanner(`Request sent to ${email}`);
+        setTopBanner("Friend request sent");
         setTimeout(() => {
-          setTopBanner((curr) => (curr === `Request sent to ${email}` ? null : curr));
-        }, 4000);
+          setTopBanner((curr) => (curr === "Friend request sent" ? null : curr));
+        }, 2500);
         setSearchResults((prev) =>
           prev.map((u) => (u.email === email ? { ...u, friendshipStatus: "pending_sent" } : u))
         );
@@ -545,7 +557,7 @@ export default function FriendsView({ authFetch, onCountUpdate }: FriendsViewPro
                       <div className="shrink-0">
                         {user.friendshipStatus === "accepted" ? (
                           <span className="text-[10px] text-neutral-300 bg-neutral-800 border border-neutral-700/60 px-2 py-0.5 rounded-md font-medium">
-                            Friends 🐾
+                            Friends
                           </span>
                         ) : user.friendshipStatus === "pending_sent" ? (
                           <span className="text-[10px] text-neutral-400 bg-neutral-800 px-2 py-0.5 rounded font-medium">
@@ -568,18 +580,6 @@ export default function FriendsView({ authFetch, onCountUpdate }: FriendsViewPro
                   </div>
                 ) : null}
               </div>
-
-              {/* Direct email fallback send */}
-              {addSearchEmail.includes("@") && searchResults.length === 0 && !isSearchingUsers && (
-                <div className="pt-2 border-t border-neutral-800 flex justify-end">
-                  <button
-                    onClick={() => handleSendFriendRequest(addSearchEmail.trim())}
-                    className="bg-white hover:bg-neutral-200 text-neutral-950 px-4 py-1.5 rounded-xl text-xs font-medium transition"
-                  >
-                    Send Request to {addSearchEmail.trim()}
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         </div>

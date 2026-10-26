@@ -52,7 +52,7 @@ class TaskCardTile extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
           decoration: BoxDecoration(
-            color: palette.surface,
+            color: palette.taskCardBg,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: palette.cardBorder),
             boxShadow: [

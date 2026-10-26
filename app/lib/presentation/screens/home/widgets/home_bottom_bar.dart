@@ -7,11 +7,13 @@ import '../../../widgets/app_outlined_icons.dart';
 class HomeBottomBar extends StatelessWidget {
   final int currentTab;
   final ValueChanged<int> onTabSelected;
+  final int pendingFriendsCount;
 
   const HomeBottomBar({
     super.key,
     required this.currentTab,
     required this.onTabSelected,
+    this.pendingFriendsCount = 0,
   });
 
   @override
@@ -68,6 +70,7 @@ class HomeBottomBar extends StatelessWidget {
                       activeColor: activeColor,
                       inactiveColor: inactiveColor,
                       pillBg: pillBg,
+                      badgeCount: pendingFriendsCount,
                     ),
                     _NavItem(
                       index: 1,
@@ -112,6 +115,7 @@ class _NavItem extends StatelessWidget {
   final Color activeColor;
   final Color inactiveColor;
   final Color pillBg;
+  final int badgeCount;
 
   const _NavItem({
     required this.index,
@@ -123,12 +127,14 @@ class _NavItem extends StatelessWidget {
     required this.activeColor,
     required this.inactiveColor,
     required this.pillBg,
+    this.badgeCount = 0,
   });
 
   @override
   Widget build(BuildContext context) {
     final color = isSelected ? activeColor : inactiveColor;
     final svgAsset = isSelected ? activeIcon : inactiveIcon;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Expanded(
       child: InkWell(
@@ -144,11 +150,39 @@ class _NavItem extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SvgPicture.asset(
-                svgAsset,
-                width: 22,
-                height: 22,
-                colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  SvgPicture.asset(
+                    svgAsset,
+                    width: 22,
+                    height: 22,
+                    colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+                  ),
+                  if (badgeCount > 0)
+                    Positioned(
+                      top: -4,
+                      right: -7,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: isDark ? const Color(0xFFF4F4F5) : const Color(0xFF1C1917),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                        child: Text(
+                          badgeCount > 9 ? '9+' : '$badgeCount',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'Sniglet',
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? const Color(0xFF0A0A0A) : const Color(0xFFFAF8F5),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
               const SizedBox(height: 3),
               Text(

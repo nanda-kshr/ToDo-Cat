@@ -12,6 +12,8 @@ void main() async {
 }
 
 class TodoCatApp extends StatelessWidget {
+  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
   const TodoCatApp({super.key});
 
   @override
@@ -27,6 +29,7 @@ class TodoCatApp extends StatelessWidget {
         );
 
         return MaterialApp(
+          navigatorKey: navigatorKey,
           title: 'TodoCat',
           debugShowCheckedModeBanner: false,
           themeMode: currentMode,
@@ -43,10 +46,10 @@ class TodoCatApp extends StatelessWidget {
             appBarTheme: AppBarTheme(
               backgroundColor: AppColors.light.background,
               elevation: 0,
-              iconTheme: IconThemeData(color: AppColors.light.textPrimary),
+              iconTheme: IconThemeData(color: AppColors.light.appTitle),
               titleTextStyle: TextStyle(
                 fontFamily: 'Sniglet',
-                color: AppColors.light.textPrimary,
+                color: AppColors.light.appTitle,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -68,10 +71,10 @@ class TodoCatApp extends StatelessWidget {
             appBarTheme: AppBarTheme(
               backgroundColor: AppColors.dark.background,
               elevation: 0,
-              iconTheme: IconThemeData(color: AppColors.dark.textPrimary),
+              iconTheme: IconThemeData(color: AppColors.dark.appTitle),
               titleTextStyle: TextStyle(
                 fontFamily: 'Sniglet',
-                color: AppColors.dark.textPrimary,
+                color: AppColors.dark.appTitle,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),

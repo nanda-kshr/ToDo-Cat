@@ -1,6 +1,6 @@
 /**
  * Central theme palette for TodoCat Web application.
- * - Light Mode: Warm cream (#FBF1DC) with soft ivory cards (#FFF8E8), dark brown-charcoal text (#3A2F28),
+ * - Light Mode: Warm cream (#FDF2DD) with soft ivory/peachy cards (#F7E9DD), deep title/primary text (#2B1D16),
  *   amber accents (#FFC65C), taupe beige paw prints (#B49A83), and soft warm shadows.
  * - Dark Mode: Carbon (#0E0E0E) with dark cards (#1A1A1A / #222222), crisp whitish text (#F5F5F5),
  *   amber accents (#FFC65C), muted grey paw prints (#777777), and deep shadows.
@@ -11,6 +11,7 @@ export interface ThemeColors {
   background: string;
   surface: string;
   surfaceElevated: string;
+  taskCardBg: string;
   cardBorder: string;
   divider: string;
   inputBg: string;
@@ -21,6 +22,7 @@ export interface ThemeColors {
   navBg: string;
 
   // Typography
+  appTitle: string;
   textPrimary: string;
   textSecondary: string;
   textMuted: string;
@@ -87,32 +89,36 @@ export interface ThemeColors {
 }
 
 export const lightColors: ThemeColors = {
-  // Main screen background: Warm cream #FBF1DC
-  background: "#FBF1DC",
-  // Cards: Soft ivory cream #FFF8E8
-  surface: "#FFF8E8",
-  surfaceElevated: "#FFF8E8",
+  // 2) Home screen background: #fdf2dd
+  background: "#FDF2DD",
+  // 3) Cards: #f7e9dd
+  surface: "#F7E9DD",
+  surfaceElevated: "#F7E9DD",
+  // Task items on home tab: Pure white #FFFFFF
+  taskCardBg: "#FFFFFF",
   // Borders: Warm beige #E8D9C2
   cardBorder: "#E8D9C2",
   divider: "#E8D9C2",
   // Search bar: Pale cream #F8EEDF
   inputBg: "#F8EEDF",
   searchBg: "#F8EEDF",
-  // Inactive chips: Light beige #F4E8D3
-  chipBg: "#F4E8D3",
-  // Active chip: Dark brown #3A2F28, Active chip text: Cream #FFF8E8
-  activeChip: "#3A2F28",
+  // Inactive chips: Pure white #FFFFFF
+  chipBg: "#FFFFFF",
+  // Selected status - All, Active, Completed: #413025 (Text: #FFF8E8)
+  activeChip: "#413025",
   activeChipText: "#FFF8E8",
   // Bottom navigation: Pale cream #FFF8E8
   navBg: "#FFF8E8",
 
-  // Primary text: Dark brown-charcoal #3A2F28
-  textPrimary: "#3A2F28",
+  // 1) App Title: #2b1d16
+  appTitle: "#2B1D16",
+  // Primary text: #2b1d16
+  textPrimary: "#2B1D16",
   // Secondary text: Muted warm brown #8A7867
   textSecondary: "#8A7867",
   textMuted: "#8A7867",
 
-  iconPrimary: "#3A2F28",
+  iconPrimary: "#2B1D16",
   iconSecondary: "#8A7867",
   iconMuted: "#8A7867",
 
@@ -122,8 +128,8 @@ export const lightColors: ThemeColors = {
   progressFill: "#FFC65C",
   priorityBadge: "#FFC65C",
 
-  // Completed: Dark brown-charcoal outline in light beige pill
-  completed: "#3A2F28",
+  // Completed: Dark brown outline in light beige pill
+  completed: "#2B1D16",
   completedBg: "#F4E8D3",
   completedBorder: "#E8D9C2",
 
@@ -146,23 +152,23 @@ export const lightColors: ThemeColors = {
   priorityLowBorder: "#E8D9C2",
 
   // Shared badge
-  sharedBadgeText: "#3A2F28",
+  sharedBadgeText: "#2B1D16",
   sharedBadgeBg: "#F4E8D3",
   sharedBadgeBorder: "#E8D9C2",
 
   // Checkbox outline: Brown #6F5A48
   checkboxBorder: "#6F5A48",
-  checkboxCheckedBg: "#3A2F28",
-  checkboxCheckedIcon: "#FFF8E8",
+  checkboxCheckedBg: "#2B1D16",
+  checkboxCheckedIcon: "#F7E9DD",
 
   // Paw prints and trail: Taupe beige #B49A83
   pawAndTrail: "#B49A83",
-  catBody: "#3A2F28",
+  catBody: "#2B1D16",
   catBlush: "#F4A6A0",
 
-  // Floating + button: Dark brown-charcoal #3A2F28, Floating + symbol: Cream #FFF8E8
-  fabBg: "#3A2F28",
-  fabIcon: "#FFF8E8",
+  // 4) Add task button: #f7e9dd (Symbol: #2b1d16)
+  fabBg: "#F7E9DD",
+  fabIcon: "#2B1D16",
 
   // Soft shadow: Warm grey-brown #8C7860 at low opacity
   softShadow: "0 4px 16px rgba(140, 120, 96, 0.15)",
@@ -179,6 +185,7 @@ export const darkColors: ThemeColors = {
   // Card: #1A1A1A, Card-elevated: #222222
   surface: "#1A1A1A",
   surfaceElevated: "#222222",
+  taskCardBg: "#1A1A1A",
   // Border: #353535
   cardBorder: "#353535",
   divider: "#353535",
@@ -193,6 +200,8 @@ export const darkColors: ThemeColors = {
   // Nav-bg: #181818
   navBg: "#181818",
 
+  // App title
+  appTitle: "#F5F5F5",
   // Text-primary: #F5F5F5
   textPrimary: "#F5F5F5",
   // Text-secondary: #A6A6A6

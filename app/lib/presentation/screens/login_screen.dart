@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
+import '../../services/fcm_service.dart';
 import '../widgets/app_logo.dart';
 import 'home_screen.dart';
 import 'legal_screen.dart';
@@ -56,6 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
 
+      FcmService().syncCurrentToken();
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -81,6 +83,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       await ApiService().loginWithGoogle();
+      FcmService().syncCurrentToken();
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeScreen()),

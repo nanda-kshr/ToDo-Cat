@@ -28,7 +28,7 @@
                 android:layout_height="wrap_content"
                 android:text="TodoCat"
                 android:fontFamily="sans-serif-rounded"
-                android:textColor="#4B5563"
+                android:textColor="#2B1D16"
                 android:textSize="17sp"
                 android:textStyle="bold" />
 
@@ -38,7 +38,7 @@
                 android:layout_height="wrap_content"
                 android:text="0 pending • 0 completed"
                 android:fontFamily="sans-serif-rounded"
-                android:textColor="#9CA3AF"
+                android:textColor="#8A7867"
                 android:textSize="12sp" />
         </LinearLayout>
 
@@ -82,7 +82,7 @@
             android:gravity="center"
             android:fontFamily="sans-serif-rounded"
             android:text="No tasks pending!\nTap + to create one."
-            android:textColor="#9CA3AF"
+            android:textColor="#8A7867"
             android:textSize="13sp" />
     </FrameLayout>
 

@@ -673,7 +673,7 @@ class FloatingCatService : Service() {
 
                     val titleText = TextView(context).apply {
                         text = "TodoCat"
-                        setTextColor(if (isDarkTheme) Color.WHITE else Color.parseColor("#111827"))
+                        setTextColor(if (isDarkTheme) Color.parseColor("#F5F5F5") else Color.parseColor("#2B1D16"))
                         textSize = 15f
                         typeface = snigletFont ?: Typeface.DEFAULT_BOLD
                     }
@@ -682,7 +682,7 @@ class FloatingCatService : Service() {
 
                     val subtitle = TextView(context).apply {
                         text = "Tasks"
-                        setTextColor(if (isDarkTheme) Color.parseColor("#9CA3AF") else Color.parseColor("#6B7280"))
+                        setTextColor(if (isDarkTheme) Color.parseColor("#A6A6A6") else Color.parseColor("#8A7867"))
                         textSize = 12f
                         snigletFont?.let { typeface = it }
                     }
@@ -693,7 +693,7 @@ class FloatingCatService : Service() {
 
                 val closeBtn = TextView(context).apply {
                     text = "✕"
-                    setTextColor(if (isDarkTheme) Color.parseColor("#A3A3A3") else Color.parseColor("#6B7280"))
+                    setTextColor(if (isDarkTheme) Color.parseColor("#A6A6A6") else Color.parseColor("#8A7867"))
                     textSize = 16f
                     typeface = Typeface.DEFAULT_BOLD
                     setPadding((8 * density).toInt(), (4 * density).toInt(), (8 * density).toInt(), (4 * density).toInt())
@@ -706,7 +706,7 @@ class FloatingCatService : Service() {
 
             // Divider
             val div = View(context).apply {
-                setBackgroundColor(if (isDarkTheme) Color.parseColor("#262626") else Color.parseColor("#E5E7EB"))
+                setBackgroundColor(if (isDarkTheme) Color.parseColor("#353535") else Color.parseColor("#E8D9C2"))
             }
             dividerView = div
             addView(div, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (1 * density).toInt()).apply {
@@ -731,13 +731,14 @@ class FloatingCatService : Service() {
 
                 val input = EditText(context).apply {
                     hint = "Quick add a task..."
-                    setHintTextColor(if (isDarkTheme) Color.parseColor("#737373") else Color.parseColor("#9CA3AF"))
-                    setTextColor(if (isDarkTheme) Color.WHITE else Color.parseColor("#111827"))
+                    setHintTextColor(if (isDarkTheme) Color.parseColor("#777777") else Color.parseColor("#8A7867"))
+                    setTextColor(if (isDarkTheme) Color.parseColor("#F5F5F5") else Color.parseColor("#2B1D16"))
                     textSize = 14f
                     snigletFont?.let { typeface = it }
                     background = GradientDrawable().apply {
-                        setColor(if (isDarkTheme) Color.parseColor("#262626") else Color.parseColor("#F3F4F6"))
+                        setColor(if (isDarkTheme) Color.parseColor("#1C1C1C") else Color.parseColor("#F8EEDF"))
                         cornerRadius = 12 * density
+                        setStroke((1 * density).toInt(), Color.parseColor(if (isDarkTheme) "#353535" else "#E8D9C2"))
                     }
                     val p = (8 * density).toInt()
                     setPadding(p, p, p, p)
@@ -747,12 +748,13 @@ class FloatingCatService : Service() {
 
                 val addBtn = ImageView(context).apply {
                     setImageResource(R.drawable.ic_widget_add)
-                    setColorFilter(if (isDarkTheme) Color.BLACK else Color.WHITE)
+                    setColorFilter(if (isDarkTheme) Color.parseColor("#0E0E0E") else Color.parseColor("#2B1D16"))
                     val p = (8 * density).toInt()
                     setPadding(p, p, p, p)
                     background = GradientDrawable().apply {
                         shape = GradientDrawable.OVAL
-                        setColor(if (isDarkTheme) Color.WHITE else Color.parseColor("#111827"))
+                        setColor(if (isDarkTheme) Color.parseColor("#F5F5F5") else Color.parseColor("#F7E9DD"))
+                        setStroke((1 * density).toInt(), Color.parseColor(if (isDarkTheme) "#353535" else "#E8D9C2"))
                     }
                     setOnClickListener {
                         val title = input.text.toString().trim()
@@ -772,7 +774,7 @@ class FloatingCatService : Service() {
             // Open Full App Button
             val openAppBtn = TextView(context).apply {
                 text = "Open Todo Cat"
-                setTextColor(if (isDarkTheme) Color.WHITE else Color.parseColor("#111827"))
+                setTextColor(if (isDarkTheme) Color.parseColor("#F5F5F5") else Color.parseColor("#2B1D16"))
                 textSize = 13f
                 typeface = snigletFont ?: Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
@@ -794,9 +796,9 @@ class FloatingCatService : Service() {
 
     private fun buildCardBackground(density: Float): GradientDrawable {
         return GradientDrawable().apply {
-            setColor(Color.parseColor(if (isDarkTheme) "#171717" else "#FFFFFF"))
+            setColor(Color.parseColor(if (isDarkTheme) "#1A1A1A" else "#F7E9DD"))
             cornerRadius = 18 * density
-            setStroke((1 * density).toInt(), Color.parseColor(if (isDarkTheme) "#2E2E2E" else "#E5E7EB"))
+            setStroke((1.2f * density).toInt(), Color.parseColor(if (isDarkTheme) "#353535" else "#E8D9C2"))
         }
     }
 
@@ -876,7 +878,7 @@ class FloatingCatService : Service() {
     private fun buildEmptyTaskView(density: Float): TextView {
         return TextView(this).apply {
             text = "No tasks yet!\nType above to add a new task."
-            setTextColor(if (isDarkTheme) Color.parseColor("#737373") else Color.parseColor("#9CA3AF"))
+            setTextColor(if (isDarkTheme) Color.parseColor("#A6A6A6") else Color.parseColor("#8A7867"))
             textSize = 14f
             snigletFont?.let { typeface = it }
             gravity = Gravity.CENTER
@@ -891,26 +893,28 @@ class FloatingCatService : Service() {
 
         // Apply theme to all card elements
         expandedView?.background = buildCardBackground(density)
-        titleTextView?.setTextColor(if (isDarkTheme) Color.WHITE else Color.parseColor("#111827"))
-        speedBadgeText?.setTextColor(if (isDarkTheme) Color.parseColor("#9CA3AF") else Color.parseColor("#6B7280"))
-        closeButtonView?.setTextColor(if (isDarkTheme) Color.parseColor("#A3A3A3") else Color.parseColor("#6B7280"))
-        dividerView?.setBackgroundColor(if (isDarkTheme) Color.parseColor("#262626") else Color.parseColor("#E5E7EB"))
+        titleTextView?.setTextColor(if (isDarkTheme) Color.parseColor("#F5F5F5") else Color.parseColor("#2B1D16"))
+        speedBadgeText?.setTextColor(if (isDarkTheme) Color.parseColor("#A6A6A6") else Color.parseColor("#8A7867"))
+        closeButtonView?.setTextColor(if (isDarkTheme) Color.parseColor("#A6A6A6") else Color.parseColor("#8A7867"))
+        dividerView?.setBackgroundColor(if (isDarkTheme) Color.parseColor("#353535") else Color.parseColor("#E8D9C2"))
         quickAddInput?.apply {
-            setTextColor(if (isDarkTheme) Color.WHITE else Color.parseColor("#111827"))
-            setHintTextColor(if (isDarkTheme) Color.parseColor("#737373") else Color.parseColor("#9CA3AF"))
+            setTextColor(if (isDarkTheme) Color.parseColor("#F5F5F5") else Color.parseColor("#2B1D16"))
+            setHintTextColor(if (isDarkTheme) Color.parseColor("#777777") else Color.parseColor("#8A7867"))
             background = GradientDrawable().apply {
-                setColor(if (isDarkTheme) Color.parseColor("#262626") else Color.parseColor("#F3F4F6"))
+                setColor(if (isDarkTheme) Color.parseColor("#1C1C1C") else Color.parseColor("#F8EEDF"))
                 cornerRadius = 12 * density
+                setStroke((1 * density).toInt(), Color.parseColor(if (isDarkTheme) "#353535" else "#E8D9C2"))
             }
         }
         quickAddBtn?.apply {
-            setColorFilter(if (isDarkTheme) Color.BLACK else Color.WHITE)
+            setColorFilter(if (isDarkTheme) Color.parseColor("#0E0E0E") else Color.parseColor("#2B1D16"))
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(if (isDarkTheme) Color.WHITE else Color.parseColor("#111827"))
+                setColor(if (isDarkTheme) Color.parseColor("#F5F5F5") else Color.parseColor("#F7E9DD"))
+                setStroke((1 * density).toInt(), Color.parseColor(if (isDarkTheme) "#353535" else "#E8D9C2"))
             }
         }
-        openAppButton?.setTextColor(if (isDarkTheme) Color.WHITE else Color.parseColor("#111827"))
+        openAppButton?.setTextColor(if (isDarkTheme) Color.parseColor("#F5F5F5") else Color.parseColor("#2B1D16"))
 
         val raw = tasksJsonString
         if (raw.isNullOrEmpty()) {
@@ -941,11 +945,12 @@ class FloatingCatService : Service() {
                     background = GradientDrawable().apply {
                         setColor(
                             Color.parseColor(
-                                if (completed) (if (isDarkTheme) "#121212" else "#F9FAFB")
-                                else (if (isDarkTheme) "#1F1F1F" else "#F3F4F6")
+                                if (completed) (if (isDarkTheme) "#141414" else "#F4E8D3")
+                                else (if (isDarkTheme) "#222222" else "#F7E9DD")
                             )
                         )
                         cornerRadius = 10 * density
+                        setStroke((1 * density).toInt(), Color.parseColor(if (isDarkTheme) "#353535" else "#E8D9C2"))
                     }
                     val hp = (10 * density).toInt()
                     val vp = (10 * density).toInt()
@@ -960,11 +965,11 @@ class FloatingCatService : Service() {
                     background = GradientDrawable().apply {
                         shape = GradientDrawable.RECTANGLE
                         cornerRadius = 6 * density
-                        setColor(if (completed) Color.parseColor(if (isDarkTheme) "#FFFFFF" else "#111827") else Color.TRANSPARENT)
+                        setColor(if (completed) Color.parseColor(if (isDarkTheme) "#F5F5F5" else "#2B1D16") else Color.TRANSPARENT)
                         setStroke(
                             (1.5f * density).toInt(),
-                            if (completed) Color.parseColor(if (isDarkTheme) "#FFFFFF" else "#111827")
-                            else Color.parseColor(if (isDarkTheme) "#525252" else "#D1D5DB")
+                            if (completed) Color.parseColor(if (isDarkTheme) "#F5F5F5" else "#2B1D16")
+                            else Color.parseColor(if (isDarkTheme) "#353535" else "#6F5A48")
                         )
                     }
                 }
@@ -978,8 +983,8 @@ class FloatingCatService : Service() {
                     snigletFont?.let { typeface = it }
                     setTextColor(
                         Color.parseColor(
-                            if (completed) (if (isDarkTheme) "#737373" else "#9CA3AF")
-                            else (if (isDarkTheme) "#FFFFFF" else "#111827")
+                            if (completed) (if (isDarkTheme) "#777777" else "#8A7867")
+                            else (if (isDarkTheme) "#F5F5F5" else "#2B1D16")
                         )
                     )
                     if (completed) paintFlags = paintFlags or Paint.STRIKE_THRU_TEXT_FLAG
@@ -987,9 +992,9 @@ class FloatingCatService : Service() {
                 row.addView(titleView, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
 
                 val priorityColor = when (priority.lowercase()) {
-                    "high" -> Color.parseColor("#EF4444")
-                    "low" -> Color.parseColor("#10B981")
-                    else -> Color.parseColor("#F59E0B")
+                    "high" -> Color.parseColor("#FFC65C")
+                    "low" -> Color.parseColor("#8A7867")
+                    else -> Color.parseColor("#FFC65C")
                 }
                 val prioDot = View(this).apply {
                     background = GradientDrawable().apply {

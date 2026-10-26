@@ -328,9 +328,7 @@ class _HomeTasksViewState extends State<HomeTasksView> {
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
-                          color: isDark
-                              ? Colors.white
-                              : const Color(0xFF4B5563),
+                          color: palette.appTitle,
                         ),
                       ),
                     )

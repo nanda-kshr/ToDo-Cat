@@ -72,16 +72,16 @@ class TodoCatWidgetProvider : HomeWidgetProvider() {
 
                 if (isDark) {
                     setInt(R.id.widget_cat_root, "setBackgroundResource", R.drawable.widget_cat_background_dark)
-                    setTextColor(R.id.widget_cat_time, Color.parseColor("#FFFFFF"))
-                    setTextColor(R.id.widget_cat_date, Color.parseColor("#9CA3AF"))
-                    setTextColor(R.id.widget_cat_ratio, Color.parseColor("#FFFFFF"))
-                    setTextColor(R.id.widget_cat_ratio_label, Color.parseColor("#9CA3AF"))
+                    setTextColor(R.id.widget_cat_time, Color.parseColor("#F5F5F5"))
+                    setTextColor(R.id.widget_cat_date, Color.parseColor("#A6A6A6"))
+                    setTextColor(R.id.widget_cat_ratio, Color.parseColor("#F5F5F5"))
+                    setTextColor(R.id.widget_cat_ratio_label, Color.parseColor("#A6A6A6"))
                 } else {
                     setInt(R.id.widget_cat_root, "setBackgroundResource", R.drawable.widget_cat_background)
-                    setTextColor(R.id.widget_cat_time, Color.parseColor("#4B5563"))
-                    setTextColor(R.id.widget_cat_date, Color.parseColor("#9CA3AF"))
-                    setTextColor(R.id.widget_cat_ratio, Color.parseColor("#4B5563"))
-                    setTextColor(R.id.widget_cat_ratio_label, Color.parseColor("#9CA3AF"))
+                    setTextColor(R.id.widget_cat_time, Color.parseColor("#2B1D16"))
+                    setTextColor(R.id.widget_cat_date, Color.parseColor("#8A7867"))
+                    setTextColor(R.id.widget_cat_ratio, Color.parseColor("#2B1D16"))
+                    setTextColor(R.id.widget_cat_ratio_label, Color.parseColor("#8A7867"))
                 }
 
                 // Cat animation frames: White vs Black

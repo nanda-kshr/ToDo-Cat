@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="widget_cat_bg">#FFF9F6</color>
-    <color name="widget_cat_pill_bg">#F5EDF5</color>
-    <color name="widget_cat_card_bg">#FFFFFF</color>
-    <color name="widget_cat_primary_text">#1C162E</color>
-    <color name="widget_cat_secondary_text">#3E3756</color>
-    <color name="widget_cat_progress_track">#EBE4F7</color>
-    <color name="widget_cat_progress_fill">#7755FD</color>
+    <color name="widget_cat_bg">#FDF2DD</color>
+    <color name="widget_cat_pill_bg">#F4E8D3</color>
+    <color name="widget_cat_card_bg">#F7E9DD</color>
+    <color name="widget_cat_primary_text">#2B1D16</color>
+    <color name="widget_cat_secondary_text">#8A7867</color>
+    <color name="widget_cat_progress_track">#EADCC6</color>
+    <color name="widget_cat_progress_fill">#FFC65C</color>
     <color name="splash_background">#0A0A0A</color>
     <color name="ic_launcher_background">#ffffff</color>
 </resources>

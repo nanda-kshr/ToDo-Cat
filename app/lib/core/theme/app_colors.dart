@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// Central theme palette representing all visual tokens across TodoCat.
-/// - Light Mode: Warm cream (#FBF1DC) with soft ivory cards (#FFF8E8), dark brown-charcoal text (#3A2F28),
+/// - Light Mode: Warm cream (#FDF2DD) with soft ivory/peachy cards (#F7E9DD), deep title/primary text (#2B1D16),
 ///   amber accents (#FFC65C), taupe beige paw prints (#B49A83), and soft warm shadows.
 /// - Dark Mode: Carbon (#0E0E0E) with dark cards (#1A1A1A / #222222), crisp whitish text (#F5F5F5),
 ///   amber accents (#FFC65C), muted grey paw prints (#777777), and deep shadows.
@@ -10,6 +10,7 @@ class AppPalette {
   final Color background;
   final Color surface;
   final Color surfaceElevated;
+  final Color taskCardBg;
   final Color cardBorder;
   final Color divider;
   final Color inputBg;
@@ -20,6 +21,7 @@ class AppPalette {
   final Color bottomNavBg;
 
   // Typography
+  final Color appTitle;
   final Color textPrimary;
   final Color textSecondary;
   final Color textMuted;
@@ -94,6 +96,7 @@ class AppPalette {
     required this.background,
     required this.surface,
     required this.surfaceElevated,
+    required this.taskCardBg,
     required this.cardBorder,
     required this.divider,
     required this.inputBg,
@@ -102,6 +105,7 @@ class AppPalette {
     required this.activeChip,
     required this.activeChipText,
     required this.bottomNavBg,
+    required this.appTitle,
     required this.textPrimary,
     required this.textSecondary,
     required this.textMuted,
@@ -155,32 +159,36 @@ class AppColors {
 
   /// Light (Warm Cream) Theme Palette
   static const AppPalette light = AppPalette(
-    // Main screen background: Warm cream #FBF1DC
-    background: Color(0xFFFBF1DC),
-    // Cards: Soft ivory cream #FFF8E8
-    surface: Color(0xFFFFF8E8),
-    surfaceElevated: Color(0xFFFFF8E8),
+    // 2) Home screen background: #fdf2dd
+    background: Color(0xFFFDF2DD),
+    // 3) Cards: #f7e9dd
+    surface: Color(0xFFF7E9DD),
+    surfaceElevated: Color(0xFFF7E9DD),
+    // Task items on home tab: Pure white #FFFFFF
+    taskCardBg: Color(0xFFFFFFFF),
     // Borders: Warm beige #E8D9C2
     cardBorder: Color(0xFFE8D9C2),
     divider: Color(0xFFE8D9C2),
     // Search bar: Pale cream #F8EEDF
     inputBg: Color(0xFFF8EEDF),
     searchBg: Color(0xFFF8EEDF),
-    // Inactive chips: Light beige #F4E8D3
-    chipBg: Color(0xFFF4E8D3),
-    // Active chip: Dark brown #3A2F28, Active chip text: Cream #FFF8E8
-    activeChip: Color(0xFF3A2F28),
+    // Inactive chips: Pure white #FFFFFF
+    chipBg: Color(0xFFFFFFFF),
+    // Selected status - All, Active, Completed: #413025 (Text: #FFF8E8)
+    activeChip: Color(0xFF413025),
     activeChipText: Color(0xFFFFF8E8),
     // Bottom navigation: Pale cream #FFF8E8
     bottomNavBg: Color(0xFFFFF8E8),
 
-    // Primary text: Dark brown-charcoal #3A2F28
-    textPrimary: Color(0xFF3A2F28),
+    // 1) App Title: #2b1d16
+    appTitle: Color(0xFF2B1D16),
+    // Primary text: #2b1d16
+    textPrimary: Color(0xFF2B1D16),
     // Secondary text: Muted warm brown #8A7867
     textSecondary: Color(0xFF8A7867),
     textMuted: Color(0xFF8A7867),
 
-    iconPrimary: Color(0xFF3A2F28),
+    iconPrimary: Color(0xFF2B1D16),
     iconSecondary: Color(0xFF8A7867),
     iconMuted: Color(0xFF8A7867),
 
@@ -193,8 +201,8 @@ class AppColors {
     // Priority badge: Warm amber #FFC65C
     priorityBadge: Color(0xFFFFC65C),
 
-    // Completed: Dark brown-charcoal outline in light beige pill
-    completed: Color(0xFF3A2F28),
+    // Completed: Dark brown outline in light beige pill
+    completed: Color(0xFF2B1D16),
     completedBg: Color(0xFFF4E8D3),
     completedBorder: Color(0xFFE8D9C2),
 
@@ -217,30 +225,30 @@ class AppColors {
     priorityLowBorder: Color(0xFFE8D9C2),
 
     // Shared badge
-    sharedBadgeText: Color(0xFF3A2F28),
+    sharedBadgeText: Color(0xFF2B1D16),
     sharedBadgeBg: Color(0xFFF4E8D3),
     sharedBadgeBorder: Color(0xFFE8D9C2),
 
     // Checkbox outline: Brown #6F5A48
     checkboxBorder: Color(0xFF6F5A48),
-    checkboxCheckedBg: Color(0xFF3A2F28),
-    checkboxCheckedIcon: Color(0xFFFFF8E8),
+    checkboxCheckedBg: Color(0xFF2B1D16),
+    checkboxCheckedIcon: Color(0xFFFFFFFF),
 
-    // Calendar & recurrence: Dark brown-charcoal & muted warm brown
-    calendarIcon: Color(0xFF3A2F28),
-    calendarText: Color(0xFF3A2F28),
+    // Calendar & recurrence: Dark brown & muted warm brown
+    calendarIcon: Color(0xFF2B1D16),
+    calendarText: Color(0xFF2B1D16),
     recurrenceIcon: Color(0xFF8A7867),
     recurrenceText: Color(0xFF8A7867),
 
     // Paw prints and trail: Taupe beige #B49A83
     pawAndTrail: Color(0xFFB49A83),
-    catBody: Color(0xFF3A2F28),
+    catBody: Color(0xFF2B1D16),
     // Kitten blush: Soft pink #F4A6A0
     catBlush: Color(0xFFF4A6A0),
 
-    // Floating + button: Dark brown-charcoal #3A2F28, Floating + symbol: Cream #FFF8E8
-    fabBg: Color(0xFF3A2F28),
-    fabIcon: Color(0xFFFFF8E8),
+    // 4) Add task button: #f7e9dd (Symbol: #2b1d16)
+    fabBg: Color(0xFFF7E9DD),
+    fabIcon: Color(0xFF2B1D16),
 
     // Soft shadow: Warm grey-brown #8C7860 at low opacity
     softShadow: Color(0x248C7860),
@@ -258,6 +266,7 @@ class AppColors {
     // Card: #1A1A1A, Card-elevated: #222222
     surface: Color(0xFF1A1A1A),
     surfaceElevated: Color(0xFF222222),
+    taskCardBg: Color(0xFF1A1A1A),
     // Border: #353535
     cardBorder: Color(0xFF353535),
     divider: Color(0xFF353535),
@@ -272,6 +281,8 @@ class AppColors {
     // Nav-bg: #181818
     bottomNavBg: Color(0xFF181818),
 
+    // App title
+    appTitle: Color(0xFFF5F5F5),
     // Text-primary: #F5F5F5
     textPrimary: Color(0xFFF5F5F5),
     // Text-secondary: #A6A6A6
