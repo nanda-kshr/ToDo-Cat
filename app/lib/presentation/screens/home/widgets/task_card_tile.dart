@@ -55,6 +55,13 @@ class TaskCardTile extends StatelessWidget {
             color: palette.surface,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: palette.cardBorder),
+            boxShadow: [
+              BoxShadow(
+                color: palette.softShadow,
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,

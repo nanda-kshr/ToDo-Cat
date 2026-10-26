@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
+import '../../core/theme/app_colors.dart';
 import '../../core/utils/date_utils.dart';
 import '../../models/analytics.dart';
 import '../../models/task.dart';
@@ -603,11 +604,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final palette = AppColors.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final scaffoldBg = isDark ? const Color(0xFF0D0D0D) : const Color(0xFFF8F9FA);
-    final cardBorder = isDark ? const Color(0xFF242424) : const Color(0xFFE5E7EB);
-    final textPrimary = isDark ? Colors.white : const Color(0xFF4B5563);
-    final textSecondary = isDark ? const Color(0xFFA1A1AA) : const Color(0xFF71717A);
+    final scaffoldBg = palette.background;
+    final cardBorder = palette.cardBorder;
+    final textPrimary = palette.textPrimary;
+    final textSecondary = palette.textSecondary;
 
     _ensureFilteredTasks();
     final filtered = _cachedFiltered!;
@@ -794,8 +796,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       floatingActionButton: _currentTab == 1
           ? FloatingActionButton(
               onPressed: _showCreateTaskDialog,
-              backgroundColor: isDark ? Colors.white : const Color(0xFF4B5563),
-              foregroundColor: isDark ? Colors.black : Colors.white,
+              backgroundColor: palette.fabBg,
+              foregroundColor: palette.fabIcon,
               elevation: 4,
               shape: const CircleBorder(),
               child: const Icon(Icons.add, size: 28),
@@ -805,8 +807,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   onPressed: () {
                     _friendsViewKey.currentState?.openAddFriendDialog();
                   },
-                  backgroundColor: isDark ? Colors.white : const Color(0xFF4B5563),
-                  foregroundColor: isDark ? Colors.black : Colors.white,
+                  backgroundColor: palette.fabBg,
+                  foregroundColor: palette.fabIcon,
                   elevation: 4,
                   shape: const CircleBorder(),
                   child: const Icon(Icons.add, size: 28),

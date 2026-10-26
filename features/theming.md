@@ -14,8 +14,39 @@ TodoCat features a cohesive, playful design aesthetic built around the `Sniglet`
 - **Theme Modes**: Supports Light (white theme), Dark, and System auto-detection.
 - **Centralized Paired Color Palette**:
   - All element colors (surfaces, backgrounds, texts, borders, icons, status badges, priority levels) are maintained in a single common place.
-  - **Dark Mode**: Crisp whitish monochrome tones (`#FFFFFF`, `#F4F4F5`, `#A1A1AA`) on deep carbon (`#0A0A0A`), avoiding glowing red/yellow/green tints.
-  - **White/Light Mode**: Warm, soothing cream tones (`#FAF8F5`, `#FFFDFB`, `#EFEBE2`, `#E8E2D8`) with warm espresso/charcoal accents (`#292524`, `#78716C`), avoiding glowing red/yellow/green tints.
+  - **Light Mode Palette**:
+    - Main screen background: Warm cream `#FBF1DC`
+    - Cards: Soft ivory cream `#FFF8E8`
+    - Primary text: Dark brown-charcoal `#3A2F28`
+    - Secondary text: Muted warm brown `#8A7867`
+    - Borders: Warm beige `#E8D9C2`
+    - Search bar: Pale cream `#F8EEDF`
+    - Inactive chips: Light beige `#F4E8D3`
+    - Active chip: Dark brown `#3A2F28` (Text: `#FFF8E8`)
+    - Progress bar track: Pale beige `#EADCC6` (Fill: Soft amber `#FFC65C`)
+    - Priority badge / Accent: Warm amber `#FFC65C`
+    - Checkbox outline: Brown `#6F5A48`
+    - Paw prints & trail: Taupe beige `#B49A83`
+    - Kitten blush: Soft pink `#F4A6A0`
+    - Floating action button: Dark brown-charcoal `#3A2F28` (Symbol: `#FFF8E8`)
+    - Bottom navigation: Pale cream `#FFF8E8`
+    - Soft shadow: Warm grey-brown `#8C7860` at low opacity
+  - **Dark Mode Palette**:
+    - Main screen background (`--bg`): `#0E0E0E`
+    - Cards (`--card`): `#1A1A1A` (`--card-elevated`: `#222222`)
+    - Search bar (`--search-bg`): `#1C1C1C`
+    - Inactive chips (`--chip-bg`): `#242424`
+    - Bottom navigation (`--nav-bg`): `#181818`
+    - Primary text (`--text-primary`): `#F5F5F5`
+    - Secondary text (`--text-secondary`): `#A6A6A6`
+    - Borders (`--border`): `#353535`
+    - Soft shadow (`--shadow`): `0 4px 16px rgba(0, 0, 0, 0.25)`
+    - Accent / Priority badge / Progress fill (`--accent`): `#FFC65C`
+    - Progress bar track (`--progress-track`): `#3A3A3A`
+    - Active chip (`--active-chip`): `#F5F5F5` (`--active-chip-text`: `#0E0E0E`)
+    - Paw prints & trail (`--paw`): `#777777`
+    - Cat body (`--cat-body`): `#F5F5F5`, Kitten blush (`--cat-blush`): `#F4A6A0`
+    - Floating action button (`--fab-bg`): `#F5F5F5` (`--fab-icon`: `#0E0E0E`)
   - **Subtle Whitish Green / Sage Tokens**: `subtleGreen`, `subtleGreenBg`, and `subtleGreenBorder` for public stats indicators, stats visibility switch, friend public badges, and globe icons (Dark: whitish sage `#D4E7DC` on deep dark sage `#1B241F`; Light: muted earthy sage `#476251` on cream sage `#EDF3EE`), completely replacing bright/light emerald greens.
   - Adding any new color token requires defining both light and dark palette values simultaneously, ensuring complete theme parity.
   - Mobile: `app/lib/core/theme/app_colors.dart` (`AppPalette`, `AppColors.light`, `AppColors.dark`).

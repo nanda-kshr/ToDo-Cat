@@ -15,8 +15,39 @@ last_updated: 2026-10-26
 ## 2. Color System & Theming
 - **No Glowing/Neon Colors**: Avoid bright neon yellow, neon green (`#10B981`, `#22C55E`), or glowing red accents.
 - **Theme Modes**:
-  - **Dark Mode**: Crisp whitish monochrome tones (`#FFFFFF`, `#F4F4F5`, `#A1A1AA`) on deep carbon backgrounds (`#0A0A0A`, `#141414`, `#1F1F1F`).
-  - **Light/White Mode**: Warm, soothing cream tones (`#FAF8F5`, `#FFFDFB`, `#EFEBE2`, `#E8E2D8`) with warm espresso/charcoal accents (`#292524`, `#78716C`).
+  - **Light Mode Palette (Warm Cream)**:
+    - Main screen background: `#FBF1DC`
+    - Cards / Elevated: Soft ivory cream `#FFF8E8`
+    - Primary text: Dark brown-charcoal `#3A2F28`
+    - Secondary text: Muted warm brown `#8A7867`
+    - Borders: Warm beige `#E8D9C2`
+    - Search bar: Pale cream `#F8EEDF`
+    - Inactive chips: Light beige `#F4E8D3`
+    - Active chip: Dark brown `#3A2F28` (Text: `#FFF8E8`)
+    - Progress bar track: Pale beige `#EADCC6` (Fill: Soft amber `#FFC65C`)
+    - Priority badge / Accent: Warm amber `#FFC65C`
+    - Checkbox outline: Brown `#6F5A48`
+    - Paw prints & trail: Taupe beige `#B49A83`
+    - Kitten blush: Soft pink `#F4A6A0`
+    - Floating action button: Dark brown-charcoal `#3A2F28` (Symbol: `#FFF8E8`)
+    - Bottom navigation: Pale cream `#FFF8E8`
+    - Soft shadow: Warm grey-brown `#8C7860` at low opacity
+  - **Dark Mode Palette (Carbon & Amber)**:
+    - Background (`--bg`): `#0E0E0E`
+    - Cards (`--card`): `#1A1A1A` (`--card-elevated`: `#222222`)
+    - Search bar (`--search-bg`): `#1C1C1C`
+    - Inactive chips (`--chip-bg`): `#242424`
+    - Bottom navigation (`--nav-bg`): `#181818`
+    - Primary text (`--text-primary`): `#F5F5F5`
+    - Secondary text (`--text-secondary`): `#A6A6A6`
+    - Borders (`--border`): `#353535`
+    - Soft shadow (`--shadow`): `0 4px 16px rgba(0, 0, 0, 0.25)`
+    - Accent / Priority / Progress fill (`--accent`): `#FFC65C`
+    - Progress track (`--progress-track`): `#3A3A3A`
+    - Active chip (`--active-chip`): `#F5F5F5` (`--active-chip-text`: `#0E0E0E`)
+    - Paw prints & trail (`--paw`): `#777777`
+    - Cat body (`--cat-body`): `#F5F5F5`, Kitten blush (`--cat-blush`): `#F4A6A0`
+    - Floating action button (`--fab-bg`): `#F5F5F5` (`--fab-icon`: `#0E0E0E`)
 - **Subtle Green / Sage Accents**:
   - For public productivity indicators, stats visibility switch, friend public stats badges, and public globe icons, use a muted whitish shade of green rather than bright/light green:
     - Dark mode: `Color(0xFFD4E7DC)` (subtle whitish sage green) with soft dark sage background `Color(0xFF1B241F)` and border `Color(0xFF2C3B32)`.

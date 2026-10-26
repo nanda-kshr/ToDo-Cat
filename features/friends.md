@@ -35,7 +35,7 @@ Enables collaborative task management between friends:
   - `Web/app/api/tasks/[id]/route.ts` - Handles individual participant toggling and enforces task completion only when all participants finish.
   - `Web/app/api/friends/route.ts` - `GET` supports searching existing friends by email/name (`search`, `email`), pagination (`page`, `limit`), and returns pending requests alongside paginated friends; `POST` creates friend requests.
   - `Web/app/api/friends/[id]/route.ts` - Request accept/decline and friendship removal.
-  - `Web/app/api/friends/search/route.ts` - Email-based registered user search for adding new friends.
+  - `Web/app/api/friends/search/route.ts` - Strict registered user search for adding friends. Rejects partial searches to prevent email scraping; requires a full email address with valid domain and returns an exact match only.
 - **Web Frontend (Next.js)**:
   - `Web/app/dashboard/page.tsx` - Added "Friends" view tab, shared task `x/y completed the task` badges, and shared task participants breakdown modal.
   - `Web/components/FriendsView.tsx` - Two-card layout (pending requests + lazy-loading friends with existing friends search) and "Add New Friend" modal.

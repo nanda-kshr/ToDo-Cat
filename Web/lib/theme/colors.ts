@@ -1,7 +1,9 @@
 /**
  * Central theme palette for TodoCat Web application.
- * - In Dark mode: Crisp whitish tones on carbon background (no glowing yellow/green/red).
- * - In White mode: Warm, soothing cream tones with rich espresso/charcoal accents (no glowing yellow/green/red).
+ * - Light Mode: Warm cream (#FBF1DC) with soft ivory cards (#FFF8E8), dark brown-charcoal text (#3A2F28),
+ *   amber accents (#FFC65C), taupe beige paw prints (#B49A83), and soft warm shadows.
+ * - Dark Mode: Carbon (#0E0E0E) with dark cards (#1A1A1A / #222222), crisp whitish text (#F5F5F5),
+ *   amber accents (#FFC65C), muted grey paw prints (#777777), and deep shadows.
  */
 
 export interface ThemeColors {
@@ -12,6 +14,11 @@ export interface ThemeColors {
   cardBorder: string;
   divider: string;
   inputBg: string;
+  searchBg: string;
+  chipBg: string;
+  activeChip: string;
+  activeChipText: string;
+  navBg: string;
 
   // Typography
   textPrimary: string;
@@ -22,8 +29,14 @@ export interface ThemeColors {
   iconPrimary: string;
   iconSecondary: string;
   iconMuted: string;
+  accent: string;
 
-  // Status (Completed / Pending) - SVG icons & subtle badge backgrounds
+  // Progress Bar & Badges
+  progressTrack: string;
+  progressFill: string;
+  priorityBadge: string;
+
+  // Status (Completed / Pending)
   completed: string;
   completedBg: string;
   completedBorder: string;
@@ -32,7 +45,7 @@ export interface ThemeColors {
   pendingBg: string;
   pendingBorder: string;
 
-  // Priority Tokens (High / Medium / Low) - Outlined SVG art & pill backgrounds
+  // Priority Tokens (High / Medium / Low)
   priorityHigh: string;
   priorityHighBg: string;
   priorityHighBorder: string;
@@ -55,121 +68,193 @@ export interface ThemeColors {
   checkboxCheckedBg: string;
   checkboxCheckedIcon: string;
 
-  // Subtle Whitish Green / Sage Accents (Stats visibility, public stats badges, globe indicator)
+  // Illustrations & Decorative Trails
+  pawAndTrail: string;
+  catBody: string;
+  catBlush: string;
+
+  // Floating Action Button
+  fabBg: string;
+  fabIcon: string;
+
+  // Shadow
+  softShadow: string;
+
+  // Subtle Sage Accents (Stats visibility, public stats badges, globe indicator)
   subtleGreen: string;
   subtleGreenBg: string;
   subtleGreenBorder: string;
 }
 
 export const lightColors: ThemeColors = {
-  background: "#FAF8F5",
-  surface: "#FFFDFB",
-  surfaceElevated: "#FFFDFB",
-  cardBorder: "#E8E2D8",
-  divider: "#E8E2D8",
-  inputBg: "#F3EFE8",
+  // Main screen background: Warm cream #FBF1DC
+  background: "#FBF1DC",
+  // Cards: Soft ivory cream #FFF8E8
+  surface: "#FFF8E8",
+  surfaceElevated: "#FFF8E8",
+  // Borders: Warm beige #E8D9C2
+  cardBorder: "#E8D9C2",
+  divider: "#E8D9C2",
+  // Search bar: Pale cream #F8EEDF
+  inputBg: "#F8EEDF",
+  searchBg: "#F8EEDF",
+  // Inactive chips: Light beige #F4E8D3
+  chipBg: "#F4E8D3",
+  // Active chip: Dark brown #3A2F28, Active chip text: Cream #FFF8E8
+  activeChip: "#3A2F28",
+  activeChipText: "#FFF8E8",
+  // Bottom navigation: Pale cream #FFF8E8
+  navBg: "#FFF8E8",
 
-  textPrimary: "#292524",
-  textSecondary: "#78716C",
-  textMuted: "#A8A29E",
+  // Primary text: Dark brown-charcoal #3A2F28
+  textPrimary: "#3A2F28",
+  // Secondary text: Muted warm brown #8A7867
+  textSecondary: "#8A7867",
+  textMuted: "#8A7867",
 
-  iconPrimary: "#292524",
-  iconSecondary: "#78716C",
-  iconMuted: "#A8A29E",
+  iconPrimary: "#3A2F28",
+  iconSecondary: "#8A7867",
+  iconMuted: "#8A7867",
 
-  // Completed: Warm charcoal outline in soft cream pill
-  completed: "#292524",
-  completedBg: "#EFEBE2",
-  completedBorder: "#DDD7CB",
+  // Interactive & progress
+  accent: "#FFC65C",
+  progressTrack: "#EADCC6",
+  progressFill: "#FFC65C",
+  priorityBadge: "#FFC65C",
 
-  // Pending: Warm stone outline in pale cream pill
-  pending: "#78716C",
-  pendingBg: "#F7F4EE",
-  pendingBorder: "#EAE5DC",
+  // Completed: Dark brown-charcoal outline in light beige pill
+  completed: "#3A2F28",
+  completedBg: "#F4E8D3",
+  completedBorder: "#E8D9C2",
 
-  // High Priority: Deep charcoal outline in warm cream pill
-  priorityHigh: "#1C1917",
-  priorityHighBg: "#EAE4D8",
-  priorityHighBorder: "#DCD4C5",
+  // Pending: Muted warm brown outline in pale cream pill
+  pending: "#8A7867",
+  pendingBg: "#F8EEDF",
+  pendingBorder: "#E8D9C2",
 
-  // Medium Priority: Warm stone outline in soft cream pill
-  priorityMedium: "#57534E",
-  priorityMediumBg: "#F4F0E6",
-  priorityMediumBorder: "#E6E0D4",
+  // Priority Tokens
+  priorityHigh: "#FFC65C",
+  priorityHighBg: "#FFF3D6",
+  priorityHighBorder: "#FFE099",
 
-  // Low Priority: Soft stone outline in pale cream pill
-  priorityLow: "#78716C",
-  priorityLowBg: "#FAF7F2",
-  priorityLowBorder: "#EBE6DC",
+  priorityMedium: "#FFC65C",
+  priorityMediumBg: "#FFF7E6",
+  priorityMediumBorder: "#FFE8B3",
+
+  priorityLow: "#8A7867",
+  priorityLowBg: "#F4E8D3",
+  priorityLowBorder: "#E8D9C2",
 
   // Shared badge
-  sharedBadgeText: "#44403C",
-  sharedBadgeBg: "#F4F0E8",
-  sharedBadgeBorder: "#E6DFD4",
+  sharedBadgeText: "#3A2F28",
+  sharedBadgeBg: "#F4E8D3",
+  sharedBadgeBorder: "#E8D9C2",
 
-  // Checkbox
-  checkboxBorder: "#D6CEC2",
-  checkboxCheckedBg: "#292524",
-  checkboxCheckedIcon: "#FAF8F5",
+  // Checkbox outline: Brown #6F5A48
+  checkboxBorder: "#6F5A48",
+  checkboxCheckedBg: "#3A2F28",
+  checkboxCheckedIcon: "#FFF8E8",
 
-  // Subtle Sage / Muted Cream Green (Public stats, globe indicator, visibility switch)
+  // Paw prints and trail: Taupe beige #B49A83
+  pawAndTrail: "#B49A83",
+  catBody: "#3A2F28",
+  catBlush: "#F4A6A0",
+
+  // Floating + button: Dark brown-charcoal #3A2F28, Floating + symbol: Cream #FFF8E8
+  fabBg: "#3A2F28",
+  fabIcon: "#FFF8E8",
+
+  // Soft shadow: Warm grey-brown #8C7860 at low opacity
+  softShadow: "0 4px 16px rgba(140, 120, 96, 0.15)",
+
+  // Subtle Sage / Muted Cream Green
   subtleGreen: "#476251",
   subtleGreenBg: "#EDF3EE",
   subtleGreenBorder: "#D8E4DC",
 };
 
 export const darkColors: ThemeColors = {
-  background: "#0A0A0A",
-  surface: "#141414",
-  surfaceElevated: "#1A1A1A",
-  cardBorder: "#262626",
-  divider: "#262626",
-  inputBg: "#1F1F1F",
+  // Background: #0E0E0E
+  background: "#0E0E0E",
+  // Card: #1A1A1A, Card-elevated: #222222
+  surface: "#1A1A1A",
+  surfaceElevated: "#222222",
+  // Border: #353535
+  cardBorder: "#353535",
+  divider: "#353535",
+  // Search-bg: #1C1C1C
+  inputBg: "#1C1C1C",
+  searchBg: "#1C1C1C",
+  // Chip-bg: #242424
+  chipBg: "#242424",
+  // Active-chip: #F5F5F5, Active-chip-text: #0E0E0E
+  activeChip: "#F5F5F5",
+  activeChipText: "#0E0E0E",
+  // Nav-bg: #181818
+  navBg: "#181818",
 
-  textPrimary: "#F4F4F5",
-  textSecondary: "#A1A1AA",
-  textMuted: "#71717A",
+  // Text-primary: #F5F5F5
+  textPrimary: "#F5F5F5",
+  // Text-secondary: #A6A6A6
+  textSecondary: "#A6A6A6",
+  textMuted: "#777777",
 
-  iconPrimary: "#FFFFFF",
-  iconSecondary: "#A1A1AA",
-  iconMuted: "#52525B",
+  iconPrimary: "#F5F5F5",
+  iconSecondary: "#A6A6A6",
+  iconMuted: "#777777",
 
-  // Completed: Crisp pure white outline in dark whitish pill
-  completed: "#FFFFFF",
+  // Interactive & progress
+  accent: "#FFC65C",
+  progressTrack: "#3A3A3A",
+  progressFill: "#FFC65C",
+  priorityBadge: "#FFC65C",
+
+  // Completed: Crisp pure white outline in dark chip pill
+  completed: "#F5F5F5",
   completedBg: "#242424",
-  completedBorder: "#404040",
+  completedBorder: "#353535",
 
-  // Pending: Soft whitish silver outline in subtle dark pill
-  pending: "#A1A1AA",
+  // Pending: Soft silver outline in subtle dark pill
+  pending: "#A6A6A6",
   pendingBg: "#1C1C1C",
-  pendingBorder: "#333333",
+  pendingBorder: "#353535",
 
-  // High Priority: Crisp white outline in stylish whitish pill
-  priorityHigh: "#FFFFFF",
-  priorityHighBg: "#282828",
-  priorityHighBorder: "#525252",
+  // Priority Tokens
+  priorityHigh: "#FFC65C",
+  priorityHighBg: "#262013",
+  priorityHighBorder: "#4A3B18",
 
-  // Medium Priority: Soft off-white outline in subtle pill
-  priorityMedium: "#E4E4E7",
-  priorityMediumBg: "#202020",
-  priorityMediumBorder: "#3F3F46",
+  priorityMedium: "#FFC65C",
+  priorityMediumBg: "#201B10",
+  priorityMediumBorder: "#3B2F14",
 
-  // Low Priority: Muted whitish outline in dark pill
-  priorityLow: "#A1A1AA",
-  priorityLowBg: "#181818",
-  priorityLowBorder: "#2E2E2E",
+  priorityLow: "#A6A6A6",
+  priorityLowBg: "#1C1C1C",
+  priorityLowBorder: "#353535",
 
   // Shared badge
-  sharedBadgeText: "#E4E4E7",
-  sharedBadgeBg: "#202020",
-  sharedBadgeBorder: "#383838",
+  sharedBadgeText: "#F5F5F5",
+  sharedBadgeBg: "#242424",
+  sharedBadgeBorder: "#353535",
 
   // Checkbox
-  checkboxBorder: "#3F3F46",
-  checkboxCheckedBg: "#FFFFFF",
-  checkboxCheckedIcon: "#0A0A0A",
+  checkboxBorder: "#353535",
+  checkboxCheckedBg: "#F5F5F5",
+  checkboxCheckedIcon: "#0E0E0E",
 
-  // Subtle Whitish Green / Soft Sage (Public stats, globe indicator, visibility switch)
+  // Illustrations: Paw #777777, Cat-body #F5F5F5, Cat-blush #F4A6A0
+  pawAndTrail: "#777777",
+  catBody: "#F5F5F5",
+  catBlush: "#F4A6A0",
+
+  // Floating action button: Fab-bg #F5F5F5, Fab-icon #0E0E0E
+  fabBg: "#F5F5F5",
+  fabIcon: "#0E0E0E",
+
+  // Shadow: 0 4px 16px rgba(0, 0, 0, 0.25)
+  softShadow: "0 4px 16px rgba(0, 0, 0, 0.25)",
+
+  // Subtle Whitish Green / Soft Sage
   subtleGreen: "#D4E7DC",
   subtleGreenBg: "#1B241F",
   subtleGreenBorder: "#2C3B32",
