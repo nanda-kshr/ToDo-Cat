@@ -90,7 +90,9 @@ class FriendsViewState extends State<FriendsView> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = e is ApiException
+              ? e.message
+              : 'Unable to load friends. Please check your connection.';
           _loading = false;
         });
       }
@@ -150,14 +152,42 @@ class FriendsViewState extends State<FriendsView> {
   }
 
   Future<void> _respondRequest(String friendshipId, String action, String name) async {
+    final prevPending = List<PendingFriendRequest>.from(_pendingRequests);
+    final prevFriends = List<FriendItem>.from(_friends);
+    final prevTotal = _totalFriends;
+
+    final reqIndex = _pendingRequests.indexWhere((r) => r.friendshipId == friendshipId);
+    final requestItem = reqIndex != -1 ? _pendingRequests[reqIndex] : null;
+
+    // Instant UI update
+    setState(() {
+      _pendingRequests.removeWhere((r) => r.friendshipId == friendshipId);
+      if (action == 'accept' && requestItem != null) {
+        _friends.insert(
+          0,
+          FriendItem(
+            friendshipId: friendshipId,
+            user: requestItem.user,
+            since: DateTime.now(),
+          ),
+        );
+        _totalFriends += 1;
+      }
+    });
+    widget.onFriendsUpdated?.call();
+    AppToast.show(context, action == 'accept' ? 'Added friend' : 'Request declined');
+
     try {
       await _apiService.respondFriendRequest(friendshipId, action);
-      if (mounted) {
-        AppToast.show(context, action == 'accept' ? 'Added friend' : 'Request declined');
-        _loadFriends(reset: true);
-      }
     } catch (_) {
+      // Revert if API fails
       if (mounted) {
+        setState(() {
+          _pendingRequests = prevPending;
+          _friends = prevFriends;
+          _totalFriends = prevTotal;
+        });
+        widget.onFriendsUpdated?.call();
         AppToast.show(context, 'Failed to update request', isError: true);
       }
     }
@@ -187,14 +217,27 @@ class FriendsViewState extends State<FriendsView> {
     );
 
     if (confirm == true) {
+      if (!mounted) return;
+      final prevFriends = List<FriendItem>.from(_friends);
+      final prevTotal = _totalFriends;
+
+      // Instant UI update
+      setState(() {
+        _friends.removeWhere((f) => f.friendshipId == item.friendshipId);
+        _totalFriends = (_totalFriends > 0) ? _totalFriends - 1 : 0;
+      });
+      widget.onFriendsUpdated?.call();
+      AppToast.show(context, 'Friend removed');
+
       try {
         await _apiService.removeFriend(item.friendshipId);
-        if (mounted) {
-          AppToast.show(context, 'Friend removed');
-          _loadFriends(reset: true);
-        }
       } catch (_) {
         if (mounted) {
+          setState(() {
+            _friends = prevFriends;
+            _totalFriends = prevTotal;
+          });
+          widget.onFriendsUpdated?.call();
           AppToast.show(context, 'Failed to remove friend', isError: true);
         }
       }
@@ -434,7 +477,7 @@ class FriendsViewState extends State<FriendsView> {
                       child: Center(
                         child: Column(
                           children: [
-                            const Text('🐾', style: TextStyle(fontSize: 26)),
+                            Icon(Icons.pets, size: 26, color: textSecondary),
                             const SizedBox(height: 8),
                             Text(
                               _searchController.text.isNotEmpty
@@ -848,7 +891,9 @@ class _AddFriendBottomSheetState extends State<_AddFriendBottomSheet> {
       if (mounted) {
         setState(() {
           _sendingEmail = null;
-          _feedback = e.toString();
+          _feedback = e is ApiException
+              ? e.message
+              : 'Unable to send friend request. Please check your connection.';
           _isError = true;
         });
       }

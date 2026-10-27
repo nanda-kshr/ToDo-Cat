@@ -6,6 +6,7 @@ class Task {
   final String title;
   final String description;
   final bool completed;
+  final bool deleted;
   final DateTime? dueDate;
   final bool hasTime;
   final String recurrence;
@@ -22,6 +23,7 @@ class Task {
     required this.title,
     this.description = '',
     this.completed = false,
+    this.deleted = false,
     this.dueDate,
     this.hasTime = false,
     this.recurrence = 'none',
@@ -74,6 +76,7 @@ class Task {
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       completed: json['completed'] ?? false,
+      deleted: json['deleted'] as bool? ?? false,
       dueDate: parseDate(json['dueDate']),
       hasTime: json['hasTime'] as bool? ?? false,
       recurrence: json['recurrence'] as String? ?? 'none',
@@ -93,6 +96,7 @@ class Task {
       'title': title,
       'description': description,
       'completed': completed,
+      'deleted': deleted,
       if (dueDate != null) 'dueDate': dueDate!.toIso8601String(),
       'hasTime': hasTime,
       'recurrence': recurrence,
@@ -111,6 +115,7 @@ class Task {
     String? title,
     String? description,
     bool? completed,
+    bool? deleted,
     DateTime? dueDate,
     bool? hasTime,
     String? recurrence,
@@ -127,6 +132,7 @@ class Task {
       title: title ?? this.title,
       description: description ?? this.description,
       completed: completed ?? this.completed,
+      deleted: deleted ?? this.deleted,
       dueDate: dueDate ?? this.dueDate,
       hasTime: hasTime ?? this.hasTime,
       recurrence: recurrence ?? this.recurrence,

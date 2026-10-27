@@ -8,6 +8,7 @@ export interface ITask extends Document {
   title: string;
   description?: string;
   completed: boolean;
+  deleted?: boolean;
   dueDate?: Date | null;
   hasTime?: boolean;
   recurrence?: TaskRecurrence;
@@ -38,6 +39,11 @@ const TaskSchema = new Schema<ITask>(
       default: "",
     },
     completed: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    deleted: {
       type: Boolean,
       default: false,
       index: true,

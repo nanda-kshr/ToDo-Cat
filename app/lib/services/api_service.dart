@@ -9,12 +9,28 @@ import '../models/user.dart';
 import '../models/task.dart';
 import '../models/analytics.dart';
 import '../models/friend.dart';
+import '../models/category.dart';
 
 class ApiException implements Exception {
   final String message;
   final int statusCode;
 
-  ApiException(this.message, [this.statusCode = 500]);
+  ApiException(String rawMessage, [this.statusCode = 500])
+      : message = _sanitize(rawMessage);
+
+  static final RegExp _technicalPattern = RegExp(
+    r'(SocketException|ClientException|MongoServer|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|Traceback|errno\s*=|SyntaxError|FormatException|TypeError|PlatformException|HandshakeException|Failed host lookup|OS Error)',
+    caseSensitive: false,
+  );
+
+  static String _sanitize(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return 'An unexpected error occurred.';
+    if (_technicalPattern.hasMatch(trimmed)) {
+      return 'Unable to connect to server. Please check your internet connection.';
+    }
+    return trimmed;
+  }
 
   @override
   String toString() => message;
@@ -95,8 +111,28 @@ class ApiService {
     return headers;
   }
 
+  /// Checks if the JWT access token is expired or within [thresholdSeconds] of expiring.
+  bool _isTokenExpiringSoon(String token, [int thresholdSeconds = 90]) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return true;
+      final normalized = base64Url.normalize(parts[1]);
+      final payloadString = utf8.decode(base64Url.decode(normalized));
+      final payload = jsonDecode(payloadString);
+      final exp = payload['exp'];
+      if (exp is int) {
+        final expiryDate = DateTime.fromMillisecondsSinceEpoch(exp * 1000);
+        final threshold = DateTime.now().add(Duration(seconds: thresholdSeconds));
+        return expiryDate.isBefore(threshold);
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   /// Automatically refreshes the expired access token using the stored refresh token.
-  /// Deduplicates parallel refresh calls with a Completer.
+  /// Deduplicates parallel refresh calls with a single-flight Completer.
   Future<bool> _refreshAccessToken() async {
     if (_refreshCompleter != null) {
       return _refreshCompleter!.future;
@@ -132,11 +168,19 @@ class ApiService {
         }
       }
 
-      // If refresh failed (token expired/revoked), clear stored credentials
-      await clearTokens();
+      // ONLY clear tokens if the server explicitly rejected the refresh token (401 or 403)
+      if (response.statusCode == 401 || response.statusCode == 403) {
+        debugPrint('[ApiService] Session revoked or expired by server (${response.statusCode}). Clearing credentials.');
+        await clearTokens();
+      } else {
+        debugPrint('[ApiService] Token refresh returned status ${response.statusCode}. Retaining session tokens.');
+      }
+
       _refreshCompleter!.complete(false);
       return false;
-    } catch (_) {
+    } catch (e) {
+      // Network drop / socket exception -> do NOT clear tokens!
+      debugPrint('[ApiService] Network error during token refresh: $e. Retaining session tokens.');
       _refreshCompleter!.complete(false);
       return false;
     } finally {
@@ -144,13 +188,22 @@ class ApiService {
     }
   }
 
-  /// Wraps authenticated requests to automatically retry once after refreshing an expired token.
+  /// Wraps authenticated requests to:
+  /// 1. Proactively refresh if the access token is expiring within 90s
+  /// 2. Reactively retry once with single-flight mutex if the server still returns 401
   Future<http.Response> _authenticatedRequest(
     Future<http.Response> Function(Map<String, String> headers) makeRequest,
   ) async {
+    // 1. Proactive pre-flight refresh
+    final currentToken = await getToken();
+    if (currentToken != null && _isTokenExpiringSoon(currentToken)) {
+      await _refreshAccessToken();
+    }
+
     final headers = await _getHeaders();
     var response = await makeRequest(headers);
 
+    // 2. Reactive retry on 401
     if (response.statusCode == 401) {
       final refreshed = await _refreshAccessToken();
       if (refreshed) {
@@ -160,6 +213,56 @@ class ApiService {
     }
 
     return response;
+  }
+
+  static final RegExp _technicalLogRegex = RegExp(
+    r'(SocketException|ClientException|MongoServer|ECONNREFUSED|ETIMEDOUT|ENOTFOUND|Traceback|errno\s*=|SyntaxError|FormatException|TypeError|PlatformException|HandshakeException|Failed host lookup|OS Error)',
+    caseSensitive: false,
+  );
+
+  static Map<String, dynamic>? _parseJson(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  static ApiException _handleResponseError(http.Response response, String defaultMessage) {
+    final data = _parseJson(response.body);
+    final serverMessage = data?['message'] as String?;
+    if (serverMessage != null &&
+        serverMessage.trim().isNotEmpty &&
+        !_technicalLogRegex.hasMatch(serverMessage)) {
+      return ApiException(serverMessage.trim(), response.statusCode);
+    }
+    if (response.statusCode >= 500) {
+      return ApiException('Server is temporarily unavailable. Please try again later.', response.statusCode);
+    }
+    if (response.statusCode == 404) {
+      return ApiException('Requested resource not found.', response.statusCode);
+    }
+    if (response.statusCode == 429) {
+      return ApiException('Too many requests. Please try again later.', response.statusCode);
+    }
+    if (response.statusCode == 401) {
+      return ApiException('Unauthorized. Please log in again.', response.statusCode);
+    }
+    if (response.statusCode == 403) {
+      return ApiException('Access denied.', response.statusCode);
+    }
+    return ApiException(defaultMessage, response.statusCode);
+  }
+
+  static ApiException _handleNetworkError(
+    dynamic e, [
+    String fallback = 'Unable to connect to server. Please check your internet connection.',
+  ]) {
+    if (e is ApiException) return e;
+    debugPrint('[ApiService] Network/API Error: $e');
+    return ApiException(fallback);
   }
 
   // --- Auth API ---
@@ -175,8 +278,8 @@ class ApiService {
         }),
       );
 
-      final data = jsonDecode(response.body);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      final data = _parseJson(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300 && data != null) {
         if (data['accessToken'] != null) {
           await saveTokens(
             accessToken: data['accessToken'],
@@ -185,14 +288,10 @@ class ApiService {
         }
         return User.fromJson(data['user']);
       } else {
-        throw ApiException(
-          data['message'] ?? 'Login failed',
-          response.statusCode,
-        );
+        throw _handleResponseError(response, 'Login failed');
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Network error during login: $e');
+      throw _handleNetworkError(e, 'Unable to connect to server. Please check your internet connection.');
     }
   }
 
@@ -208,8 +307,8 @@ class ApiService {
         }),
       );
 
-      final data = jsonDecode(response.body);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      final data = _parseJson(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300 && data != null) {
         if (data['accessToken'] != null) {
           await saveTokens(
             accessToken: data['accessToken'],
@@ -218,14 +317,10 @@ class ApiService {
         }
         return User.fromJson(data['user']);
       } else {
-        throw ApiException(
-          data['message'] ?? 'Registration failed',
-          response.statusCode,
-        );
+        throw _handleResponseError(response, 'Registration failed');
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Network error during registration: $e');
+      throw _handleNetworkError(e, 'Unable to connect to server. Please check your internet connection.');
     }
   }
 
@@ -235,21 +330,14 @@ class ApiService {
         (headers) => _client.get(Uri.parse(ApiConfig.me), headers: headers),
       );
 
-      final data = jsonDecode(response.body);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      final data = _parseJson(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300 && data != null) {
         return User.fromJson(data['user']);
       } else {
-        if (response.statusCode == 401) {
-          await clearTokens();
-        }
-        throw ApiException(
-          data['message'] ?? 'Unauthorized',
-          response.statusCode,
-        );
+        throw _handleResponseError(response, 'Failed to fetch user profile');
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Failed to fetch user profile: $e');
+      throw _handleNetworkError(e, 'Unable to connect to server. Please check your internet connection.');
     }
   }
 
@@ -267,18 +355,14 @@ class ApiService {
         ),
       );
 
-      final data = jsonDecode(response.body);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      final data = _parseJson(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300 && data != null) {
         return User.fromJson(data['user']);
       } else {
-        throw ApiException(
-          data['message'] ?? 'Failed to update profile',
-          response.statusCode,
-        );
+        throw _handleResponseError(response, 'Failed to update profile');
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Failed to update profile: $e');
+      throw _handleNetworkError(e, 'Unable to connect to server. Please check your internet connection.');
     }
   }
 
@@ -305,7 +389,7 @@ class ApiService {
       final String? idToken = account.authentication.idToken;
 
       if (idToken == null || idToken.isEmpty) {
-        throw ApiException('Google sign-in failed: could not retrieve ID token. Ensure the correct OAuth client ID is configured for web.');
+        throw ApiException('Google sign-in could not retrieve ID token. Please try again.');
       }
 
       final response = await _client.post(
@@ -320,8 +404,8 @@ class ApiService {
         }),
       );
 
-      final data = jsonDecode(response.body);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      final data = _parseJson(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300 && data != null) {
         if (data['accessToken'] != null) {
           await saveTokens(
             accessToken: data['accessToken'],
@@ -330,10 +414,7 @@ class ApiService {
         }
         return User.fromJson(data['user']);
       } else {
-        throw ApiException(
-          data['message'] ?? 'Google sign-in failed',
-          response.statusCode,
-        );
+        throw _handleResponseError(response, 'Google sign-in failed');
       }
     } catch (e) {
       if (e is ApiException) rethrow;
@@ -341,9 +422,9 @@ class ApiService {
         if (e.code == GoogleSignInExceptionCode.canceled) {
           throw ApiException('Sign-in was cancelled');
         }
-        throw ApiException(e.description ?? 'Google sign-in failed: ${e.code}');
+        throw ApiException('Google sign-in failed. Please try again.');
       }
-      throw ApiException('Google sign-in error: $e');
+      throw _handleNetworkError(e, 'Unable to sign in with Google. Please check your internet connection.');
     }
   }
 
@@ -393,8 +474,8 @@ class ApiService {
         (headers) => _client.get(uri, headers: headers),
       );
 
-      final data = jsonDecode(response.body);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      final data = _parseJson(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300 && data != null) {
         final List<dynamic> list = data['tasks'] ?? [];
         final tasks = list.map((json) => Task.fromJson(json)).toList();
         final pagination = data['pagination'] as Map<String, dynamic>?;
@@ -406,14 +487,10 @@ class ApiService {
           totalPages: pagination?['totalPages'] as int? ?? 1,
         );
       } else {
-        throw ApiException(
-          data['message'] ?? 'Failed to load tasks',
-          response.statusCode,
-        );
+        throw _handleResponseError(response, 'Failed to load tasks');
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Network error fetching tasks: $e');
+      throw _handleNetworkError(e, 'Unable to connect to server. Please check your internet connection.');
     }
   }
 
@@ -445,18 +522,14 @@ class ApiService {
         ),
       );
 
-      final data = jsonDecode(response.body);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      final data = _parseJson(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300 && data != null) {
         return Task.fromJson(data['task']);
       } else {
-        throw ApiException(
-          data['message'] ?? 'Failed to create task',
-          response.statusCode,
-        );
+        throw _handleResponseError(response, 'Failed to create task');
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Network error creating task: $e');
+      throw _handleNetworkError(e, 'Unable to create task. Please check your internet connection.');
     }
   }
 
@@ -465,6 +538,7 @@ class ApiService {
     String? title,
     String? description,
     bool? completed,
+    bool? deleted,
     DateTime? dueDate,
     bool clearDueDate = false,
     bool? hasTime,
@@ -478,6 +552,7 @@ class ApiService {
       if (title != null) body['title'] = title.trim();
       if (description != null) body['description'] = description.trim();
       if (completed != null) body['completed'] = completed;
+      if (deleted != null) body['deleted'] = deleted;
       if (dueDate != null) {
         body['dueDate'] = dueDate.toIso8601String();
       } else if (clearDueDate) {
@@ -497,18 +572,14 @@ class ApiService {
         ),
       );
 
-      final data = jsonDecode(response.body);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      final data = _parseJson(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300 && data != null) {
         return Task.fromJson(data['task']);
       } else {
-        throw ApiException(
-          data['message'] ?? 'Failed to update task',
-          response.statusCode,
-        );
+        throw _handleResponseError(response, 'Failed to update task');
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Network error updating task: $e');
+      throw _handleNetworkError(e, 'Unable to update task. Please check your internet connection.');
     }
   }
 
@@ -524,20 +595,34 @@ class ApiService {
       if (response.statusCode >= 200 && response.statusCode < 300) {
         return true;
       } else {
-        final data = jsonDecode(response.body);
-        throw ApiException(
-          data['message'] ?? 'Failed to delete task',
-          response.statusCode,
-        );
+        throw _handleResponseError(response, 'Failed to delete task');
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Network error deleting task: $e');
+      throw _handleNetworkError(e, 'Unable to delete task. Please check your internet connection.');
     }
   }
 
   Future<Task> toggleTask(Task task) async {
     return updateTask(task.id, completed: !task.completed);
+  }
+
+  Future<void> sendMeow(String taskId, String targetUserId) async {
+    try {
+      final response = await _authenticatedRequest(
+        (headers) => _client.post(
+          Uri.parse(ApiConfig.taskMeow(taskId)),
+          headers: headers,
+          body: jsonEncode({'targetUserId': targetUserId}),
+        ),
+      );
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return;
+      } else {
+        throw _handleResponseError(response, 'Failed to send Meow');
+      }
+    } catch (e) {
+      throw _handleNetworkError(e, 'Unable to send Meow. Please check your internet connection.');
+    }
   }
 
   // --- Analytics API ---
@@ -566,18 +651,14 @@ class ApiService {
         (headers) => _client.get(uri, headers: headers),
       );
 
-      final data = jsonDecode(response.body);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return TaskAnalytics.fromJson(data as Map<String, dynamic>);
+      final data = _parseJson(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300 && data != null) {
+        return TaskAnalytics.fromJson(data);
       } else {
-        throw ApiException(
-          data['message'] ?? 'Failed to load analytics',
-          response.statusCode,
-        );
+        throw _handleResponseError(response, 'Failed to load analytics');
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Network error fetching analytics: $e');
+      throw _handleNetworkError(e, 'Unable to load analytics. Please check your internet connection.');
     }
   }
 
@@ -626,15 +707,14 @@ class ApiService {
       final response = await _authenticatedRequest(
         (headers) => _client.get(uri, headers: headers),
       );
-      final data = jsonDecode(response.body);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
-        return FriendsData.fromJson(data as Map<String, dynamic>);
+      final data = _parseJson(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300 && data != null) {
+        return FriendsData.fromJson(data);
       } else {
-        throw ApiException(data['message'] ?? 'Failed to load friends', response.statusCode);
+        throw _handleResponseError(response, 'Failed to load friends');
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Network error fetching friends: $e');
+      throw _handleNetworkError(e, 'Unable to load friends. Please check your internet connection.');
     }
   }
 
@@ -646,16 +726,15 @@ class ApiService {
       final response = await _authenticatedRequest(
         (headers) => _client.get(uri, headers: headers),
       );
-      final data = jsonDecode(response.body);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      final data = _parseJson(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300 && data != null) {
         final list = (data['users'] as List? ?? []);
         return list.map((e) => FriendUser.fromJson(e as Map<String, dynamic>)).toList();
       } else {
-        throw ApiException(data['message'] ?? 'Failed to search users', response.statusCode);
+        throw _handleResponseError(response, 'Failed to search users');
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Network error searching users: $e');
+      throw _handleNetworkError(e, 'Unable to search users. Please check your internet connection.');
     }
   }
 
@@ -668,13 +747,13 @@ class ApiService {
           body: jsonEncode({'email': email.trim()}),
         ),
       );
-      final data = jsonDecode(response.body);
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw ApiException(data['message'] ?? 'Failed to send friend request', response.statusCode);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return;
+      } else {
+        throw _handleResponseError(response, 'Failed to send friend request');
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Network error sending friend request: $e');
+      throw _handleNetworkError(e, 'Unable to send friend request. Please check your internet connection.');
     }
   }
 
@@ -687,13 +766,13 @@ class ApiService {
           body: jsonEncode({'action': action}),
         ),
       );
-      final data = jsonDecode(response.body);
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw ApiException(data['message'] ?? 'Failed to respond to request', response.statusCode);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return;
+      } else {
+        throw _handleResponseError(response, 'Failed to respond to request');
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Network error updating friend request: $e');
+      throw _handleNetworkError(e, 'Unable to respond to request. Please check your internet connection.');
     }
   }
 
@@ -705,13 +784,13 @@ class ApiService {
           headers: headers,
         ),
       );
-      final data = jsonDecode(response.body);
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw ApiException(data['message'] ?? 'Failed to remove friend', response.statusCode);
+      if (response.statusCode >= 200 && response.statusCode < 300) {
+        return;
+      } else {
+        throw _handleResponseError(response, 'Failed to remove friend');
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Network error removing friend: $e');
+      throw _handleNetworkError(e, 'Unable to remove friend. Please check your internet connection.');
     }
   }
 
@@ -722,15 +801,14 @@ class ApiService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email.trim()}),
       );
-      final data = jsonDecode(response.body);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      final data = _parseJson(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300 && data != null) {
         return data['message'] ?? 'Reset instructions sent to your email.';
       } else {
-        throw ApiException(data['message'] ?? 'Failed to request password reset', response.statusCode);
+        throw _handleResponseError(response, 'Failed to request password reset');
       }
     } catch (e) {
-      if (e is ApiException) rethrow;
-      throw ApiException('Network error: $e');
+      throw _handleNetworkError(e, 'Unable to request password reset. Please check your internet connection.');
     }
   }
 
@@ -749,15 +827,119 @@ class ApiService {
           'newPassword': newPassword,
         }),
       );
-      final data = jsonDecode(response.body);
-      if (response.statusCode >= 200 && response.statusCode < 300) {
+      final data = _parseJson(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300 && data != null) {
         return data['message'] ?? 'Password reset successful.';
       } else {
-        throw ApiException(data['message'] ?? 'Failed to reset password', response.statusCode);
+        throw _handleResponseError(response, 'Failed to reset password');
+      }
+    } catch (e) {
+      throw _handleNetworkError(e, 'Unable to reset password. Please check your internet connection.');
+    }
+  }
+
+  Future<List<CategoryItem>> fetchCategories() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedJson = prefs.getString('cached_categories_json');
+      List<CategoryItem> categories = [];
+      if (cachedJson != null) {
+        try {
+          final decoded = jsonDecode(cachedJson);
+          if (decoded is List) {
+            categories = decoded
+                .map((e) => CategoryItem.fromJson(e as Map<String, dynamic>))
+                .toList();
+          }
+        } catch (_) {}
+      }
+
+      final response = await _authenticatedRequest(
+        (headers) => _client.get(Uri.parse(ApiConfig.categories), headers: headers),
+      );
+      final data = _parseJson(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300 && data != null) {
+        final list = (data['categories'] as List? ?? []);
+        final fetched = list
+            .map((e) => CategoryItem.fromJson(e as Map<String, dynamic>))
+            .toList();
+        await prefs.setString(
+          'cached_categories_json',
+          jsonEncode(fetched.map((c) => c.toJson()).toList()),
+        );
+        return fetched;
+      }
+      return categories;
+    } catch (e) {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedJson = prefs.getString('cached_categories_json');
+      if (cachedJson != null) {
+        try {
+          final decoded = jsonDecode(cachedJson);
+          if (decoded is List) {
+            return decoded
+                .map((e) => CategoryItem.fromJson(e as Map<String, dynamic>))
+                .toList();
+          }
+        } catch (_) {}
+      }
+      return [];
+    }
+  }
+
+  Future<CategoryItem> createCategory({
+    required String name,
+    List<String>? sharedWith,
+  }) async {
+    try {
+      final response = await _authenticatedRequest(
+        (headers) => _client.post(
+          Uri.parse(ApiConfig.categories),
+          headers: headers,
+          body: jsonEncode({
+            'name': name.trim(),
+            'sharedWith': sharedWith ?? [],
+          }),
+        ),
+      );
+      final data = _parseJson(response.body);
+      if (response.statusCode >= 200 && response.statusCode < 300 && data != null) {
+        final cat = CategoryItem.fromJson(data['category'] ?? {});
+        final prefs = await SharedPreferences.getInstance();
+        final cachedJson = prefs.getString('cached_categories_json');
+        List<Map<String, dynamic>> list = [];
+        if (cachedJson != null) {
+          try {
+            final decoded = jsonDecode(cachedJson);
+            if (decoded is List) list = List<Map<String, dynamic>>.from(decoded);
+          } catch (_) {}
+        }
+        list.removeWhere((item) => (item['name'] as String?)?.toLowerCase() == cat.name.toLowerCase());
+        list.add(cat.toJson());
+        await prefs.setString('cached_categories_json', jsonEncode(list));
+        return cat;
+      } else {
+        throw _handleResponseError(response, 'Failed to create category');
       }
     } catch (e) {
       if (e is ApiException) rethrow;
-      throw ApiException('Network error: $e');
+      final localCat = CategoryItem(
+        id: 'local-cat-${DateTime.now().millisecondsSinceEpoch}',
+        name: name.trim(),
+        sharedWith: const [],
+      );
+      final prefs = await SharedPreferences.getInstance();
+      final cachedJson = prefs.getString('cached_categories_json');
+      List<Map<String, dynamic>> list = [];
+      if (cachedJson != null) {
+        try {
+          final decoded = jsonDecode(cachedJson);
+          if (decoded is List) list = List<Map<String, dynamic>>.from(decoded);
+        } catch (_) {}
+      }
+      list.add(localCat.toJson());
+      await prefs.setString('cached_categories_json', jsonEncode(list));
+      return localCat;
     }
   }
 }

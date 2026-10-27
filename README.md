@@ -55,7 +55,7 @@ Privacy First & No Ads
 
 Developed by Nandakishore P.
 Support the project: https://buymeacoffee.com/nanda_kshr
-Website & Web App: https://todocat.instaroid.page
+Website & Web App: https://to-do-cat.vercel.app
 ```
 
 ---
@@ -64,7 +64,7 @@ Website & Web App: https://todocat.instaroid.page
 
 - **Mobile Application (`/app`)**: Built with [Flutter](https://flutter.dev) (Dart), utilizing native Android services for `SYSTEM_ALERT_WINDOW` floating companion overlay and `AppWidgetProvider` home screen widgets.
 - **Web Application & Backend (`/Web`)**: Built with [Next.js](https://nextjs.org) (App Router, TypeScript, Tailwind CSS), backed by MongoDB with JWT & Google OAuth authentication.
-- **API Server**: Hosted live at `https://todocat.instaroid.page/api`.
+- **API Server**: Hosted live at `https://to-do-cat.vercel.app/api`.
 
 ---
 
@@ -93,9 +93,9 @@ npm run dev
 
 ## Legal & Compliance
 
-- **Privacy Policy**: [https://todocat.instaroid.page/privacy](https://todocat.instaroid.page/privacy)
-- **Terms of Service**: [https://todocat.instaroid.page/terms](https://todocat.instaroid.page/terms)
-- **Account Deletion**: [https://todocat.instaroid.page/delete-account](https://todocat.instaroid.page/delete-account)
+- **Privacy Policy**: [https://to-do-cat.vercel.app/privacy](https://to-do-cat.vercel.app/privacy)
+- **Terms of Service**: [https://to-do-cat.vercel.app/terms](https://to-do-cat.vercel.app/terms)
+- **Account Deletion**: [https://to-do-cat.vercel.app/delete-account](https://to-do-cat.vercel.app/delete-account)
 - **Developer Contact**: Nandakishore P (`nandakishorep212@gmail.com`)
 - **GitHub**: [https://github.com/nanda-kshr](https://github.com/nanda-kshr)
 - **Buy Me a Coffee**: [https://buymeacoffee.com/nanda_kshr](https://buymeacoffee.com/nanda_kshr)

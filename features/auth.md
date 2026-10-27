@@ -13,7 +13,11 @@ last_updated: 2026-10-25
 TodoCat provides secure authentication for both Web and Mobile platforms:
 - **Email/Password**: Standard signup and login with hashed passwords (`bcryptjs`) and JWT access + refresh tokens.
 - **Google OAuth 2.0**: Native Google Sign-In on mobile passing `idToken` to `/api/auth/google`, and web-based OAuth callback. Automatically saves and updates the user's Google profile picture (`avatar`), rendering it in the header and profile screen on both mobile and web (using `referrerPolicy="no-referrer"` to prevent Google image 403 blocks).
-- **Session Continuity**: Refresh token rotation stored in HTTP-only cookies on web and `SharedPreferences` on mobile.
+- **Session Continuity (RFC 6819 Production Standard)**:
+  - **Token Lifespans**: 24-hour JWT access tokens paired with 30-day sliding refresh tokens.
+  - **Grace-Window Rotation**: Refresh tokens rotate on every refresh with a 60-second grace window in MongoDB (`user.rotatedTokens`), allowing concurrent/parallel requests across screens or tabs to succeed without revoking the session.
+  - **Single-Flight Proactive Refresh**: Mobile client monitors the access token expiration (`exp`) and pre-emptively refreshes if within 90 seconds of expiry before dispatching requests.
+  - **Transient Network Fault Isolation**: Tokens are only cleared when `/api/auth/refresh` explicitly responds with 401/403 (revoked/expired). Network timeouts, DNS issues, or 5xx server errors do not log the user out.
 - **Password Reset (Dual Flow - Link & OTP)**:
   - Users request a reset code with their email.
   - A branded email is sent via SMTP containing both a 6-digit OTP code and a one-click reset link (15-minute expiration).

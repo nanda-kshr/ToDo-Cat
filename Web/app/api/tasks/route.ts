@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Task } from "@/models/Task";
 import { User } from "@/models/User";
+import { Category } from "@/models/Category";
 import { getUserFromRequest } from "@/lib/auth";
 import {
   getCachedTasks,
@@ -123,8 +124,35 @@ export async function POST(request: Request) {
       }
     }
 
+    const categoryName = typeof category === "string" && category.trim() ? category.trim() : "General";
+
+    // Auto-inherit sharing if category is a shared project/category
+    if (categoryName && categoryName !== "General") {
+      const escapedCat = categoryName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const matchedCategory = await Category.findOne({
+        name: new RegExp(`^${escapedCat}$`, "i"),
+        $or: [{ userId: currentUserId }, { sharedWith: currentUserId }],
+      });
+
+      if (matchedCategory) {
+        if (matchedCategory.userId.toString() !== payload.userId) {
+          validSharedWith.push(matchedCategory.userId);
+        }
+        for (const memberId of matchedCategory.sharedWith || []) {
+          if (memberId.toString() !== payload.userId) {
+            validSharedWith.push(memberId);
+          }
+        }
+      }
+    }
+
+    // Deduplicate validSharedWith
+    const uniqueSharedWith = Array.from(
+      new Map(validSharedWith.map((id) => [id.toString(), id])).values()
+    );
+
     // Rate limit: max 20 shared tasks per hour per user (protects SMTP and FCM quota)
-    if (validSharedWith.length > 0) {
+    if (uniqueSharedWith.length > 0) {
       const shareLimit = checkRateLimit(`task_share_user:${payload.userId}`, 20, 60 * 60);
       if (!shareLimit.allowed) {
         return NextResponse.json(
@@ -142,8 +170,8 @@ export async function POST(request: Request) {
       hasTime: Boolean(hasTime),
       recurrence: validRecurrence,
       priority: ["low", "medium", "high"].includes(priority) ? priority : "medium",
-      category: typeof category === "string" && category.trim() ? category.trim() : "General",
-      sharedWith: validSharedWith,
+      category: categoryName,
+      sharedWith: uniqueSharedWith,
       completedBy: [],
     });
 
@@ -155,8 +183,8 @@ export async function POST(request: Request) {
     addCachedTask(payload.userId, populatedTask || task);
 
     // If shared with friends, notify them and invalidate their task caches
-    if (validSharedWith.length > 0) {
-      const friends = await User.find({ _id: { $in: validSharedWith } });
+    if (uniqueSharedWith.length > 0) {
+      const friends = await User.find({ _id: { $in: uniqueSharedWith } });
       for (const friend of friends) {
         // Clear cached tasks so they get the new shared task
         removeCachedTask(friend._id.toString(), "");

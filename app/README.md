@@ -26,7 +26,7 @@ KEY FEATURES:
 • Privacy Focused: No tracking ads, full data control and deletion anytime.
 
 Developed by Nandakishore P.
-Website: https://todocat.instaroid.page
+Website: https://to-do-cat.vercel.app
 Support the developer: https://buymeacoffee.com/nanda_kshr
 ```
 

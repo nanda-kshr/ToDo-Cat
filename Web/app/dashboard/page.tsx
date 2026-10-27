@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import CatAnimation from "@/components/CatAnimation";
 import FriendsView from "@/components/FriendsView";
+import { PawIcon } from "@/components/Icons";
 import {
   TaskPriorityBadge,
   TaskStatusBadge,
@@ -120,6 +121,7 @@ function DashboardContent() {
   // Modal State (Create / Edit)
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedSharedTask, setSelectedSharedTask] = useState<TaskItem | null>(null);
+  const [meowedUsers, setMeowedUsers] = useState<Record<string, boolean>>({});
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -260,7 +262,7 @@ function DashboardContent() {
           const latestReq = incoming[0];
           const senderName = latestReq?.user?.name || latestReq?.user?.email || "A friend";
           setInAppBanner({
-            title: "New Friend Request! 🐾",
+            title: "New Friend Request!",
             body: `${senderName} sent you a friend request.`,
           });
         }
@@ -365,6 +367,29 @@ function DashboardContent() {
 
     if (undoToastTimerRef.current) clearTimeout(undoToastTimerRef.current);
     setUndoToast(null);
+  };
+
+  const handleSendMeow = async (taskId: string, targetUserId: string, targetName: string) => {
+    if (meowedUsers[targetUserId]) return;
+    setMeowedUsers((prev) => ({ ...prev, [targetUserId]: true }));
+    setInAppBanner({ title: "Meow", body: `Meow sent to ${targetName}` });
+    setTimeout(() => setInAppBanner(null), 3000);
+
+    setTimeout(() => {
+      setMeowedUsers((prev) => ({ ...prev, [targetUserId]: false }));
+    }, 30000);
+
+    try {
+      const res = await authFetch(`/api/tasks/${taskId}/meow`, {
+        method: "POST",
+        body: JSON.stringify({ targetUserId }),
+      });
+      if (!res.ok) {
+        setMeowedUsers((prev) => ({ ...prev, [targetUserId]: false }));
+      }
+    } catch {
+      setMeowedUsers((prev) => ({ ...prev, [targetUserId]: false }));
+    }
   };
 
   // Open modal for Create
@@ -552,14 +577,51 @@ function DashboardContent() {
     return Math.min(100, Math.round((activeTasksCount / 5) * 100));
   }, [tasks.length, activeTasksCount]);
 
-  const catSpeedMessage = useMemo(() => {
-    if (tasks.length === 0) return "No tasks yet • Cat is sleeping peacefully";
-    if (activeTasksCount === 0) return "All tasks completed! Cat is sleeping peacefully";
-    if (catSpeedPercent >= 100) return `${activeTasksCount} tasks pending • Cat is at 100% maximum speed`;
-    if (catSpeedPercent >= 75) return `${activeTasksCount} tasks pending • Cat is sprinting fast`;
-    if (catSpeedPercent >= 40) return `${activeTasksCount} tasks pending • Cat is trotting along`;
-    return `${activeTasksCount} task pending • Cat is stretching and alert`;
-  }, [tasks.length, activeTasksCount, catSpeedPercent]);
+  const dailyBriefingMessage = useMemo(() => {
+    const hour = new Date().getHours();
+
+    // Morning: 5:00 AM - 11:59 AM
+    if (hour >= 5 && hour < 12) {
+      if (activeTasksCount > 0) {
+        return `Good morning! ${activeTasksCount} ${activeTasksCount === 1 ? "task" : "tasks"} waiting today.`;
+      }
+      if (completedCount > 0) {
+        return "Good morning! All caught up for today.";
+      }
+      return "Good morning! Ready for today?";
+    }
+
+    // Afternoon: 12:00 PM - 4:59 PM
+    if (hour >= 12 && hour < 17) {
+      if (activeTasksCount > 0) {
+        return `Good afternoon! ${activeTasksCount} ${activeTasksCount === 1 ? "task" : "tasks"} remaining.`;
+      }
+      if (completedCount > 0) {
+        return "Good afternoon! All caught up for today.";
+      }
+      return "Good afternoon! Ready for today?";
+    }
+
+    // Evening: 5:00 PM - 9:59 PM
+    if (hour >= 17 && hour < 22) {
+      if (completedCount > 0 && activeTasksCount === 0) {
+        return `Good evening! You crushed ${completedCount} ${completedCount === 1 ? "task" : "tasks"} today! Cat is happy and asleep.`;
+      }
+      if (activeTasksCount > 0) {
+        return `Good evening! ${activeTasksCount} ${activeTasksCount === 1 ? "task" : "tasks"} remaining today.`;
+      }
+      if (completedCount > 0) {
+        return `Good evening! You crushed ${completedCount} ${completedCount === 1 ? "task" : "tasks"} today!`;
+      }
+      return "Good evening! Have a peaceful rest.";
+    }
+
+    // Night: 10:00 PM - 4:59 AM
+    if (completedCount > 0) {
+      return `You crushed ${completedCount} ${completedCount === 1 ? "task" : "tasks"} today! Cat is asleep.`;
+    }
+    return "Cat is asleep. Rest well for tomorrow.";
+  }, [activeTasksCount, completedCount]);
 
   if (loading) {
     return (
@@ -576,8 +638,8 @@ function DashboardContent() {
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 max-w-md w-[92%] sm:w-full px-4 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="bg-neutral-900 border border-neutral-700/90 rounded-2xl p-3.5 shadow-2xl flex items-center justify-between gap-3 text-white">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center shrink-0 text-sm">
-                🐾
+              <div className="w-8 h-8 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center shrink-0 text-neutral-300">
+                <PawIcon className="w-4 h-4" />
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-bold truncate text-white">{inAppBanner.title}</p>
@@ -693,7 +755,7 @@ function DashboardContent() {
               <svg className="w-4 h-4 text-neutral-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-              <p className="text-sm font-medium text-neutral-200">{catSpeedMessage}</p>
+              <p className="text-sm font-medium text-neutral-200">{dailyBriefingMessage}</p>
             </div>
           </div>
         </div>
@@ -1315,7 +1377,32 @@ function DashboardContent() {
                           </div>
                         </div>
 
-                        <TaskStatusBadge isDone={isDone} />
+                        <div className="flex items-center gap-2">
+                          {!isDone && !isMe && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleSendMeow(
+                                  selectedSharedTask._id,
+                                  person._id,
+                                  person.name || person.email?.split("@")[0] || "Friend"
+                                )
+                              }
+                              disabled={meowedUsers[person._id]}
+                              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition ${
+                                meowedUsers[person._id]
+                                  ? "bg-neutral-800 text-neutral-400 cursor-not-allowed"
+                                  : "bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 border border-amber-500/30"
+                              }`}
+                            >
+                              <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                                <path d="M4.5 10.5C3.67 10.5 3 11.17 3 12s.67 1.5 1.5 1.5S6 12.83 6 12s-.67-1.5-1.5-1.5zm15 0c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm-7.5-3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-3.5 1c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zm7 0c-.83 0-1.5.67-1.5 1.5s.67 1.5 1.5 1.5 1.5-.67 1.5-1.5-.67-1.5-1.5-1.5zM12 14c-2.33 0-4.31 1.46-5.11 3.5h10.22c-.8-2.04-2.78-3.5-5.11-3.5z"/>
+                              </svg>
+                              <span>{meowedUsers[person._id] ? "Meowed" : "Meow"}</span>
+                            </button>
+                          )}
+                          <TaskStatusBadge isDone={isDone} />
+                        </div>
                       </div>
                     );
                   })}

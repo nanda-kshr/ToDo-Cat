@@ -5,8 +5,8 @@ import bcrypt from "bcryptjs";
 const JWT_SECRET = process.env.JWT_SECRET || "todocat_jwt_access_secret_change_in_production";
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "todocat_jwt_refresh_secret_change_in_production";
 
-const ACCESS_TOKEN_EXPIRES_IN = "15m";
-const REFRESH_TOKEN_EXPIRES_IN = "7d";
+const ACCESS_TOKEN_EXPIRES_IN = "24h";
+const REFRESH_TOKEN_EXPIRES_IN = "30d";
 
 export interface TokenPayload {
   userId: string;
@@ -55,7 +55,7 @@ export async function setRefreshTokenCookie(token: string): Promise<void> {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60,
+    maxAge: 30 * 24 * 60 * 60,
     path: "/",
   });
 }

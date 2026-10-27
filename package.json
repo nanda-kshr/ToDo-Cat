@@ -1,0 +1,7 @@
+{
+  "name": "todocat",
+  "private": true,
+  "scripts": {
+    "test": "NODE_PATH=Web/node_modules node --test"
+  }
+}

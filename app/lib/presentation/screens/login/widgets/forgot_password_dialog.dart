@@ -67,7 +67,9 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = e.toString();
+          _error = e is ApiException
+              ? e.message
+              : 'Unable to connect to server. Please check your connection.';
         });
       }
     }
@@ -109,7 +111,9 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = e.toString();
+          _error = e is ApiException
+              ? e.message
+              : 'Unable to connect to server. Please check your connection.';
         });
       }
     }
@@ -138,7 +142,8 @@ class _ForgotPasswordDialogState extends State<ForgotPasswordDialog> {
               children: [
                 Row(
                   children: [
-                    const Text('🐾 ', style: TextStyle(fontSize: 18)),
+                    Icon(Icons.pets, size: 18, color: textPrimary),
+                    const SizedBox(width: 6),
                     Text(
                       _step == 1 ? 'Forgot Password' : 'Reset Password',
                       style: TextStyle(

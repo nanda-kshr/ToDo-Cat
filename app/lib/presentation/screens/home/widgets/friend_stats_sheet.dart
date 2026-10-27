@@ -63,7 +63,9 @@ class _FriendStatsSheetState extends State<FriendStatsSheet> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString().replaceAll('Exception: ', '');
+          _error = e is ApiException
+              ? e.message
+              : 'Unable to load stats. Please check your connection.';
           _loading = false;
         });
       }

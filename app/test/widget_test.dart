@@ -147,9 +147,12 @@ void main() {
                 todayTasks: today,
                 earlierTasks: earlierTasks,
                 isLoadingMore: false,
+                deletedTasks: const [],
                 onToggleTask: (_) {},
                 onTaskTap: (_) {},
                 onDeleteTask: (_) {},
+                onRestoreTask: (_) {},
+                onPermanentDeleteTask: (_) {},
               ),
             );
           },

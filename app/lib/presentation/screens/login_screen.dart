@@ -64,7 +64,9 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } catch (e) {
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = e is ApiException
+            ? e.message
+            : 'Unable to connect to server. Please check your connection.';
       });
     } finally {
       if (mounted) {
@@ -90,7 +92,9 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } catch (e) {
       setState(() {
-        _errorMessage = e.toString();
+        _errorMessage = e is ApiException
+            ? e.message
+            : 'Google sign-in failed. Please try again.';
       });
     } finally {
       if (mounted) {

@@ -132,7 +132,7 @@ function ResetPasswordForm() {
         </Link>
         <h1 className="text-xl font-bold text-white">
           {isSuccess
-            ? "Password Reset Complete! 🎉"
+            ? "Password Reset Complete!"
             : mode === "request"
             ? "Forgot your password?"
             : mode === "otp"
@@ -201,7 +201,11 @@ function ResetPasswordForm() {
 
       {isSuccess ? (
         <div className="text-center py-4">
-          <div className="text-4xl mb-3">🐱🐾</div>
+          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
           <Link
             href="/auth?action=login"
             className="inline-block w-full py-3 px-4 bg-white text-black font-bold text-sm rounded-xl hover:bg-zinc-200 transition-colors"

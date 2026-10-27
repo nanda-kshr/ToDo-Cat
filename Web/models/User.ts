@@ -1,5 +1,12 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 
+export interface IRotatedToken {
+  token: string;
+  newAccessToken: string;
+  newRefreshToken: string;
+  rotatedAt: Date;
+}
+
 export interface IUser extends Document {
   email: string;
   password?: string;
@@ -7,6 +14,7 @@ export interface IUser extends Document {
   googleId?: string;
   avatar?: string;
   refreshTokens: string[];
+  rotatedTokens?: IRotatedToken[];
   fcmTokens?: string[];
   resetPasswordToken?: string;
   resetPasswordOtp?: string;
@@ -48,6 +56,14 @@ const UserSchema = new Schema<IUser>(
       type: [String],
       default: [],
     },
+    rotatedTokens: [
+      {
+        token: { type: String, required: true },
+        newAccessToken: { type: String, required: true },
+        newRefreshToken: { type: String, required: true },
+        rotatedAt: { type: Date, default: Date.now },
+      },
+    ],
     fcmTokens: {
       type: [String],
       default: [],

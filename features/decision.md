@@ -4,7 +4,7 @@ title: Architectural & Design Decisions
 description: Authoritative log of architectural decisions, project constraints, and coding styles established for TodoCat across mobile and web.
 tags: [decisions, architecture, coding-style, theme-rules, constraints]
 status: active
-last_updated: 2026-10-26
+last_updated: 2026-10-27
 ---
 
 # Architectural & Design Decisions
@@ -81,10 +81,43 @@ last_updated: 2026-10-26
 - **Dynamic System Adaptation**: Handled via `Configuration.UI_MODE_NIGHT_MASK` and Flutter app preferences for real-time automatic theme switching across both native and Flutter UI components.
 - **Rounded Widget Asset Clipping**: Android widgets enforce `android:clipToOutline="true"` and bottom artwork (`widget_cat_grass.png`, `grass.svg`) has pre-clipped transparent bottom corners (128px radius matching 24dp at widget scale) to guarantee that launcher RemoteViews render smoothly without square corner clipping artifacts.
 
-## 7. Optimistic Task Deletion & 5-Second Undo
-- **Delayed Deletion Pattern**: Task deletions across Mobile (Flutter) and Web (Next.js) are processed optimistically:
-  - The task is immediately removed from the active list view and widget state.
-  - An undo toast notification is displayed with an interactive "Undo" button for 5 seconds.
-  - If the user triggers "Undo", the timer is cancelled and the task is immediately restored to its exact index without executing any backend DELETE request.
-  - If 5 seconds elapse without undo, the permanent `DELETE /api/tasks/:id` request is executed.
-  - Any pending deletions are flushed immediately upon app backgrounding/detach or window `beforeunload`.
+## 7. Optimistic UI & 'deleted' Status Lifecycle
+- **Optimistic UI Pattern**: All user actions (task completion tick mark, friend request accept/reject, friend removal, task deletion) update local state in 0ms without waiting for backend responses. API calls run asynchronously in the background; if they fail, local state automatically rolls back with an error toast.
+- **Accidental Scroll Protection**: Drag gestures enforce a 35% horizontal swipe threshold (`confirmDismiss`) preventing vertical scrolling from triggering unintended actions.
+- **Dual-Direction Gestures**:
+  - **Swipe Right $\to$**: Toggles task completion instantly and snaps back smoothly.
+  - **Swipe Left $\leftarrow$**: Moves task to `'deleted'` status.
+- **'deleted' Section**: Deleted tasks are placed directly under Today's tasks in a collapsible section with count badge and Restore option.
+
+## 8. Production Error Sanitization & Network Shielding
+- **No Raw System Logs in UI**: Never expose internal socket errors, DNS failures, database logs, stack traces, or OS error numbers (`errno`) to the user.
+- **Client Sanitization**: All network and decoding exceptions in `ApiService` and presentation controllers are converted to clean, user-friendly messages (e.g. `Unable to connect to server. Please check your internet connection.`).
+- **Safe JSON Decoding**: Network response parsing uses safe decoders to prevent non-JSON error pages (e.g. 502/503 HTML) from leaking parser syntax errors.
+
+## 9. Session Management & Industrial JWT/Refresh Token Continuity
+- **Token Lifespans**:
+  - Access Token: 24 hours (prevents hyper-frequent refresh bursts).
+  - Refresh Token: 30 days (standard persistent mobile/web session).
+- **Grace-Window Rotation (RFC 6819 §5.2.2.3)**:
+  - Refresh tokens rotate upon use, but previously rotated tokens remain valid for a 60-second grace window (`user.rotatedTokens`).
+  - Concurrent requests from multi-tab browsing or parallel widget/screen initialization (e.g. `getMe()`, `fetchTasks()`, `checkPendingFriendRequests()`) share the existing token pair without throwing 403 or revoking the session.
+- **Client-Side Deduplication & Pre-flight Refresh**:
+  - `ApiService` proactive pre-flight check: parses JWT `exp` in memory and refreshes if expiring within 90 seconds.
+  - Single-flight refresh completer (`_refreshCompleter`): queues concurrent calls onto a single inflight refresh network request.
+- **Fault-Isolated Session Revocation**:
+  - Mobile tokens are wiped only on explicit HTTP 401/403 responses from `/api/auth/refresh`.
+  - Network timeouts, DNS issues, and 5xx backend server errors retain local credentials and never force logout.
+  - Screen-level error handlers check `isLoggedIn()` before redirecting to login.
+
+## 10. Category Layout & Shared Projects UX
+- **Preset Clutter Removal**: The default preset category chips are strictly restricted to `General` and `Work`. Unused presets (`Personal`, `Study`, `Health`, `Shopping`) are removed to avoid taking up row space.
+- **Dynamic Category Pills with Add Action**: Custom and shared categories are displayed alongside presets followed by an inline `+ Add Category` button.
+- **Add Category Modal**: Tapping `+ Add Category` opens a modal allowing users to enter a category name and optionally select friends to share the category with.
+- **Automatic Task Collaboration Inheritance**: When creating a task inside a shared category, all friends associated with that category are automatically assigned to `task.sharedWith` and notified upon creation.
+
+## 11. Scalable Friend Picker Architecture (`FriendPickerSheet`)
+- **Scalability Beyond Small Lists**: Replaced unscalable `Wrap` chips and restricted `PopupMenuButton` dropdowns with a dedicated, bottom-sheet friend selector (`FriendPickerSheet`).
+- **Real-Time Instant Search**: Provides an in-memory search bar filtering hundreds of friends by display name or email with zero lag.
+- **Persistent Selection Carousel**: Pinned horizontal chips bar at the top displays currently selected friends with quick removal (`x`) so users never lose context when searching or scrolling.
+- **Scrollable List with Direct Toggles**: Full-height scrollable list with avatar initials/images, names, emails, and circular checkmarks.
+- **Universal Reusability**: Single source of truth used across Category Sharing ("Add Category") and Task Sharing ("Share Task").

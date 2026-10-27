@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 
 class ApiConfig {
   static const String baseUrl =
-      kIsWeb ? 'http://localhost:3000' : 'https://todocat.instaroid.page';
+      kIsWeb ? 'http://localhost:3000' : 'https://to-do-cat.vercel.app';
 
   // Web Application Client ID for Google Sign-In serverClientId (ID Token audience)
   static const String googleServerClientId =
@@ -21,6 +21,10 @@ class ApiConfig {
   // Task endpoints
   static const String tasks = '$baseUrl/api/tasks';
   static String taskById(String id) => '$baseUrl/api/tasks/$id';
+  static String taskMeow(String id) => '$baseUrl/api/tasks/$id/meow';
+
+  // Categories endpoint
+  static const String categories = '$baseUrl/api/categories';
 
   // Analytics endpoint
   static const String analytics = '$baseUrl/api/analytics';

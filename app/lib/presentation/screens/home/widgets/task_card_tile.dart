@@ -10,6 +10,9 @@ class TaskCardTile extends StatelessWidget {
   final VoidCallback onToggle;
   final VoidCallback onTap;
   final VoidCallback onDismissed;
+  final VoidCallback? onRestore;
+  final VoidCallback? onPermanentDelete;
+  final bool isDeleted;
 
   const TaskCardTile({
     super.key,
@@ -18,6 +21,9 @@ class TaskCardTile extends StatelessWidget {
     required this.onToggle,
     required this.onTap,
     required this.onDismissed,
+    this.onRestore,
+    this.onPermanentDelete,
+    this.isDeleted = false,
   });
 
   @override
@@ -31,20 +37,210 @@ class TaskCardTile extends StatelessWidget {
 
     final formattedDate = formatDueDate(task.dueDate, hasTime: task.hasTime);
 
+    // View for deleted tasks (below Today section)
+    if (isDeleted) {
+      return Dismissible(
+        key: ValueKey('del_${task.id}'),
+        direction: DismissDirection.horizontal,
+        dismissThresholds: const {
+          DismissDirection.startToEnd: 0.35,
+          DismissDirection.endToStart: 0.35,
+        },
+        background: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.only(left: 20),
+          alignment: Alignment.centerLeft,
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1B2E24) : const Color(0xFFE8F5E9),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.restore,
+                color: isDark ? const Color(0xFF81C784) : const Color(0xFF2E7D32),
+                size: 22,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Restore',
+                style: TextStyle(
+                  fontFamily: 'Sniglet',
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? const Color(0xFF81C784) : const Color(0xFF2E7D32),
+                ),
+              ),
+            ],
+          ),
+        ),
+        secondaryBackground: Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.only(right: 20),
+          alignment: Alignment.centerRight,
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF331818) : const Color(0xFFFFEBEE),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Text(
+                'Delete Forever',
+                style: TextStyle(
+                  fontFamily: 'Sniglet',
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? const Color(0xFFE57373) : const Color(0xFFC62828),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.delete_forever,
+                color: isDark ? const Color(0xFFE57373) : const Color(0xFFC62828),
+                size: 22,
+              ),
+            ],
+          ),
+        ),
+        confirmDismiss: (direction) async {
+          if (direction == DismissDirection.startToEnd) {
+            onRestore?.call();
+            return true;
+          } else if (direction == DismissDirection.endToStart) {
+            onPermanentDelete?.call();
+            return true;
+          }
+          return false;
+        },
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF161616) : const Color(0xFFF9FAFB),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: palette.cardBorder.withValues(alpha: 0.5)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.delete_outline,
+                  size: 20,
+                  color: palette.textMuted.withValues(alpha: 0.6),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    task.title,
+                    style: TextStyle(
+                      fontFamily: 'Sniglet',
+                      fontSize: 15,
+                      color: palette.textMuted,
+                      decoration: TextDecoration.lineThrough,
+                    ),
+                  ),
+                ),
+                if (onRestore != null)
+                  IconButton(
+                    icon: const Icon(Icons.restore, size: 20),
+                    tooltip: 'Restore task',
+                    color: palette.iconPrimary,
+                    onPressed: onRestore,
+                  ),
+                if (onPermanentDelete != null)
+                  IconButton(
+                    icon: const Icon(Icons.delete_forever_outlined, size: 20),
+                    tooltip: 'Delete permanently',
+                    color: isDark ? const Color(0xFFE57373) : const Color(0xFFEF4444),
+                    onPressed: onPermanentDelete,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Active / Completed normal card
     return Dismissible(
-      key: ValueKey(task.id),
-      direction: DismissDirection.endToStart,
+      key: ValueKey('task_${task.id}'),
+      direction: DismissDirection.horizontal,
+      dismissThresholds: const {
+        DismissDirection.startToEnd: 0.35,
+        DismissDirection.endToStart: 0.35,
+      },
       background: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.only(left: 20),
+        alignment: Alignment.centerLeft,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E2922) : const Color(0xFFE8F5E9),
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isChecked ? Icons.remove_done : Icons.check_circle_outline,
+              color: isDark ? const Color(0xFF81C784) : const Color(0xFF2E7D32),
+              size: 24,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              isChecked ? 'Mark Active' : 'Mark Done',
+              style: TextStyle(
+                fontFamily: 'Sniglet',
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: isDark ? const Color(0xFF81C784) : const Color(0xFF2E7D32),
+              ),
+            ),
+          ],
+        ),
+      ),
+      secondaryBackground: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.only(right: 20),
         alignment: Alignment.centerRight,
         decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF262626) : const Color(0xFFE8E2D8),
+          color: isDark ? const Color(0xFF2E1A1A) : const Color(0xFFFEE2E2),
           borderRadius: BorderRadius.circular(18),
         ),
-        child: Icon(Icons.delete_outline, color: palette.textPrimary, size: 24),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Text(
+              'Delete',
+              style: TextStyle(
+                fontFamily: 'Sniglet',
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+                color: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              Icons.delete_outline,
+              color: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
+              size: 24,
+            ),
+          ],
+        ),
       ),
-      onDismissed: (_) => onDismissed(),
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          // Slide right: optimistic toggle
+          onToggle();
+          return false;
+        } else if (direction == DismissDirection.endToStart) {
+          // Slide left: mark as deleted
+          onDismissed();
+          return true;
+        }
+        return false;
+      },
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
@@ -66,11 +262,13 @@ class TaskCardTile extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Squircle Checkbox
+              // Squircle Checkbox with smooth animation
               InkWell(
                 onTap: onToggle,
                 borderRadius: BorderRadius.circular(8),
-                child: Container(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  curve: Curves.easeOutCubic,
                   width: 26,
                   height: 26,
                   decoration: BoxDecoration(
@@ -102,8 +300,9 @@ class TaskCardTile extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      task.title,
+                    AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 180),
+                      curve: Curves.easeOutCubic,
                       style: TextStyle(
                         fontFamily: 'Sniglet',
                         fontSize: 16,
@@ -114,6 +313,7 @@ class TaskCardTile extends StatelessWidget {
                         decoration:
                             task.completed ? TextDecoration.lineThrough : null,
                       ),
+                      child: Text(task.title),
                     ),
                     if (formattedDate.isNotEmpty ||
                         task.isRecurring ||

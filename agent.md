@@ -3,7 +3,7 @@ type: Playbook
 title: TodoCat Agent Protocol & OKF Specification
 description: Operational rules for AI agents working on TodoCat, enforcing Google Open Knowledge Format (OKF) documentation.
 tags: [agent, protocol, okf, documentation]
-updated_at: 2026-10-25T22:30:00Z
+updated_at: 2026-10-27T16:45:00Z
 ---
 
 # Agent Playbook & Google OKF Protocol
@@ -54,6 +54,7 @@ Each feature document must conform to the Google Open Knowledge Format specifica
 | **Theme & UI Styling** | [theming.md](features/theming.md) | `Feature` | `active` |
 | **Web Dashboard & Landing** | [web-experience.md](features/web-experience.md) | `Feature` | `active` |
 | **Account & Legal Compliance** | [account-legal.md](features/account-legal.md) | `Feature` | `active` |
+| **Architectural Decisions** | [decision.md](features/decision.md) | `DecisionLog` | `active` |
 
 ---
 
@@ -63,3 +64,12 @@ Each feature document must conform to the Google Open Knowledge Format specifica
 3. **No duplicate functions**: Re-use existing utilities and services.
 4. **Don't overdo it**: Implement strictly what is requested without bloated abstractions.
 5. **No assumptions**: Ask the user whenever clarification is required.
+6. **Production error sanitization**: Never display raw system logs, socket errors, DNS failures, or stack traces in the UI. All exceptions must be sanitized to user-friendly messages.
+7. **Optimistic UI with Rollback**: Fast-path interactions (checkboxes, friend actions, task moves) must update the UI immediately without waiting for network responses, rolling back gracefully upon API failure.
+8. **Zero Emojis Policy**: Do not use emojis in user-facing UI, notifications, toasts, or email templates unless explicitly requested. Use clean typography and SVG/vector icons.
+
+---
+
+## 4. User Workflow & Planning Preferences
+1. **Concise In-Chat Plans Only**: Never generate standalone markdown plan files (e.g. `.md` artifacts or plan documents). Always present proposals and implementation plans as concise, bulleted summaries directly in the chat response.
+2. **Feature Docs Only Upon Approval**: Create or update concept markdown files under `features/*.md` (Google OKF) **strictly after** the user approves and the feature is implemented, never for preliminary plans.

@@ -19,19 +19,49 @@ class HomeStatusBanner extends StatelessWidget {
   });
 
   String _getSpeechText() {
-    if (todayTotalCount == 0 && activeCount == 0) {
-      return 'Ready for today?';
+    final hour = DateTime.now().hour;
+
+    // Morning: 5:00 AM - 11:59 AM
+    if (hour >= 5 && hour < 12) {
+      if (activeCount > 0) {
+        return 'Good morning!\n$activeCount ${activeCount == 1 ? 'task' : 'tasks'} waiting today.';
+      }
+      if (completedTodayCount > 0) {
+        return 'Good morning!\nAll caught up for today.';
+      }
+      return 'Good morning!\nReady for today?';
     }
-    if (activeCount == 0 && completedTodayCount > 0) {
-      return 'All caught up!';
+
+    // Afternoon: 12:00 PM - 4:59 PM
+    if (hour >= 12 && hour < 17) {
+      if (activeCount > 0) {
+        return 'Good afternoon!\n$activeCount ${activeCount == 1 ? 'task' : 'tasks'} remaining.';
+      }
+      if (completedTodayCount > 0) {
+        return 'Good afternoon!\nAll caught up for today.';
+      }
+      return 'Good afternoon!\nReady for today?';
     }
-    if (completionPercent >= 50) {
-      return 'Not yet, keep going!';
+
+    // Evening: 5:00 PM - 9:59 PM
+    if (hour >= 17 && hour < 22) {
+      if (completedTodayCount > 0 && activeCount == 0) {
+        return 'Good evening!\nYou crushed $completedTodayCount ${completedTodayCount == 1 ? 'task' : 'tasks'} today!\nCat is happy and asleep.';
+      }
+      if (activeCount > 0) {
+        return 'Good evening!\n$activeCount ${activeCount == 1 ? 'task' : 'tasks'} remaining today.';
+      }
+      if (completedTodayCount > 0) {
+        return 'Good evening!\nYou crushed $completedTodayCount ${completedTodayCount == 1 ? 'task' : 'tasks'} today!';
+      }
+      return 'Good evening!\nHave a peaceful rest.';
     }
+
+    // Night: 10:00 PM - 4:59 AM
     if (completedTodayCount > 0) {
-      return 'Good start, keep going!';
+      return 'You crushed $completedTodayCount ${completedTodayCount == 1 ? 'task' : 'tasks'} today!\nCat is asleep.';
     }
-    return 'Let\'s get started!';
+    return 'Cat is asleep.\nRest well for tomorrow.';
   }
 
   @override
@@ -185,6 +215,7 @@ class _SpeechBubble extends StatelessWidget {
           ),
           child: Text(
             text,
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontFamily: 'Sniglet',
               fontSize: 11.5,

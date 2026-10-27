@@ -154,6 +154,54 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  String? _lastBriefingPeriodKey;
+
+  void _checkAndShowDailyBriefing() {
+    if (!mounted) return;
+    final now = DateTime.now();
+    final hour = now.hour;
+    final period = hour >= 5 && hour < 12
+        ? 'morning'
+        : (hour >= 12 && hour < 17 ? 'afternoon' : (hour >= 17 && hour < 22 ? 'evening' : 'night'));
+    final todayKey = '${now.year}-${now.month}-${now.day}-$period';
+
+    if (_lastBriefingPeriodKey == todayKey) return;
+    _lastBriefingPeriodKey = todayKey;
+
+    final counts = _counts;
+    final active = counts.active;
+    final completedToday = counts.completedToday;
+
+    String message;
+    if (period == 'morning') {
+      message = active > 0
+          ? 'Good morning! $active ${active == 1 ? 'task' : 'tasks'} waiting today.'
+          : (completedToday > 0
+              ? 'Good morning! All caught up for today.'
+              : 'Good morning! Ready for today?');
+    } else if (period == 'afternoon') {
+      message = active > 0
+          ? 'Good afternoon! $active ${active == 1 ? 'task' : 'tasks'} remaining.'
+          : (completedToday > 0
+              ? 'Good afternoon! All caught up for today.'
+              : 'Good afternoon! Ready for today?');
+    } else if (period == 'evening') {
+      message = completedToday > 0 && active == 0
+          ? 'Good evening! You crushed $completedToday ${completedToday == 1 ? 'task' : 'tasks'} today! Cat is happy and asleep.'
+          : (active > 0
+              ? 'Good evening! $active ${active == 1 ? 'task' : 'tasks'} remaining today.'
+              : (completedToday > 0
+                  ? 'Good evening! You crushed $completedToday ${completedToday == 1 ? 'task' : 'tasks'} today!'
+                  : 'Good evening! Have a peaceful rest.'));
+    } else {
+      message = completedToday > 0
+          ? 'You crushed $completedToday ${completedToday == 1 ? 'task' : 'tasks'} today! Cat is asleep.'
+          : 'Cat is asleep. Rest well for tomorrow.';
+    }
+
+    AppToast.show(context, message);
+  }
+
   @override
   void dispose() {
     for (final entry in _pendingDeletions.entries) {
@@ -180,6 +228,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _checkAuthAndLoad(showLoading: false);
       _checkFloatingOverlayStatus();
       _checkPendingFriendRequests();
+      _checkAndShowDailyBriefing();
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
       for (final entry in _pendingDeletions.entries) {
         entry.value.cancel();
@@ -309,13 +358,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         _syncWidget();
         FcmService().syncCurrentToken();
         _checkPendingFriendRequests();
+        _checkAndShowDailyBriefing();
         if (_currentTab == 2) {
           _loadAnalytics();
         }
       }
     } catch (e) {
       if (mounted) {
-        if (e is ApiException && e.statusCode == 401) {
+        final isLoggedIn = await _apiService.isLoggedIn();
+        if (!mounted) return;
+        if (!isLoggedIn) {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (_) => const LoginScreen()),
           );
@@ -323,7 +375,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         }
         setState(() {
           if (_tasks.isEmpty) {
-            _error = e.toString();
+            _error = e is ApiException
+                ? e.message
+                : 'Unable to connect to server. Please check your connection.';
           }
           _loading = false;
         });
@@ -377,7 +431,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (mounted) {
         setState(() {
           _loadingAnalytics = false;
-          _analyticsError = e.toString();
+          _analyticsError = e is ApiException
+              ? e.message
+              : 'Unable to load analytics. Please check your connection.';
         });
       }
     }
@@ -397,6 +453,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<Task>? _cachedFiltered;
   List<Task>? _cachedTodayTasks;
   List<Task>? _cachedEarlierTasks;
+  List<Task>? _cachedDeletedTasks;
   List<Task>? _lastFilteredSourceTasks;
   String? _lastFilter;
   String? _lastSearchQuery;
@@ -418,17 +475,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final filtered = <Task>[];
     final today = <Task>[];
     final earlier = <Task>[];
+    final deleted = <Task>[];
 
     for (final t in _tasks) {
-      if (_filter == 'active' && t.completed) continue;
-      if (_filter == 'completed' && !t.completed) continue;
-
       if (hasSearch) {
         final matchTitle = t.title.toLowerCase().contains(trimmedQ);
         final matchDesc = t.description.toLowerCase().contains(trimmedQ);
         final matchCat = t.category.toLowerCase().contains(trimmedQ);
         if (!matchTitle && !matchDesc && !matchCat) continue;
       }
+
+      if (t.deleted) {
+        deleted.add(t);
+        continue;
+      }
+
+      if (_filter == 'active' && t.completed) continue;
+      if (_filter == 'completed' && !t.completed) continue;
 
       filtered.add(t);
       if (!t.completed || isToday(t.updatedAt ?? t.createdAt)) {
@@ -441,6 +504,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _cachedFiltered = filtered;
     _cachedTodayTasks = today;
     _cachedEarlierTasks = earlier;
+    _cachedDeletedTasks = deleted;
   }
 
   Future<void> _toggleTask(Task task) async {
@@ -448,22 +512,53 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final isMyPartCompleted = myId.isNotEmpty && task.completedBy.contains(myId);
     final willComplete = task.isShared ? !isMyPartCompleted : !task.completed;
 
+    // 1. OPTIMISTIC UI: instant feedback on device
+    final previousTasks = _tasks;
+    final updatedTask = task.copyWith(
+      completed: willComplete,
+      completedBy: task.isShared
+          ? (willComplete
+              ? [...task.completedBy, if (myId.isNotEmpty && !task.completedBy.contains(myId)) myId]
+              : task.completedBy.where((id) => id != myId).toList())
+          : (willComplete ? (myId.isNotEmpty ? [myId] : ['completed']) : []),
+    );
+
+    setState(() {
+      _tasks = _tasks.map((t) => t.id == task.id ? updatedTask : t).toList();
+      _cachedFiltered = null;
+      _cachedTodayTasks = null;
+      _cachedEarlierTasks = null;
+      _cachedDeletedTasks = null;
+    });
+    _syncWidget();
+
+    // 2. BACKGROUND API SYNC
     try {
-      final updatedTask = await _apiService.updateTask(
+      final serverTask = await _apiService.updateTask(
         task.id,
         completed: willComplete,
       );
       if (mounted) {
         setState(() {
-          _tasks = _tasks.map((t) => t.id == task.id ? updatedTask : t).toList();
+          _tasks = _tasks.map((t) => t.id == task.id ? serverTask : t).toList();
           _cachedFiltered = null;
           _cachedTodayTasks = null;
           _cachedEarlierTasks = null;
+          _cachedDeletedTasks = null;
         });
         _syncWidget();
       }
     } catch (e) {
+      // 3. ROLLBACK on failure
       if (mounted) {
+        setState(() {
+          _tasks = previousTasks;
+          _cachedFiltered = null;
+          _cachedTodayTasks = null;
+          _cachedEarlierTasks = null;
+          _cachedDeletedTasks = null;
+        });
+        _syncWidget();
         AppToast.show(context, 'Failed to update task', isError: true);
       }
     }
@@ -472,61 +567,105 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _deleteTask(String id) async {
     final taskIndex = _tasks.indexWhere((t) => t.id == id);
     if (taskIndex == -1) return;
-    final deletedTask = _tasks[taskIndex];
+    final task = _tasks[taskIndex];
 
-    // Optimistically remove from state
+    // 1. OPTIMISTIC UI: Mark as 'deleted' status immediately
+    final previousTasks = _tasks;
+    final updatedTask = task.copyWith(deleted: true);
+
+    setState(() {
+      _tasks = _tasks.map((t) => t.id == id ? updatedTask : t).toList();
+      _cachedFiltered = null;
+      _cachedTodayTasks = null;
+      _cachedEarlierTasks = null;
+      _cachedDeletedTasks = null;
+    });
+    _syncWidget();
+
+    AppToast.show(
+      context,
+      'Moved to deleted',
+      duration: const Duration(seconds: 4),
+      actionLabel: 'Undo',
+      onAction: () => _restoreTask(task),
+    );
+
+    // 2. BACKGROUND API SYNC
+    try {
+      await _apiService.updateTask(id, deleted: true);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _tasks = previousTasks;
+          _cachedFiltered = null;
+          _cachedTodayTasks = null;
+          _cachedEarlierTasks = null;
+          _cachedDeletedTasks = null;
+        });
+        _syncWidget();
+        AppToast.show(context, 'Failed to delete task', isError: true);
+      }
+    }
+  }
+
+  Future<void> _restoreTask(Task task) async {
+    final previousTasks = _tasks;
+    final updatedTask = task.copyWith(deleted: false);
+
+    setState(() {
+      _tasks = _tasks.map((t) => t.id == task.id ? updatedTask : t).toList();
+      _cachedFiltered = null;
+      _cachedTodayTasks = null;
+      _cachedEarlierTasks = null;
+      _cachedDeletedTasks = null;
+    });
+    _syncWidget();
+    AppToast.show(context, 'Task restored');
+
+    try {
+      await _apiService.updateTask(task.id, deleted: false);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _tasks = previousTasks;
+          _cachedFiltered = null;
+          _cachedTodayTasks = null;
+          _cachedEarlierTasks = null;
+          _cachedDeletedTasks = null;
+        });
+        _syncWidget();
+        AppToast.show(context, 'Failed to restore task', isError: true);
+      }
+    }
+  }
+
+  Future<void> _permanentDeleteTask(String id) async {
+    final previousTasks = _tasks;
+
     setState(() {
       _tasks = _tasks.where((t) => t.id != id).toList();
       _cachedFiltered = null;
       _cachedTodayTasks = null;
       _cachedEarlierTasks = null;
+      _cachedDeletedTasks = null;
     });
     _syncWidget();
+    AppToast.show(context, 'Permanently deleted');
 
-    // Cancel any previous timer for this ID
-    _pendingDeletions[id]?.cancel();
-
-    bool isUndone = false;
-
-    // Start 5-second undo timer
-    final timer = Timer(const Duration(seconds: 5), () async {
-      _pendingDeletions.remove(id);
-      if (!isUndone) {
-        try {
-          await _apiService.deleteTask(id);
-        } catch (e) {
-          debugPrint('[HomeScreen] deleteTask on server failed: $e');
-        }
+    try {
+      await _apiService.deleteTask(id);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _tasks = previousTasks;
+          _cachedFiltered = null;
+          _cachedTodayTasks = null;
+          _cachedEarlierTasks = null;
+          _cachedDeletedTasks = null;
+        });
+        _syncWidget();
+        AppToast.show(context, 'Failed to delete task', isError: true);
       }
-    });
-    _pendingDeletions[id] = timer;
-
-    if (mounted) {
-      AppToast.show(
-        context,
-        'Task deleted',
-        duration: const Duration(seconds: 5),
-        actionLabel: 'Undo',
-        onAction: () {
-          isUndone = true;
-          _pendingDeletions[id]?.cancel();
-          _pendingDeletions.remove(id);
-
-          if (mounted) {
-            setState(() {
-              final newTasks = List<Task>.from(_tasks);
-              final insertIndex = taskIndex <= newTasks.length ? taskIndex : newTasks.length;
-              newTasks.insert(insertIndex, deletedTask);
-              _tasks = newTasks;
-              _cachedFiltered = null;
-              _cachedTodayTasks = null;
-              _cachedEarlierTasks = null;
-            });
-            _syncWidget();
-            AppToast.show(context, 'Task restored');
-          }
-        },
-      );
     }
   }
 
@@ -723,6 +862,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final filtered = _cachedFiltered!;
     final todayTasks = _cachedTodayTasks!;
     final earlierTasks = _cachedEarlierTasks!;
+    final deletedTasks = _cachedDeletedTasks!;
     final counts = _counts;
     final completionPercent = counts.todayTotal == 0
         ? 0
@@ -864,7 +1004,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             completedTodayCount: counts.completedToday,
                             todayTotalCount: counts.todayTotal,
                             completionPercent: completionPercent,
-                            totalCount: _tasks.length,
+                            totalCount: _tasks.where((t) => !t.deleted).length,
                             currentFilter: _filter,
                             onFilterChanged: (filter) => setState(() => _filter = filter),
                             searchController: _searchController,
@@ -873,11 +1013,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                             filteredTasks: filtered,
                             todayTasks: todayTasks,
                             earlierTasks: earlierTasks,
+                            deletedTasks: deletedTasks,
                             isLoadingMore: _isLoadingMore,
                             currentUserId: _user?.id,
                             onToggleTask: _toggleTask,
                             onTaskTap: _showTaskDetailsModal,
                             onDeleteTask: _deleteTask,
+                            onRestoreTask: _restoreTask,
+                            onPermanentDeleteTask: _permanentDeleteTask,
                           ),
                         ),
                         TickerMode(
@@ -986,6 +1129,7 @@ class _TaskCounts {
     int completedToday = 0;
 
     for (final t in tasks) {
+      if (t.deleted) continue;
       if (t.completed) {
         completed++;
         if (isToday(t.updatedAt ?? t.createdAt)) {

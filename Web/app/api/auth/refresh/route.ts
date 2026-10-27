@@ -42,6 +42,24 @@ export async function POST(request: Request) {
 
     const tokenIndex = (user.refreshTokens || []).indexOf(token);
     if (tokenIndex === -1) {
+      // RFC 6819 §5.2.2.3: Check grace window for recently rotated tokens
+      // Allows parallel/in-flight requests from the same client to succeed without revoking the session
+      const now = Date.now();
+      const GRACE_PERIOD_MS = 60 * 1000; // 60 seconds grace window
+
+      const graceMatch = (user.rotatedTokens || []).find(
+        (rt: { token: string; rotatedAt: Date; newAccessToken: string; newRefreshToken: string }) =>
+          rt.token === token && now - new Date(rt.rotatedAt).getTime() < GRACE_PERIOD_MS
+      );
+
+      if (graceMatch) {
+        return NextResponse.json({
+          message: "Token refreshed successfully (grace window)",
+          accessToken: graceMatch.newAccessToken,
+          refreshToken: graceMatch.newRefreshToken,
+        });
+      }
+
       return NextResponse.json(
         { message: "Refresh token is invalid or has been revoked" },
         { status: 403 }
@@ -49,6 +67,20 @@ export async function POST(request: Request) {
     }
 
     const { accessToken, refreshToken: newRefreshToken } = generateTokens(user._id.toString());
+
+    // Record rotation in grace window (retaining only items from last 5 minutes, max 20)
+    const now = Date.now();
+    const activeRotated = (user.rotatedTokens || []).filter(
+      (rt: { rotatedAt: Date }) => now - new Date(rt.rotatedAt).getTime() < 5 * 60 * 1000
+    );
+    activeRotated.push({
+      token,
+      newAccessToken: accessToken,
+      newRefreshToken,
+      rotatedAt: new Date(),
+    });
+    user.rotatedTokens = activeRotated.slice(-20);
+
     user.refreshTokens[tokenIndex] = newRefreshToken;
     await user.save();
 

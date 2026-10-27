@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     const origin = request.headers.get("origin");
     const host = request.headers.get("host");
     const proto = request.headers.get("x-forwarded-proto") || "https";
-    const baseUrl = origin || (host ? `${proto}://${host}` : "https://todocat.instaroid.page");
+    const baseUrl = origin || (host ? `${proto}://${host}` : "https://to-do-cat.vercel.app");
     const resetLink = `${baseUrl}/reset-password?token=${token}`;
 
     sendPasswordResetEmail({

@@ -4,9 +4,11 @@ import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../models/task.dart';
 import '../../../../models/friend.dart';
+import '../../../../models/category.dart';
 import '../../../../services/api_service.dart';
 import '../../../widgets/app_outlined_icons.dart';
 import '../../../widgets/app_toast.dart';
+import '../../../widgets/friend_picker_sheet.dart';
 
 Future<void> showCreateTaskModal(
   BuildContext context, {
@@ -43,6 +45,7 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
   String _selectedRecurrence = 'none';
   List<FriendItem> _availableFriends = [];
   final List<FriendUser> _selectedFriends = [];
+  List<CategoryItem> _availableCategories = [];
 
   @override
   void initState() {
@@ -50,6 +53,7 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
     _titleController = TextEditingController();
     _descController = TextEditingController();
     _loadAvailableFriends();
+    _loadAvailableCategories();
   }
 
   Future<void> _loadAvailableFriends() async {
@@ -61,6 +65,331 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
         });
       }
     } catch (_) {}
+  }
+
+  Future<void> _loadAvailableCategories() async {
+    try {
+      final cats = await ApiService().fetchCategories();
+      if (mounted) {
+        setState(() {
+          _availableCategories = cats;
+        });
+      }
+    } catch (_) {}
+  }
+
+  List<CategoryItem> get _displayCategories {
+    final list = <CategoryItem>[
+      const CategoryItem(id: 'general', name: 'General', isDefault: true),
+      const CategoryItem(id: 'work', name: 'Work', isDefault: true),
+    ];
+    for (final cat in _availableCategories) {
+      if (cat.name.toLowerCase() != 'general' && cat.name.toLowerCase() != 'work') {
+        if (!list.any((c) => c.name.toLowerCase() == cat.name.toLowerCase())) {
+          list.add(cat);
+        }
+      }
+    }
+    if (_selectedCategory.isNotEmpty &&
+        !list.any((c) => c.name.toLowerCase() == _selectedCategory.toLowerCase())) {
+      list.add(CategoryItem(id: 'custom', name: _selectedCategory));
+    }
+    return list;
+  }
+
+  Future<void> _showAddCategoryModal() async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final palette = AppColors.of(context);
+    final textPrimary = palette.textPrimary;
+    final textSecondary = palette.textSecondary;
+    final cardBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final inputBg = isDark ? const Color(0xFF282828) : const Color(0xFFF8EEDF);
+
+    final catController = TextEditingController();
+    List<FriendUser> selectedCategoryFriends = [];
+
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      backgroundColor: cardBg,
+      elevation: 0,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (sheetCtx) {
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
+            return SafeArea(
+              top: false,
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + bottomInset),
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: palette.activeChip,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.folder_outlined, size: 18, color: palette.activeChipText),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            'Add Category',
+                            style: TextStyle(
+                              fontFamily: 'Sniglet',
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    const SizedBox(height: 14),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: inputBg,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: palette.cardBorder, width: 1.2),
+                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                      child: TextField(
+                        controller: catController,
+                        autofocus: true,
+                        style: TextStyle(
+                          fontFamily: 'Sniglet',
+                          color: textPrimary,
+                          fontSize: 14,
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Category Name (e.g. Trip to Japan)',
+                          hintStyle: TextStyle(
+                            fontFamily: 'Sniglet',
+                            color: textSecondary.withValues(alpha: 0.7),
+                            fontSize: 14,
+                          ),
+                          border: InputBorder.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    // Share section
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.group_outlined, size: 16, color: textSecondary),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Share with friends',
+                              style: TextStyle(
+                                fontFamily: 'Sniglet',
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_availableFriends.isNotEmpty)
+                          InkWell(
+                            onTap: () async {
+                              final res = await showFriendPickerSheet(
+                                context: ctx,
+                                availableFriends: _availableFriends,
+                                initialSelected: selectedCategoryFriends,
+                                title: 'Share Category with Friends',
+                              );
+                              if (res != null) {
+                                setSheetState(() {
+                                  selectedCategoryFriends = List<FriendUser>.from(res);
+                                });
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(14),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: selectedCategoryFriends.isNotEmpty
+                                    ? palette.activeChip
+                                    : inputBg,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: palette.cardBorder, width: 1.2),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    selectedCategoryFriends.isNotEmpty
+                                        ? Icons.edit_outlined
+                                        : Icons.person_add_alt_1_rounded,
+                                    size: 13,
+                                    color: selectedCategoryFriends.isNotEmpty
+                                        ? palette.activeChipText
+                                        : textSecondary,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    selectedCategoryFriends.isEmpty
+                                        ? '+ Select Friends'
+                                        : '${selectedCategoryFriends.length} selected',
+                                    style: TextStyle(
+                                      fontFamily: 'Sniglet',
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: selectedCategoryFriends.isNotEmpty
+                                          ? palette.activeChipText
+                                          : textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (_availableFriends.isEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Text(
+                          'No friends added yet. You can invite friends in the Friends tab to share projects.',
+                          style: TextStyle(
+                            fontFamily: 'Sniglet',
+                            fontSize: 12,
+                            color: textSecondary,
+                          ),
+                        ),
+                      )
+                    else if (selectedCategoryFriends.isNotEmpty)
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: selectedCategoryFriends.map((f) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF282828) : const Color(0xFFEDF3EE),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: palette.cardBorder, width: 1),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  f.displayName,
+                                  style: TextStyle(
+                                    fontFamily: 'Sniglet',
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: textPrimary,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                GestureDetector(
+                                  onTap: () {
+                                    setSheetState(() {
+                                      selectedCategoryFriends.removeWhere((sf) => sf.id == f.id);
+                                    });
+                                  },
+                                  child: Icon(Icons.close_rounded, size: 13, color: textSecondary),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    const SizedBox(height: 22),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.of(sheetCtx).pop(),
+                            child: Text(
+                              'Cancel',
+                              style: TextStyle(
+                                fontFamily: 'Sniglet',
+                                color: textSecondary,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: palette.fabBg,
+                              foregroundColor: palette.fabIcon,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            onPressed: () async {
+                              final name = catController.text.trim();
+                              if (name.isEmpty) return;
+                              Navigator.of(sheetCtx).pop();
+
+                              try {
+                                final newCat = await ApiService().createCategory(
+                                  name: name,
+                                  sharedWith: selectedCategoryFriends.map((f) => f.id).toList(),
+                                );
+                                if (mounted) {
+                                  setState(() {
+                                    _availableCategories.removeWhere((c) =>
+                                        c.name.toLowerCase() == newCat.name.toLowerCase());
+                                    _availableCategories.add(newCat);
+                                    _selectedCategory = newCat.name;
+                                    for (final f in selectedCategoryFriends) {
+                                      if (!_selectedFriends.any((sf) => sf.id == f.id)) {
+                                        _selectedFriends.add(f);
+                                      }
+                                    }
+                                  });
+                                  AppToast.show(null, 'Category "$name" added');
+                                }
+                              } catch (_) {
+                                if (mounted) {
+                                  setState(() {
+                                    _selectedCategory = name;
+                                  });
+                                }
+                              }
+                            },
+                            child: const Text(
+                              'Create Category',
+                              style: TextStyle(
+                                fontFamily: 'Sniglet',
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -179,14 +508,15 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
     final badgeBg = isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE4E4E7);
 
     return BackdropFilter(
-      filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
+      filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
       child: Dialog(
         backgroundColor: dialogBg,
         insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(28),
         ),
-        child: SingleChildScrollView(
+        child: RepaintBoundary(
+          child: SingleChildScrollView(
           padding: const EdgeInsets.all(22),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -656,46 +986,104 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: [
-                  'General',
-                  'Work',
-                  'Personal',
-                  'Study',
-                  'Health',
-                  'Shopping'
-                ].map((cat) {
-                  final isSel = _selectedCategory == cat;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: InkWell(
-                      onTap: () => setState(() => _selectedCategory = cat),
-                      borderRadius: BorderRadius.circular(14),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: isSel
-                              ? palette.activeChip
-                              : (isDark ? inputBg : Colors.white),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: isSel ? Colors.transparent : palette.cardBorder,
-                            width: 1.2,
-                          ),
-                        ),
-                        child: Text(
-                          cat,
-                          style: TextStyle(
-                            fontFamily: 'Sniglet',
-                            fontSize: 12,
-                            fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                  ..._displayCategories.map((catItem) {
+                    final isSel = _selectedCategory.toLowerCase() == catItem.name.toLowerCase();
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            _selectedCategory = catItem.name;
+                            if (catItem.isShared) {
+                              for (final friend in catItem.sharedWith) {
+                                if (!_selectedFriends.any((f) => f.id == friend.id)) {
+                                  _selectedFriends.add(friend);
+                                }
+                              }
+                            }
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
                             color: isSel
-                                ? palette.activeChipText
-                                : textSecondary,
+                                ? palette.activeChip
+                                : (isDark ? inputBg : Colors.white),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isSel ? Colors.transparent : palette.cardBorder,
+                              width: 1.2,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (catItem.isShared) ...[
+                                Icon(
+                                  Icons.people_outline_rounded,
+                                  size: 13,
+                                  color: isSel ? palette.activeChipText : textSecondary,
+                                ),
+                                const SizedBox(width: 4),
+                              ],
+                              Text(
+                                catItem.name,
+                                style: TextStyle(
+                                  fontFamily: 'Sniglet',
+                                  fontSize: 12,
+                                  fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                                  color: isSel
+                                      ? palette.activeChipText
+                                      : textSecondary,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
+                    );
+                  }),
+                  // Add Category Button
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: InkWell(
+                      onTap: _showAddCategoryModal,
+                      borderRadius: BorderRadius.circular(14),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: isDark ? inputBg : Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: palette.cardBorder,
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.add_rounded,
+                              size: 14,
+                              color: palette.fabBg,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Add Category',
+                              style: TextStyle(
+                                fontFamily: 'Sniglet',
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
-                  );
-                }).toList(),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
@@ -741,39 +1129,22 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                     ),
                   )
                 else
-                  PopupMenuButton<FriendUser>(
-                    onSelected: (friend) {
-                      setState(() {
-                        if (_selectedFriends.any((f) => f.id == friend.id)) {
-                          _selectedFriends.removeWhere((f) => f.id == friend.id);
-                        } else {
-                          _selectedFriends.add(friend);
-                        }
-                      });
-                    },
-                    color: isDark ? const Color(0xFF222222) : Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    itemBuilder: (ctx) => _availableFriends.map((f) {
-                      final isSel = _selectedFriends.any((sf) => sf.id == f.user.id);
-                      return PopupMenuItem<FriendUser>(
-                        value: f.user,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              f.user.displayName,
-                              style: TextStyle(
-                                fontFamily: 'Sniglet',
-                                fontSize: 13,
-                                fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
-                                color: isSel ? textPrimary : textSecondary,
-                              ),
-                            ),
-                            if (isSel) Icon(Icons.check, size: 16, color: palette.subtleGreen),
-                          ],
-                        ),
+                  InkWell(
+                    onTap: () async {
+                      final res = await showFriendPickerSheet(
+                        context: context,
+                        availableFriends: _availableFriends,
+                        initialSelected: _selectedFriends,
+                        title: 'Share Task with Friends',
                       );
-                    }).toList(),
+                      if (res != null) {
+                        setState(() {
+                          _selectedFriends.clear();
+                          _selectedFriends.addAll(res);
+                        });
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(18),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                       decoration: BoxDecoration(
@@ -781,7 +1152,7 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
                         borderRadius: BorderRadius.circular(18),
                         border: _selectedFriends.isNotEmpty
                             ? Border.all(color: palette.subtleGreen, width: 1.2)
-                            : null,
+                            : Border.all(color: palette.cardBorder, width: 1),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -873,6 +1244,7 @@ class _CreateTaskDialogState extends State<CreateTaskDialog> {
           ],
         ),
       ),
+    ),
     ),
   );
 }

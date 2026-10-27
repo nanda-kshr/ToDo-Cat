@@ -24,7 +24,7 @@ function getTransporter() {
 }
 
 function emailWrapper(content: string): string {
-  const logoUrl = "https://todocat.instaroid.page/logo.png";
+  const logoUrl = "https://to-do-cat.vercel.app/logo.png";
 
   return `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f9fafb; padding: 36px 16px; color: #374151;">
@@ -66,7 +66,7 @@ export async function sendFriendRequestEmail({
       Once connected, you can share tasks with each other and complete them together.
     </p>
     <div style="text-align: center; margin: 26px 0;">
-      <a href="https://todocat.instaroid.page" style="background-color: #374151; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; font-size: 14px; display: inline-block;">
+      <a href="https://to-do-cat.vercel.app" style="background-color: #374151; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; font-size: 14px; display: inline-block;">
         Open TodoCat
       </a>
     </div>
@@ -106,7 +106,7 @@ export async function sendFriendAcceptedEmail({
       <strong>${displayName}</strong> accepted your friend request. You can now start sharing tasks and completing them together.
     </p>
     <div style="text-align: center; margin: 26px 0;">
-      <a href="https://todocat.instaroid.page" style="background-color: #374151; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; font-size: 14px; display: inline-block;">
+      <a href="https://to-do-cat.vercel.app" style="background-color: #374151; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; font-size: 14px; display: inline-block;">
         View Friends on TodoCat
       </a>
     </div>
@@ -154,7 +154,7 @@ export async function sendSharedTaskEmail({
       Remember: Both participants need to check this task as completed to finish it.
     </p>
     <div style="text-align: center; margin: 24px 0;">
-      <a href="https://todocat.instaroid.page" style="background-color: #374151; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; font-size: 14px; display: inline-block;">
+      <a href="https://to-do-cat.vercel.app" style="background-color: #374151; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 12px; font-weight: 600; font-size: 14px; display: inline-block;">
         View Shared Task
       </a>
     </div>

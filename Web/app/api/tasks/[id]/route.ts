@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import { Task } from "@/models/Task";
 import { User } from "@/models/User";
+import { Category } from "@/models/Category";
 import { getUserFromRequest } from "@/lib/auth";
 import { updateCachedTask, removeCachedTask } from "@/lib/taskCache";
 import { sendPushNotification } from "@/lib/firebaseAdmin";
@@ -64,8 +65,8 @@ export async function PATCH(
           for (const p of participants) {
             if (p.fcmTokens?.length) {
               sendPushNotification(p.fcmTokens, {
-                title: "Shared Task Completed! 🎉",
-                body: `All friends completed: "${task.title}"! The cat is dancing! 🐱🐾`,
+                title: "Shared Task Completed!",
+                body: `All friends completed: "${task.title}"! The cat is dancing!`,
                 data: { taskId: task._id.toString() },
               }).catch(() => {});
             }
@@ -75,6 +76,10 @@ export async function PATCH(
         task.completed = willComplete;
         task.completedBy = willComplete ? [currentUserId] : [];
       }
+    }
+
+    if (body.deleted !== undefined) {
+      task.deleted = Boolean(body.deleted);
     }
 
     // Only creator can edit metadata (title, due date, etc.)
@@ -113,6 +118,25 @@ export async function PATCH(
       if (body.category !== undefined) {
         if (typeof body.category === "string" && body.category.trim()) {
           task.category = body.category.trim();
+          if (task.category !== "General") {
+            const escapedCat = task.category.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const matchedCategory = await Category.findOne({
+              name: new RegExp(`^${escapedCat}$`, "i"),
+              $or: [{ userId: currentUserId }, { sharedWith: currentUserId }],
+            });
+            if (matchedCategory && matchedCategory.sharedWith?.length > 0 && !Array.isArray(body.sharedWith)) {
+              const extraIds = [
+                ...(matchedCategory.userId.toString() !== payload.userId ? [matchedCategory.userId] : []),
+                ...(matchedCategory.sharedWith || []).filter((id) => id.toString() !== payload.userId),
+              ];
+              const existingStrings = (task.sharedWith || []).map((id) => id.toString());
+              for (const xId of extraIds) {
+                if (!existingStrings.includes(xId.toString())) {
+                  task.sharedWith = [...(task.sharedWith || []), xId];
+                }
+              }
+            }
+          }
         }
       }
 

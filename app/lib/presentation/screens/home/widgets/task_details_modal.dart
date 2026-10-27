@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/date_utils.dart';
 import '../../../../models/task.dart';
+import '../../../../models/category.dart';
+import '../../../../services/api_service.dart';
 import '../../../widgets/app_outlined_icons.dart';
 import '../../../widgets/app_toast.dart';
 
@@ -437,6 +440,14 @@ Future<void> showTaskDetailsModal(
                                           ],
                                         ),
                                       ),
+                                      if (!isDone && (currentUserId == null || person.id != currentUserId)) ...[
+                                        const SizedBox(width: 8),
+                                        _MeowButton(
+                                          taskId: currentTask.id,
+                                          targetUserId: person.id,
+                                          targetName: person.displayName,
+                                        ),
+                                      ],
                                       const SizedBox(width: 8),
                                       TaskStatusBadge(isDone: isDone),
                                     ],
@@ -539,6 +550,7 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
   late String _selectedCategory;
   late String _selectedRecurrence;
   bool _saving = false;
+  List<CategoryItem> _availableCategories = [];
 
   @override
   void initState() {
@@ -553,6 +565,30 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
     _selectedPriority = widget.task.priority;
     _selectedCategory = widget.task.category.isNotEmpty ? widget.task.category : 'General';
     _selectedRecurrence = widget.task.recurrence.isNotEmpty ? widget.task.recurrence : 'none';
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    try {
+      final cats = await ApiService().fetchCategories();
+      if (mounted) setState(() => _availableCategories = cats);
+    } catch (_) {}
+  }
+
+  List<String> get _categoryList {
+    final list = <String>['General', 'Work'];
+    for (final c in _availableCategories) {
+      if (c.name.toLowerCase() != 'general' && c.name.toLowerCase() != 'work') {
+        if (!list.any((item) => item.toLowerCase() == c.name.toLowerCase())) {
+          list.add(c.name);
+        }
+      }
+    }
+    if (_selectedCategory.isNotEmpty &&
+        !list.any((item) => item.toLowerCase() == _selectedCategory.toLowerCase())) {
+      list.add(_selectedCategory);
+    }
+    return list;
   }
 
   @override
@@ -1068,32 +1104,38 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: ['General', 'Work', 'Personal', 'Study', 'Health', 'Shopping'].map((cat) {
-                  final isSel = _selectedCategory == cat;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: InkWell(
-                      onTap: () => setState(() => _selectedCategory = cat),
-                      borderRadius: BorderRadius.circular(14),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: isSel ? palette.activeChip : inputBg,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Text(
-                          cat,
-                          style: TextStyle(
-                            fontFamily: 'Sniglet',
-                            fontSize: 12,
-                            fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
-                            color: isSel ? palette.activeChipText : textSecondary,
+                children: [
+                  ..._categoryList.map((cat) {
+                    final isSel = _selectedCategory.toLowerCase() == cat.toLowerCase();
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: InkWell(
+                        onTap: () => setState(() => _selectedCategory = cat),
+                        borderRadius: BorderRadius.circular(14),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isSel ? palette.activeChip : inputBg,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(
+                              color: isSel ? Colors.transparent : palette.cardBorder,
+                              width: 1.2,
+                            ),
+                          ),
+                          child: Text(
+                            cat,
+                            style: TextStyle(
+                              fontFamily: 'Sniglet',
+                              fontSize: 12,
+                              fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                              color: isSel ? palette.activeChipText : textSecondary,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  );
-                }).toList(),
+                    );
+                  }),
+                ],
               ),
             ),
             const SizedBox(height: 22),
@@ -1117,6 +1159,141 @@ class _EditTaskDialogState extends State<_EditTaskDialog> {
               child: const Text(
                 'Save Changes',
                 style: TextStyle(fontFamily: 'Sniglet', fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MeowButton extends StatefulWidget {
+  final String taskId;
+  final String targetUserId;
+  final String targetName;
+
+  const _MeowButton({
+    required this.taskId,
+    required this.targetUserId,
+    required this.targetName,
+  });
+
+  @override
+  State<_MeowButton> createState() => _MeowButtonState();
+}
+
+class _MeowButtonState extends State<_MeowButton> {
+  bool _sent = false;
+  bool _loading = false;
+  Timer? _cooldownTimer;
+
+  @override
+  void dispose() {
+    _cooldownTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _handleMeow() async {
+    if (_sent || _loading) return;
+
+    setState(() {
+      _sent = true;
+      _loading = true;
+    });
+
+    if (mounted) {
+      AppToast.show(context, 'Meow sent to ${widget.targetName}');
+    }
+
+    _cooldownTimer = Timer(const Duration(seconds: 30), () {
+      if (mounted) {
+        setState(() => _sent = false);
+      }
+    });
+
+    try {
+      await ApiService().sendMeow(widget.taskId, widget.targetUserId);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _sent = false;
+          _loading = false;
+        });
+        _cooldownTimer?.cancel();
+        AppToast.show(context, 'Could not send Meow', isError: true);
+      }
+      return;
+    }
+
+    if (mounted) {
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final palette = AppColors.of(context);
+
+    if (_sent) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF222222) : const Color(0xFFF3F4F6),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: palette.cardBorder),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.check,
+              size: 11,
+              color: palette.textSecondary,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Meowed',
+              style: TextStyle(
+                fontFamily: 'Sniglet',
+                fontSize: 11,
+                color: palette.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return InkWell(
+      onTap: _loading ? null : _handleMeow,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF2A2215) : const Color(0xFFFEF3C7),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: const Color(0xFFFFC65C).withValues(alpha: isDark ? 0.4 : 0.8),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.pets,
+              size: 11,
+              color: isDark ? const Color(0xFFFFD27D) : const Color(0xFFB45309),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Meow',
+              style: TextStyle(
+                fontFamily: 'Sniglet',
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: isDark ? const Color(0xFFFFD27D) : const Color(0xFFB45309),
               ),
             ),
           ],

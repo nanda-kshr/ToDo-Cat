@@ -32,8 +32,15 @@ Enables collaborative task management between friends:
   - `GET /api/friends`: Max 90 requests per minute per user.
   - `POST /api/tasks` (shared): Max 20 shared tasks per hour per user.
 
+- **Shared Task "Meow" Nudge**:
+  - In shared tasks, any participant can send a quick "Meow" notification to any pending participant (`!isDone`).
+  - Displays as a compact button next to the pending status badge in the task details sheet.
+  - Zero emojis across button labels, toasts, and push notifications.
+  - Rate-limited to max 1 Meow per 30 seconds per target friend (`POST /api/tasks/:id/meow`).
+
 ## Components & Architecture
 - **Web Backend & API**:
+  - `Web/app/api/tasks/[id]/meow/route.ts` - Meow nudge endpoint dispatching FCM push notifications with rate limiting.
   - `Web/lib/email.ts` - Nodemailer SMTP integration with professional HTML templates (hosting the official TodoCat logo, zero emojis) for friend requests, acceptances, and shared tasks.
   - `Web/models/Friendship.ts` - Friendship schema with unique compound index on `(requester, recipient)`.
   - `Web/models/Task.ts` - `sharedWith` and `completedBy` fields.
@@ -48,6 +55,7 @@ Enables collaborative task management between friends:
 - **Mobile (Flutter)**:
   - `app/lib/models/friend.dart` - `FriendUser`, `FriendItem`, `PendingFriendRequest`, `FriendsData` with pagination support (`total`, `hasMore`, `page`).
   - `app/lib/models/task.dart` - `creator`, `sharedWith`, `completedBy`, `allParticipants`, `dualProgressText` (`x/y completed the task`).
+  - `app/lib/presentation/widgets/friend_picker_sheet.dart` - Scalable modal sheet with instant search, selected chips carousel, and multi-select list supporting 50+ friends across categories and tasks.
   - `app/lib/services/api_service.dart` - `fetchFriends({int? page, int? limit, String? search})` with query parameters.
   - `app/lib/presentation/screens/home/widgets/task_card_tile.dart` - Renders `x/y completed the task` badge for shared tasks.
   - `app/lib/presentation/screens/home/widgets/task_details_modal.dart` - Displays all participants with individual `Completed ✓` and `Pending ⏳` status badges.

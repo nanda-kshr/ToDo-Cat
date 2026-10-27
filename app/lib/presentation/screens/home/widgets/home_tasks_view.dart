@@ -23,11 +23,14 @@ class HomeTasksView extends StatefulWidget {
   final List<Task> filteredTasks;
   final List<Task> todayTasks;
   final List<Task> earlierTasks;
+  final List<Task> deletedTasks;
   final bool isLoadingMore;
   final String? currentUserId;
   final ValueChanged<Task> onToggleTask;
   final ValueChanged<Task> onTaskTap;
   final ValueChanged<String> onDeleteTask;
+  final ValueChanged<Task> onRestoreTask;
+  final ValueChanged<String> onPermanentDeleteTask;
 
   const HomeTasksView({
     super.key,
@@ -48,11 +51,14 @@ class HomeTasksView extends StatefulWidget {
     required this.filteredTasks,
     required this.todayTasks,
     required this.earlierTasks,
+    required this.deletedTasks,
     required this.isLoadingMore,
     this.currentUserId,
     required this.onToggleTask,
     required this.onTaskTap,
     required this.onDeleteTask,
+    required this.onRestoreTask,
+    required this.onPermanentDeleteTask,
   });
 
   @override
@@ -61,6 +67,7 @@ class HomeTasksView extends StatefulWidget {
 
 class _HomeTasksViewState extends State<HomeTasksView> {
   bool _isEarlierExpanded = false;
+  bool _isDeletedExpanded = true;
 
   @override
   Widget build(BuildContext context) {
@@ -81,10 +88,13 @@ class _HomeTasksViewState extends State<HomeTasksView> {
     final filteredTasks = widget.filteredTasks;
     final todayTasks = widget.todayTasks;
     final earlierTasks = widget.earlierTasks;
+    final deletedTasks = widget.deletedTasks;
     final isLoadingMore = widget.isLoadingMore;
     final onToggleTask = widget.onToggleTask;
     final onTaskTap = widget.onTaskTap;
     final onDeleteTask = widget.onDeleteTask;
+    final onRestoreTask = widget.onRestoreTask;
+    final onPermanentDeleteTask = widget.onPermanentDeleteTask;
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final palette = AppColors.of(context);
@@ -132,7 +142,7 @@ class _HomeTasksViewState extends State<HomeTasksView> {
           ),
 
           // Task List or Empty State
-          if (filteredTasks.isEmpty)
+          if (filteredTasks.isEmpty && deletedTasks.isEmpty)
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               sliver: SliverToBoxAdapter(
@@ -225,7 +235,100 @@ class _HomeTasksViewState extends State<HomeTasksView> {
               ),
             ),
 
-            // 2. Completed Till Yesterday Section Header (Expandable Button)
+            // 2. Deleted Tasks Section (Placed below Today's Tasks)
+            if (deletedTasks.isNotEmpty) ...[
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                sliver: SliverToBoxAdapter(
+                  child: InkWell(
+                    onTap: () => setState(() => _isDeletedExpanded = !_isDeletedExpanded),
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: cardBg,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: cardBorder),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.delete_outline,
+                            size: 16,
+                            color: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Deleted',
+                            style: TextStyle(
+                              fontFamily: 'Sniglet',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: textSecondary,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 7,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? const Color(0xFF331818)
+                                  : const Color(0xFFFFEBEE),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              '${deletedTasks.length}',
+                              style: TextStyle(
+                                fontFamily: 'Sniglet',
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          AnimatedRotation(
+                            turns: _isDeletedExpanded ? 0.5 : 0.0,
+                            duration: const Duration(milliseconds: 200),
+                            child: Icon(
+                              Icons.keyboard_arrow_down,
+                              size: 20,
+                              color: textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              if (_isDeletedExpanded)
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList.builder(
+                    itemCount: deletedTasks.length,
+                    itemBuilder: (context, index) {
+                      final task = deletedTasks[index];
+                      return TaskCardTile(
+                        task: task,
+                        isDeleted: true,
+                        currentUserId: widget.currentUserId,
+                        onToggle: () {},
+                        onTap: () => onTaskTap(task),
+                        onDismissed: () => onPermanentDeleteTask(task.id),
+                        onRestore: () => onRestoreTask(task),
+                        onPermanentDelete: () => onPermanentDeleteTask(task.id),
+                      );
+                    },
+                  ),
+                ),
+            ],
+
+            // 3. Completed Till Yesterday Section Header (Expandable Button)
             if (earlierTasks.isNotEmpty) ...[
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
@@ -296,7 +399,7 @@ class _HomeTasksViewState extends State<HomeTasksView> {
                 ),
               ),
 
-              // 2. Completed Till Yesterday Tasks List (Visible when expanded)
+              // 3. Completed Till Yesterday Tasks List (Visible when expanded)
               if (_isEarlierExpanded)
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
