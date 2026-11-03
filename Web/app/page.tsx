@@ -3,11 +3,12 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import CatAnimation from "@/components/CatAnimation";
+import CatAnimation, { RunnerType } from "@/components/CatAnimation";
 import { CoffeeIcon } from "@/components/Icons";
 
 export default function Home() {
   // Demo interactive state
+  const [demoRunner, setDemoRunner] = useState<RunnerType>("cat");
   const [demoTasks, setDemoTasks] = useState([
     { id: 1, title: "Review quarterly sprint roadmap", completed: false, priority: "high" },
     { id: 2, title: "Deploy updated API endpoints", completed: false, priority: "medium" },
@@ -156,10 +157,12 @@ export default function Home() {
             {/* Runner Banner */}
             <div className="my-5 p-4 rounded-2xl bg-neutral-950 border border-neutral-800/80 flex items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
-                <CatAnimation speedPercent={demoSpeed} size={44} theme="card" />
+                <CatAnimation speedPercent={demoSpeed} size={44} theme="card" runner={demoRunner} />
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-white">Cat Status</span>
+                    <span className="text-xs font-semibold text-white">
+                      {demoRunner === "bunny" ? "Bunny" : "Cat"} Status
+                    </span>
                     <span
                       className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
                         demoSpeed === 0
@@ -174,18 +177,39 @@ export default function Home() {
                   </div>
                   <p className="text-xs text-neutral-400 mt-0.5">
                     {demoSpeed === 0
-                      ? "All tasks cleared. Cat is sleeping peacefully."
+                      ? `All tasks cleared. ${demoRunner === "bunny" ? "Bunny" : "Cat"} is sleeping peacefully.`
                       : demoSpeed >= 100
                       ? `${activeCount} pending tasks. Maximum speed zoomies!`
-                      : `${activeCount} pending tasks. Cat is running along.`}
+                      : `${activeCount} pending tasks. ${demoRunner === "bunny" ? "Bunny" : "Cat"} is running along.`}
                   </p>
                 </div>
               </div>
 
-              <div className="hidden sm:block text-right">
-                <span className="text-xs text-neutral-500">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center bg-neutral-900 border border-neutral-800 rounded-lg p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setDemoRunner("cat")}
+                    className={`px-2 py-0.5 text-xs font-medium rounded-md transition ${
+                      demoRunner === "cat" ? "bg-neutral-800 text-white shadow-sm" : "text-neutral-400 hover:text-neutral-200"
+                    }`}
+                  >
+                    Cat
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDemoRunner("bunny")}
+                    className={`px-2 py-0.5 text-xs font-medium rounded-md transition ${
+                      demoRunner === "bunny" ? "bg-neutral-800 text-white shadow-sm" : "text-neutral-400 hover:text-neutral-200"
+                    }`}
+                  >
+                    Bunny
+                  </button>
+                </div>
+
+                <div className="hidden sm:block text-right text-xs text-neutral-500 ml-2">
                   {demoTasks.length - activeCount} / {demoTasks.length} done
-                </span>
+                </div>
               </div>
             </div>
 

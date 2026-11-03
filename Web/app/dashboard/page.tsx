@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
-import CatAnimation from "@/components/CatAnimation";
+import CatAnimation, { RunnerType, getGlobalRunner, setGlobalRunner } from "@/components/CatAnimation";
 import FriendsView from "@/components/FriendsView";
 import { PawIcon } from "@/components/Icons";
 import {
@@ -117,6 +117,16 @@ function DashboardContent() {
   const undoToastTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [selectedRunner, setSelectedRunner] = useState<RunnerType>("cat");
+
+  useEffect(() => {
+    setSelectedRunner(getGlobalRunner());
+  }, []);
+
+  const handleRunnerChange = (newRunner: RunnerType) => {
+    setSelectedRunner(newRunner);
+    setGlobalRunner(newRunner);
+  };
 
   // Modal State (Create / Edit)
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -602,10 +612,12 @@ function DashboardContent() {
       return "Good afternoon! Ready for today?";
     }
 
+    const runnerName = selectedRunner === "bunny" ? "Bunny" : "Cat";
+
     // Evening: 5:00 PM - 9:59 PM
     if (hour >= 17 && hour < 22) {
       if (completedCount > 0 && activeTasksCount === 0) {
-        return `Good evening! You crushed ${completedCount} ${completedCount === 1 ? "task" : "tasks"} today! Cat is happy and asleep.`;
+        return `Good evening! You crushed ${completedCount} ${completedCount === 1 ? "task" : "tasks"} today! ${runnerName} is happy and asleep.`;
       }
       if (activeTasksCount > 0) {
         return `Good evening! ${activeTasksCount} ${activeTasksCount === 1 ? "task" : "tasks"} remaining today.`;
@@ -618,10 +630,10 @@ function DashboardContent() {
 
     // Night: 10:00 PM - 4:59 AM
     if (completedCount > 0) {
-      return `You crushed ${completedCount} ${completedCount === 1 ? "task" : "tasks"} today! Cat is asleep.`;
+      return `You crushed ${completedCount} ${completedCount === 1 ? "task" : "tasks"} today! ${runnerName} is asleep.`;
     }
-    return "Cat is asleep. Rest well for tomorrow.";
-  }, [activeTasksCount, completedCount]);
+    return `${runnerName} is asleep. Rest well for tomorrow.`;
+  }, [activeTasksCount, completedCount, selectedRunner]);
 
   if (loading) {
     return (
@@ -733,15 +745,15 @@ function DashboardContent() {
         </div>
       </header>
 
-      {/* Progress & Cat Speed Banner */}
+      {/* Progress & Companion Speed Banner */}
       <div className="bg-neutral-900/80 border border-neutral-800 rounded-2xl p-5 flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          <CatAnimation speedPercent={catSpeedPercent} size={48} theme="card" />
+          <CatAnimation speedPercent={catSpeedPercent} size={48} theme="card" runner={selectedRunner} />
 
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs uppercase tracking-wider font-semibold text-neutral-400">
-                Cat Speed & Activity
+                {selectedRunner === "bunny" ? "Bunny" : "Cat"} Speed & Activity
               </span>
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-200 border border-neutral-700">
                 {catSpeedPercent}% Speed
@@ -749,6 +761,34 @@ function DashboardContent() {
               <span className="text-xs text-neutral-500">
                 ({completedCount}/{tasks.length} completed)
               </span>
+
+              {/* Runner Selector */}
+              <div className="inline-flex items-center bg-neutral-950 border border-neutral-800 rounded-lg p-0.5 ml-1">
+                <button
+                  type="button"
+                  onClick={() => handleRunnerChange("cat")}
+                  className={`px-2 py-0.5 text-xs font-medium rounded-md transition ${
+                    selectedRunner === "cat"
+                      ? "bg-neutral-800 text-white shadow-sm"
+                      : "text-neutral-400 hover:text-neutral-200"
+                  }`}
+                  title="Switch to Cat"
+                >
+                  Cat
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRunnerChange("bunny")}
+                  className={`px-2 py-0.5 text-xs font-medium rounded-md transition ${
+                    selectedRunner === "bunny"
+                      ? "bg-neutral-800 text-white shadow-sm"
+                      : "text-neutral-400 hover:text-neutral-200"
+                  }`}
+                  title="Switch to Bunny"
+                >
+                  Bunny
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
