@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/runner.dart';
 
 class ThemeService {
   static final ThemeService instance = ThemeService._();
@@ -7,10 +8,12 @@ class ThemeService {
 
   static const String _themePrefKey = 'theme_mode';
   static const String _catColorPrefKey = 'cat_color_variant';
+  static const String _runnerPrefKey = 'selected_runner';
   static const String _v2InitializedKey = 'theme_defaults_v2_set';
 
   final ValueNotifier<ThemeMode> themeMode = ValueNotifier<ThemeMode>(ThemeMode.system);
   final ValueNotifier<String> catColorVariant = ValueNotifier<String>('auto'); // 'auto', 'white', 'black'
+  final ValueNotifier<RunnerType> selectedRunner = ValueNotifier<RunnerType>(RunnerType.cat);
 
   Future<void> init() async {
     try {
@@ -19,8 +22,10 @@ class ThemeService {
       if (!isV2Set) {
         themeMode.value = ThemeMode.system;
         catColorVariant.value = 'auto';
+        selectedRunner.value = RunnerType.cat;
         await prefs.setString(_themePrefKey, 'system');
         await prefs.setString(_catColorPrefKey, 'auto');
+        await prefs.setString(_runnerPrefKey, 'cat');
         await prefs.setBool(_v2InitializedKey, true);
         return;
       }
@@ -42,6 +47,9 @@ class ThemeService {
       } else {
         catColorVariant.value = 'auto';
       }
+
+      final savedRunner = prefs.getString(_runnerPrefKey);
+      selectedRunner.value = RunnerType.fromString(savedRunner);
     } catch (_) {}
   }
 
@@ -66,6 +74,14 @@ class ThemeService {
     } catch (_) {}
   }
 
+  Future<void> setSelectedRunner(RunnerType runner) async {
+    selectedRunner.value = runner;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_runnerPrefKey, runner.id);
+    } catch (_) {}
+  }
+
   bool isDarkMode(BuildContext context) {
     if (themeMode.value == ThemeMode.dark) return true;
     if (themeMode.value == ThemeMode.light) return false;
@@ -78,4 +94,6 @@ class ThemeService {
     if (catColorVariant.value == 'black') return false;
     return isDarkMode(context);
   }
+
+  bool isRunnerWhite(BuildContext context) => isCatWhite(context);
 }

@@ -13,6 +13,7 @@ import '../../services/floating_cat_service.dart';
 import '../../services/task_sync_service.dart';
 import '../../services/theme_service.dart';
 import '../../services/widget_service.dart';
+import '../../services/app_update_service.dart';
 import 'home/widgets/cat_trail_background.dart';
 import 'home/widgets/create_task_modal.dart';
 import 'home/widgets/friends_view.dart';
@@ -202,6 +203,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     AppToast.show(context, message);
   }
 
+  void _checkAppUpdate() {
+    if (!mounted) return;
+    AppUpdateService.instance.checkAndShowUpdate(context);
+  }
+
   @override
   void dispose() {
     for (final entry in _pendingDeletions.entries) {
@@ -229,6 +235,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _checkFloatingOverlayStatus();
       _checkPendingFriendRequests();
       _checkAndShowDailyBriefing();
+      _checkAppUpdate();
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
       for (final entry in _pendingDeletions.entries) {
         entry.value.cancel();
@@ -359,6 +366,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         FcmService().syncCurrentToken();
         _checkPendingFriendRequests();
         _checkAndShowDailyBriefing();
+        _checkAppUpdate();
         if (_currentTab == 2) {
           _loadAnalytics();
         }
@@ -735,12 +743,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final tasksJson = jsonEncode(todayTasks.map((t) => t.toJson()).toList());
     final speedMessage = counts.active == 0 ? 'All caught up' : '${counts.active} tasks pending';
 
+    final runner = ThemeService.instance.selectedRunner.value;
     final started = await FloatingCatService.start(
       speedPercent: counts.catSpeed,
       speedMessage: speedMessage,
       tasksJson: tasksJson,
       isCatWhite: isWhite,
       isDark: isDark,
+      runner: runner.id,
     );
 
     if (!started) {
@@ -750,7 +760,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     _syncWidget();
     if (mounted) {
-      AppToast.show(context, 'Floating cat active');
+      AppToast.show(context, 'Floating ${runner.displayName.toLowerCase()} active');
     }
     return true;
   }

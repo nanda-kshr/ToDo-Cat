@@ -14,6 +14,7 @@ class WidgetService {
     required String speedMessage,
     bool? isDark,
     bool? isCatWhite,
+    String? runner,
     List<Task>? tasks,
     String? tasksJson,
   }) async {
@@ -31,12 +32,16 @@ class WidgetService {
       if (isCatWhite != null) {
         saveFutures.add(HomeWidget.saveWidgetData<bool>('is_cat_white', isCatWhite));
       }
+      if (runner != null) {
+        saveFutures.add(HomeWidget.saveWidgetData<String>('selected_runner', runner));
+      }
 
       await Future.wait(saveFutures);
 
       final prefs = await SharedPreferences.getInstance();
       if (isDark != null) await prefs.setBool('is_dark', isDark);
       if (isCatWhite != null) await prefs.setBool('is_cat_white', isCatWhite);
+      if (runner != null) await prefs.setString('selected_runner', runner);
 
       final serialized = tasksJson ?? (tasks != null ? jsonEncode(tasks.map((t) => t.toJson()).toList()) : null);
       if (serialized != null) {

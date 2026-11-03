@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../models/runner.dart';
 import '../../services/theme_service.dart';
 
 class CatAnimation extends StatefulWidget {
@@ -7,6 +8,7 @@ class CatAnimation extends StatefulWidget {
   final bool idleRunWhenSleeping;
   final bool? isWhite;
   final bool showContainer;
+  final RunnerType? runner;
 
   const CatAnimation({
     super.key,
@@ -15,6 +17,7 @@ class CatAnimation extends StatefulWidget {
     this.idleRunWhenSleeping = false,
     this.isWhite,
     this.showContainer = false,
+    this.runner,
   });
 
   @override
@@ -90,70 +93,71 @@ class _CatAnimationState extends State<CatAnimation>
     final pad = (widget.size * 0.08).clamp(2.0, 5.0);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final useWhite = widget.isWhite ?? ThemeService.instance.isCatWhite(context);
-    final assetDir = useWhite ? 'assets/runners/cat_white' : 'assets/runners/cat';
-    final pixelRatio = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
-    final targetCachePx = (widget.size * pixelRatio).round().clamp(32, 256);
+    return ValueListenableBuilder<RunnerType>(
+      valueListenable: ThemeService.instance.selectedRunner,
+      builder: (context, currentRunner, _) {
+        final activeRunner = widget.runner ?? currentRunner;
+        final useWhite = widget.isWhite ?? ThemeService.instance.isRunnerWhite(context);
+        final pixelRatio = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 1.0;
+        final targetCachePx = (widget.size * pixelRatio).round().clamp(32, 256);
 
-    final catImage = Center(
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) {
-          if (isSleeping) {
-            final frame = (_controller.value * 6).floor().clamp(0, 5);
-            return Image.asset(
-              '$assetDir/cat_sleep_$frame.png',
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.none,
-              gaplessPlayback: true,
-              cacheWidth: targetCachePx,
-              cacheHeight: targetCachePx,
-            );
-          } else {
-            final frame = (_controller.value * 7).floor().clamp(0, 6);
-            return Image.asset(
-              '$assetDir/cat_$frame.png',
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.none,
-              gaplessPlayback: true,
-              cacheWidth: targetCachePx,
-              cacheHeight: targetCachePx,
-            );
-          }
-        },
-      ),
-    );
-
-    if (!widget.showContainer) {
-      return SizedBox(
-        width: widget.size,
-        height: widget.size,
-        child: catImage,
-      );
-    }
-
-    final boxColor = isDark ? const Color(0xFF262626) : Colors.white;
-
-    return Container(
-      width: widget.size,
-      height: widget.size,
-      decoration: BoxDecoration(
-        color: boxColor,
-        borderRadius: BorderRadius.circular(radius),
-        border: Border.all(
-          color: isDark ? const Color(0xFF383838) : const Color(0xFFE5E7EB),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
+        final runnerImage = Center(
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, _) {
+              final totalFrames = isSleeping
+                  ? activeRunner.sleepFrameCount
+                  : activeRunner.runFrameCount;
+              final frame = (_controller.value * totalFrames).floor().clamp(0, totalFrames - 1);
+              final assetPath = activeRunner.assetPath(
+                isWhite: useWhite,
+                isSleeping: isSleeping,
+                frame: frame,
+              );
+              return Image.asset(
+                assetPath,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.none,
+                gaplessPlayback: true,
+                cacheWidth: targetCachePx,
+                cacheHeight: targetCachePx,
+              );
+            },
           ),
-        ],
-      ),
-      padding: EdgeInsets.all(pad),
-      child: catImage,
+        );
+
+        if (!widget.showContainer) {
+          return SizedBox(
+            width: widget.size,
+            height: widget.size,
+            child: runnerImage,
+          );
+        }
+
+        final boxColor = isDark ? const Color(0xFF262626) : Colors.white;
+
+        return Container(
+          width: widget.size,
+          height: widget.size,
+          decoration: BoxDecoration(
+            color: boxColor,
+            borderRadius: BorderRadius.circular(radius),
+            border: Border.all(
+              color: isDark ? const Color(0xFF383838) : const Color(0xFFE5E7EB),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.08),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+            ],
+          ),
+          padding: EdgeInsets.all(pad),
+          child: runnerImage,
+        );
+      },
     );
   }
 }

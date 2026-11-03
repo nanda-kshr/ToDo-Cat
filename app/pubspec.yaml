@@ -2,7 +2,7 @@ name: todocat
 description: "TodoCat - Visual task management app developed by Nandakishore P."
 publish_to: 'none'
 
-version: 1.0.1+4
+version: 1.0.1+5
 
 environment:
   sdk: ^3.10.8
@@ -19,6 +19,7 @@ dependencies:
   url_launcher: ^6.3.2
   firebase_core: ^5.1.0
   firebase_messaging: ^17.0.1
+  package_info_plus: ^10.2.2
 
 dev_dependencies:
   flutter_test:
@@ -32,8 +33,14 @@ flutter:
   assets:
     - assets/logo.svg
     - assets/grass.svg
-    - assets/runners/cat/
-    - assets/runners/cat_white/
+    - assets/runners/cat/run/
+    - assets/runners/cat/sleep/
+    - assets/runners/cat_white/run/
+    - assets/runners/cat_white/sleep/
+    - assets/runners/bunny/run/
+    - assets/runners/bunny/sleep/
+    - assets/runners/bunny_white/run/
+    - assets/runners/bunny_white/sleep/
     - assets/svg/
 
   fonts:

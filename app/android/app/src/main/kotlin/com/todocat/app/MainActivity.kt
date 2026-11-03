@@ -108,6 +108,7 @@ class MainActivity : FlutterActivity() {
             putExtra(FloatingCatService.EXTRA_SPEED_MESSAGE, call.argument<String>("speedMessage") ?: "TodoCat is running")
             call.argument<Boolean>("isCatWhite")?.let { putExtra(FloatingCatService.EXTRA_IS_WHITE, it) }
             call.argument<Boolean>("isDark")?.let { putExtra(FloatingCatService.EXTRA_IS_DARK, it) }
+            call.argument<String>("runner")?.let { putExtra(FloatingCatService.EXTRA_RUNNER, it) }
             call.argument<String>("tasksJson")?.let { putExtra(FloatingCatService.EXTRA_TASKS_JSON, it) }
         }
     }

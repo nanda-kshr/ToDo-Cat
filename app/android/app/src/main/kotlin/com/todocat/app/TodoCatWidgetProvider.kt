@@ -24,10 +24,11 @@ class TodoCatWidgetProvider : HomeWidgetProvider() {
         val speedPercent = widgetData.getInt("speed_percent", homePrefs.getInt("speed_percent", 0))
         val isDark = widgetData.getBoolean("is_dark", homePrefs.getBoolean("is_dark", false))
         val isCatWhite = widgetData.getBoolean("is_cat_white", homePrefs.getBoolean("is_cat_white", false))
+        val runner = widgetData.getString("selected_runner", homePrefs.getString("selected_runner", "cat")) ?: "cat"
         val completedCount = (totalCount - pendingCount).coerceAtLeast(0)
 
         appWidgetIds.forEach { widgetId ->
-            updateCatWidget(context, appWidgetManager, widgetId, pendingCount, completedCount, speedPercent, totalCount, isDark, isCatWhite)
+            updateCatWidget(context, appWidgetManager, widgetId, pendingCount, completedCount, speedPercent, totalCount, isDark, isCatWhite, runner)
         }
     }
 
@@ -44,9 +45,10 @@ class TodoCatWidgetProvider : HomeWidgetProvider() {
         val speedPercent = homePrefs.getInt("speed_percent", 0)
         val isDark = homePrefs.getBoolean("is_dark", false)
         val isCatWhite = homePrefs.getBoolean("is_cat_white", false)
+        val runner = homePrefs.getString("selected_runner", "cat") ?: "cat"
         val completedCount = (totalCount - pendingCount).coerceAtLeast(0)
 
-        updateCatWidget(context, appWidgetManager, appWidgetId, pendingCount, completedCount, speedPercent, totalCount, isDark, isCatWhite)
+        updateCatWidget(context, appWidgetManager, appWidgetId, pendingCount, completedCount, speedPercent, totalCount, isDark, isCatWhite, runner)
     }
 
     companion object {
@@ -59,7 +61,8 @@ class TodoCatWidgetProvider : HomeWidgetProvider() {
             speedPercent: Int,
             hasProgress: Boolean,
             isDark: Boolean,
-            isCatWhite: Boolean
+            isCatWhite: Boolean,
+            runner: String = "cat"
         ): RemoteViews {
             val openAppPendingIntent = HomeWidgetLaunchIntent.getActivity(context, MainActivity::class.java)
 
@@ -84,35 +87,68 @@ class TodoCatWidgetProvider : HomeWidgetProvider() {
                     setTextColor(R.id.widget_cat_ratio_label, Color.parseColor("#8A7867"))
                 }
 
-                // Cat animation frames: White vs Black
+                // Companion animation frames: White vs Black and Cat vs Bunny
+                val isBunny = runner == "bunny"
                 if (isCatWhite) {
-                    setImageViewResource(R.id.widget_cat_frame_0, R.drawable.cat_white_0)
-                    setImageViewResource(R.id.widget_cat_frame_1, R.drawable.cat_white_1)
-                    setImageViewResource(R.id.widget_cat_frame_2, R.drawable.cat_white_2)
-                    setImageViewResource(R.id.widget_cat_frame_3, R.drawable.cat_white_3)
-                    setImageViewResource(R.id.widget_cat_frame_4, R.drawable.cat_white_4)
-                    setImageViewResource(R.id.widget_cat_frame_5, R.drawable.cat_white_5)
-                    setImageViewResource(R.id.widget_cat_frame_6, R.drawable.cat_white_6)
-                    setImageViewResource(R.id.widget_cat_sleep_0, R.drawable.cat_white_sleep_0)
-                    setImageViewResource(R.id.widget_cat_sleep_1, R.drawable.cat_white_sleep_1)
-                    setImageViewResource(R.id.widget_cat_sleep_2, R.drawable.cat_white_sleep_2)
-                    setImageViewResource(R.id.widget_cat_sleep_3, R.drawable.cat_white_sleep_3)
-                    setImageViewResource(R.id.widget_cat_sleep_4, R.drawable.cat_white_sleep_4)
-                    setImageViewResource(R.id.widget_cat_sleep_5, R.drawable.cat_white_sleep_5)
+                    if (isBunny) {
+                        setImageViewResource(R.id.widget_cat_frame_0, R.drawable.bunny_white_0)
+                        setImageViewResource(R.id.widget_cat_frame_1, R.drawable.bunny_white_1)
+                        setImageViewResource(R.id.widget_cat_frame_2, R.drawable.bunny_white_2)
+                        setImageViewResource(R.id.widget_cat_frame_3, R.drawable.bunny_white_3)
+                        setImageViewResource(R.id.widget_cat_frame_4, R.drawable.bunny_white_4)
+                        setImageViewResource(R.id.widget_cat_frame_5, R.drawable.bunny_white_1)
+                        setImageViewResource(R.id.widget_cat_frame_6, R.drawable.bunny_white_3)
+                        setImageViewResource(R.id.widget_cat_sleep_0, R.drawable.bunny_white_sleep_0)
+                        setImageViewResource(R.id.widget_cat_sleep_1, R.drawable.bunny_white_sleep_1)
+                        setImageViewResource(R.id.widget_cat_sleep_2, R.drawable.bunny_white_sleep_2)
+                        setImageViewResource(R.id.widget_cat_sleep_3, R.drawable.bunny_white_sleep_3)
+                        setImageViewResource(R.id.widget_cat_sleep_4, R.drawable.bunny_white_sleep_4)
+                        setImageViewResource(R.id.widget_cat_sleep_5, R.drawable.bunny_white_sleep_2)
+                    } else {
+                        setImageViewResource(R.id.widget_cat_frame_0, R.drawable.cat_white_0)
+                        setImageViewResource(R.id.widget_cat_frame_1, R.drawable.cat_white_1)
+                        setImageViewResource(R.id.widget_cat_frame_2, R.drawable.cat_white_2)
+                        setImageViewResource(R.id.widget_cat_frame_3, R.drawable.cat_white_3)
+                        setImageViewResource(R.id.widget_cat_frame_4, R.drawable.cat_white_4)
+                        setImageViewResource(R.id.widget_cat_frame_5, R.drawable.cat_white_5)
+                        setImageViewResource(R.id.widget_cat_frame_6, R.drawable.cat_white_6)
+                        setImageViewResource(R.id.widget_cat_sleep_0, R.drawable.cat_white_sleep_0)
+                        setImageViewResource(R.id.widget_cat_sleep_1, R.drawable.cat_white_sleep_1)
+                        setImageViewResource(R.id.widget_cat_sleep_2, R.drawable.cat_white_sleep_2)
+                        setImageViewResource(R.id.widget_cat_sleep_3, R.drawable.cat_white_sleep_3)
+                        setImageViewResource(R.id.widget_cat_sleep_4, R.drawable.cat_white_sleep_4)
+                        setImageViewResource(R.id.widget_cat_sleep_5, R.drawable.cat_white_sleep_5)
+                    }
                 } else {
-                    setImageViewResource(R.id.widget_cat_frame_0, R.drawable.cat_0)
-                    setImageViewResource(R.id.widget_cat_frame_1, R.drawable.cat_1)
-                    setImageViewResource(R.id.widget_cat_frame_2, R.drawable.cat_2)
-                    setImageViewResource(R.id.widget_cat_frame_3, R.drawable.cat_3)
-                    setImageViewResource(R.id.widget_cat_frame_4, R.drawable.cat_4)
-                    setImageViewResource(R.id.widget_cat_frame_5, R.drawable.cat_5)
-                    setImageViewResource(R.id.widget_cat_frame_6, R.drawable.cat_6)
-                    setImageViewResource(R.id.widget_cat_sleep_0, R.drawable.cat_sleep_0)
-                    setImageViewResource(R.id.widget_cat_sleep_1, R.drawable.cat_sleep_1)
-                    setImageViewResource(R.id.widget_cat_sleep_2, R.drawable.cat_sleep_2)
-                    setImageViewResource(R.id.widget_cat_sleep_3, R.drawable.cat_sleep_3)
-                    setImageViewResource(R.id.widget_cat_sleep_4, R.drawable.cat_sleep_4)
-                    setImageViewResource(R.id.widget_cat_sleep_5, R.drawable.cat_sleep_5)
+                    if (isBunny) {
+                        setImageViewResource(R.id.widget_cat_frame_0, R.drawable.bunny_0)
+                        setImageViewResource(R.id.widget_cat_frame_1, R.drawable.bunny_1)
+                        setImageViewResource(R.id.widget_cat_frame_2, R.drawable.bunny_2)
+                        setImageViewResource(R.id.widget_cat_frame_3, R.drawable.bunny_3)
+                        setImageViewResource(R.id.widget_cat_frame_4, R.drawable.bunny_4)
+                        setImageViewResource(R.id.widget_cat_frame_5, R.drawable.bunny_1)
+                        setImageViewResource(R.id.widget_cat_frame_6, R.drawable.bunny_3)
+                        setImageViewResource(R.id.widget_cat_sleep_0, R.drawable.bunny_sleep_0)
+                        setImageViewResource(R.id.widget_cat_sleep_1, R.drawable.bunny_sleep_1)
+                        setImageViewResource(R.id.widget_cat_sleep_2, R.drawable.bunny_sleep_2)
+                        setImageViewResource(R.id.widget_cat_sleep_3, R.drawable.bunny_sleep_3)
+                        setImageViewResource(R.id.widget_cat_sleep_4, R.drawable.bunny_sleep_4)
+                        setImageViewResource(R.id.widget_cat_sleep_5, R.drawable.bunny_sleep_2)
+                    } else {
+                        setImageViewResource(R.id.widget_cat_frame_0, R.drawable.cat_0)
+                        setImageViewResource(R.id.widget_cat_frame_1, R.drawable.cat_1)
+                        setImageViewResource(R.id.widget_cat_frame_2, R.drawable.cat_2)
+                        setImageViewResource(R.id.widget_cat_frame_3, R.drawable.cat_3)
+                        setImageViewResource(R.id.widget_cat_frame_4, R.drawable.cat_4)
+                        setImageViewResource(R.id.widget_cat_frame_5, R.drawable.cat_5)
+                        setImageViewResource(R.id.widget_cat_frame_6, R.drawable.cat_6)
+                        setImageViewResource(R.id.widget_cat_sleep_0, R.drawable.cat_sleep_0)
+                        setImageViewResource(R.id.widget_cat_sleep_1, R.drawable.cat_sleep_1)
+                        setImageViewResource(R.id.widget_cat_sleep_2, R.drawable.cat_sleep_2)
+                        setImageViewResource(R.id.widget_cat_sleep_3, R.drawable.cat_sleep_3)
+                        setImageViewResource(R.id.widget_cat_sleep_4, R.drawable.cat_sleep_4)
+                        setImageViewResource(R.id.widget_cat_sleep_5, R.drawable.cat_sleep_5)
+                    }
                 }
 
                 if (hasProgress) {
@@ -144,7 +180,8 @@ class TodoCatWidgetProvider : HomeWidgetProvider() {
             speedPercent: Int,
             totalCount: Int = pendingCount + completedCount,
             isDark: Boolean = false,
-            isCatWhite: Boolean = false
+            isCatWhite: Boolean = false,
+            runner: String = "cat"
         ) {
             val options = appWidgetManager.getAppWidgetOptions(widgetId)
             val minWidth = options?.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0) ?: 0
@@ -157,7 +194,7 @@ class TodoCatWidgetProvider : HomeWidgetProvider() {
                 else -> R.layout.todocat_cat_widget
             }
 
-            val views = buildWidgetViews(context, layoutId, pendingCount, completedCount, totalCount, speedPercent, true, isDark, isCatWhite)
+            val views = buildWidgetViews(context, layoutId, pendingCount, completedCount, totalCount, speedPercent, true, isDark, isCatWhite, runner)
             appWidgetManager.updateAppWidget(widgetId, views)
         }
     }

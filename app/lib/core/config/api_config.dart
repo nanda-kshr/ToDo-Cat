@@ -36,4 +36,7 @@ class ApiConfig {
   static const String friends = '$baseUrl/api/friends';
   static const String friendsSearch = '$baseUrl/api/friends/search';
   static String friendById(String id) => '$baseUrl/api/friends/$id';
+
+  // App version & update endpoint
+  static const String appVersion = '$baseUrl/api/app-version';
 }

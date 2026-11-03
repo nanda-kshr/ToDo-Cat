@@ -54,6 +54,7 @@ class FloatingCatService : Service() {
         const val EXTRA_TASKS_JSON = "tasks_json"
         const val EXTRA_IS_WHITE = "is_white"
         const val EXTRA_IS_DARK = "is_dark"
+        const val EXTRA_RUNNER = "runner"
 
         const val NOTIFICATION_ID = 8821
         const val CHANNEL_ID = "todocat_floating_cat_channel"
@@ -90,6 +91,7 @@ class FloatingCatService : Service() {
     private var tasksJsonString: String? = null
     private var isExpanded = false
     private var isCatWhite = false
+    private var runner = "cat"
     private var collapsedX = 0
     private var collapsedY = 0
 
@@ -121,6 +123,24 @@ class FloatingCatService : Service() {
         R.drawable.cat_white_sleep_3, R.drawable.cat_white_sleep_4, R.drawable.cat_white_sleep_5
     )
 
+    private val blackBunnyFrames = intArrayOf(
+        R.drawable.bunny_0, R.drawable.bunny_1, R.drawable.bunny_2, R.drawable.bunny_3, R.drawable.bunny_4
+    )
+
+    private val whiteBunnyFrames = intArrayOf(
+        R.drawable.bunny_white_0, R.drawable.bunny_white_1, R.drawable.bunny_white_2, R.drawable.bunny_white_3, R.drawable.bunny_white_4
+    )
+
+    private val blackBunnySleepFrames = intArrayOf(
+        R.drawable.bunny_sleep_0, R.drawable.bunny_sleep_1, R.drawable.bunny_sleep_2,
+        R.drawable.bunny_sleep_3, R.drawable.bunny_sleep_4
+    )
+
+    private val whiteBunnySleepFrames = intArrayOf(
+        R.drawable.bunny_white_sleep_0, R.drawable.bunny_white_sleep_1, R.drawable.bunny_white_sleep_2,
+        R.drawable.bunny_white_sleep_3, R.drawable.bunny_white_sleep_4
+    )
+
     private fun loadDrawables(frames: IntArray): Array<Drawable> {
         val list = ArrayList<Drawable>(frames.size)
         for (id in frames) {
@@ -134,10 +154,33 @@ class FloatingCatService : Service() {
     private val blackCatSleepDrawables: Array<Drawable> by lazy { loadDrawables(blackCatSleepFrames) }
     private val whiteCatSleepDrawables: Array<Drawable> by lazy { loadDrawables(whiteCatSleepFrames) }
 
+    private val blackBunnyDrawables: Array<Drawable> by lazy { loadDrawables(blackBunnyFrames) }
+    private val whiteBunnyDrawables: Array<Drawable> by lazy { loadDrawables(whiteBunnyFrames) }
+    private val blackBunnySleepDrawables: Array<Drawable> by lazy { loadDrawables(blackBunnySleepFrames) }
+    private val whiteBunnySleepDrawables: Array<Drawable> by lazy { loadDrawables(whiteBunnySleepFrames) }
+
+    private fun getActiveRunDrawables(): Array<Drawable> {
+        val isBunny = runner == "bunny"
+        return if (isCatWhite) {
+            if (isBunny) whiteBunnyDrawables else whiteCatDrawables
+        } else {
+            if (isBunny) blackBunnyDrawables else blackCatDrawables
+        }
+    }
+
+    private fun getActiveSleepDrawables(): Array<Drawable> {
+        val isBunny = runner == "bunny"
+        return if (isCatWhite) {
+            if (isBunny) whiteBunnySleepDrawables else whiteCatSleepDrawables
+        } else {
+            if (isBunny) blackBunnySleepDrawables else blackCatSleepDrawables
+        }
+    }
+
     private val frameRunnable = object : Runnable {
         override fun run() {
             if (speedPercent <= 0) {
-                val sleepDrawables = if (isCatWhite) whiteCatSleepDrawables else blackCatSleepDrawables
+                val sleepDrawables = getActiveSleepDrawables()
                 if (sleepDrawables.isNotEmpty()) {
                     val drawable = sleepDrawables[currentFrameIndex % sleepDrawables.size]
                     imageView?.setImageDrawable(drawable)
@@ -150,7 +193,7 @@ class FloatingCatService : Service() {
                 return
             }
 
-            val frames = if (isCatWhite) whiteCatDrawables else blackCatDrawables
+            val frames = getActiveRunDrawables()
             if (frames.isNotEmpty()) {
                 val drawable = frames[currentFrameIndex % frames.size]
                 imageView?.setImageDrawable(drawable)
@@ -221,6 +264,23 @@ class FloatingCatService : Service() {
         } else {
             checkIsDarkMode()
         }
+        val oldRunner = runner
+        runner = if (intent?.hasExtra(EXTRA_RUNNER) == true) {
+            intent.getStringExtra(EXTRA_RUNNER) ?: checkRunnerPreference()
+        } else {
+            checkRunnerPreference()
+        }
+        if (runner != oldRunner) {
+            currentFrameIndex = 0
+            val drawables = if (speedPercent <= 0) getActiveSleepDrawables() else getActiveRunDrawables()
+            if (drawables.isNotEmpty()) {
+                val d = drawables[0]
+                imageView?.setImageDrawable(d)
+                if (isExpanded) {
+                    headerCatView?.setImageDrawable(d)
+                }
+            }
+        }
         val newTasks = intent?.getStringExtra(EXTRA_TASKS_JSON)
         if (!newTasks.isNullOrEmpty()) {
             tasksJsonString = newTasks
@@ -264,6 +324,16 @@ class FloatingCatService : Service() {
         } catch (e: Exception) {
             TaskUtils.logError("FloatingCatService", "checkCatWhitePreference failed", e)
             false
+        }
+    }
+
+    private fun checkRunnerPreference(): String {
+        return try {
+            val prefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+            prefs.getString("flutter.selected_runner", "cat") ?: "cat"
+        } catch (e: Exception) {
+            TaskUtils.logError("FloatingCatService", "checkRunnerPreference failed", e)
+            "cat"
         }
     }
 
@@ -388,13 +458,18 @@ class FloatingCatService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notifIcon = if (isCatWhite) R.drawable.cat_white_0 else R.drawable.cat_0
+        val notifIcon = if (runner == "bunny") {
+            if (isCatWhite) R.drawable.bunny_white_0 else R.drawable.bunny_0
+        } else {
+            if (isCatWhite) R.drawable.cat_white_0 else R.drawable.cat_0
+        }
+        val closeLabel = if (runner == "bunny") "Close Bunny" else "Close Cat"
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("TodoCat Floating Companion")
             .setContentText(speedMessage)
             .setSmallIcon(notifIcon)
             .setContentIntent(openAppPendingIntent)
-            .addAction(0, "Close Cat", stopPendingIntent)
+            .addAction(0, closeLabel, stopPendingIntent)
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
@@ -491,13 +566,11 @@ class FloatingCatService : Service() {
             background = null
             elevation = 0f
         }
-        val initialCatRes = if (speedPercent <= 0) {
-            (if (isCatWhite) whiteCatSleepFrames else blackCatSleepFrames)[0]
-        } else {
-            (if (isCatWhite) whiteCatFrames else blackCatFrames)[0]
-        }
+        val initialDrawables = if (speedPercent <= 0) getActiveSleepDrawables() else getActiveRunDrawables()
         val iv = ImageView(this).apply {
-            setImageResource(initialCatRes)
+            if (initialDrawables.isNotEmpty()) {
+                setImageDrawable(initialDrawables[0])
+            }
             background = null
         }
         imageView = iv
@@ -659,10 +732,12 @@ class FloatingCatService : Service() {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
 
-                val initialHeaderRes = if (isCatWhite) R.drawable.cat_white_0 else R.drawable.cat_0
+                val initialHeaderDrawables = if (speedPercent <= 0) getActiveSleepDrawables() else getActiveRunDrawables()
                 val catIv = ImageView(context).apply {
                     scaleType = ImageView.ScaleType.FIT_CENTER
-                    setImageResource(initialHeaderRes)
+                    if (initialHeaderDrawables.isNotEmpty()) {
+                        setImageDrawable(initialHeaderDrawables[0])
+                    }
                 }
                 headerCatView = catIv
                 addView(catIv, LinearLayout.LayoutParams((32 * density).toInt(), (32 * density).toInt()))

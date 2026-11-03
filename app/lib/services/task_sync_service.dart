@@ -155,6 +155,7 @@ class TaskSyncService {
     final tasksJson = jsonEncode(tasks.map((t) => t.toJson()).toList());
     final isWhite = ThemeService.instance.isCatWhite(context);
     final isDark = ThemeService.instance.isDarkMode(context);
+    final runner = ThemeService.instance.selectedRunner.value.id;
     final speedMessage = activeCount == 0 ? 'All caught up' : '$activeCount tasks pending';
 
     WidgetService.updateWidget(
@@ -164,6 +165,7 @@ class TaskSyncService {
       speedMessage: speedMessage,
       isDark: isDark,
       isCatWhite: isWhite,
+      runner: runner,
       tasksJson: tasksJson,
     );
 
@@ -176,6 +178,7 @@ class TaskSyncService {
         tasksJson: floatingTasksJson,
         isCatWhite: isWhite,
         isDark: isDark,
+        runner: runner,
       );
     }
   }

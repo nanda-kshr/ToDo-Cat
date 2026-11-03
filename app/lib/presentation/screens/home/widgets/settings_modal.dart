@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../models/user.dart';
+import '../../../../models/runner.dart';
 import '../../../../services/theme_service.dart';
 import '../../about_screen.dart';
 import '../../legal_screen.dart';
@@ -58,6 +59,47 @@ class _SettingsModalSheet extends StatefulWidget {
 class _SettingsModalSheetState extends State<_SettingsModalSheet> {
   late bool _localFloatingRunning;
   bool _isToggling = false;
+  bool _isClosing = false;
+  double _overscrollAccumulator = 0.0;
+
+  void _triggerClose() {
+    if (_isClosing) return;
+    _isClosing = true;
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
+  }
+
+  bool _onScrollNotification(ScrollNotification notification) {
+    if (_isClosing) return false;
+
+    if (notification is ScrollStartNotification) {
+      if (notification.dragDetails != null) {
+        _overscrollAccumulator = 0.0;
+      }
+    } else if (notification is OverscrollNotification) {
+      if (notification.dragDetails != null && notification.overscroll < 0) {
+        _overscrollAccumulator += notification.overscroll.abs();
+        if (_overscrollAccumulator > 40) {
+          _triggerClose();
+        }
+      }
+    } else if (notification is ScrollUpdateNotification) {
+      if (notification.dragDetails != null && notification.metrics.pixels < 0) {
+        final pullDistance = notification.metrics.pixels.abs();
+        _overscrollAccumulator = pullDistance;
+        if (pullDistance > 40) {
+          _triggerClose();
+        }
+      }
+    } else if (notification is ScrollEndNotification) {
+      if (_overscrollAccumulator > 25) {
+        _triggerClose();
+      }
+      _overscrollAccumulator = 0.0;
+    }
+    return false;
+  }
 
   @override
   void initState() {
@@ -73,7 +115,10 @@ class _SettingsModalSheetState extends State<_SettingsModalSheet> {
         return ValueListenableBuilder<String>(
           valueListenable: ThemeService.instance.catColorVariant,
           builder: (context, currentCatVariant, _) {
-            final isDark = ThemeService.instance.isDarkMode(context);
+            return ValueListenableBuilder<RunnerType>(
+              valueListenable: ThemeService.instance.selectedRunner,
+              builder: (context, currentRunner, _) {
+                final isDark = ThemeService.instance.isDarkMode(context);
             final palette = isDark ? AppColors.dark : AppColors.light;
             final dialogBg = palette.surfaceElevated;
             final textPrimary = palette.textPrimary;
@@ -90,24 +135,38 @@ class _SettingsModalSheetState extends State<_SettingsModalSheet> {
               ),
               child: SafeArea(
                 top: false,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.only(left: 22, right: 22, top: 8, bottom: 28),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Drag Handle
-                      Center(
-                        child: Container(
-                          width: 38,
-                          height: 4,
-                          margin: const EdgeInsets.only(bottom: 12),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF383838) : const Color(0xFFD4C8B8),
-                            borderRadius: BorderRadius.circular(2),
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: _onScrollNotification,
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                    padding: const EdgeInsets.only(left: 22, right: 22, top: 8, bottom: 28),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Drag Handle
+                        Center(
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onVerticalDragUpdate: (details) {
+                              if ((details.primaryDelta ?? 0) > 4) {
+                                _triggerClose();
+                              }
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 24),
+                              child: Container(
+                                width: 38,
+                                height: 4,
+                                margin: const EdgeInsets.only(bottom: 6),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF383838) : const Color(0xFFD4C8B8),
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
 
                       // Header: Title + Circular Close Button
                       Row(
@@ -226,9 +285,67 @@ class _SettingsModalSheetState extends State<_SettingsModalSheet> {
                       ),
                       const SizedBox(height: 22),
 
-                      // Section 2: Cat Color
+                      // Section 2: Runner Companion
                       Text(
-                        'Cat Color',
+                        'Runner Companion',
+                        style: TextStyle(
+                          fontFamily: 'Sniglet',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          _buildSettingOptionCard(
+                            label: 'Cat',
+                            iconWidget: Image.asset(
+                              RunnerType.cat.previewAssetPath(isWhite: isDark),
+                              width: 32,
+                              height: 28,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.pets, size: 24),
+                            ),
+                            isSelected: currentRunner == RunnerType.cat,
+                            onTap: () async {
+                              await ThemeService.instance.setSelectedRunner(RunnerType.cat);
+                              widget.onThemeChanged();
+                            },
+                            cardBg: cardBg,
+                            cardBorder: cardBorder,
+                            activeBorder: activeBorder,
+                            textPrimary: textPrimary,
+                            textSecondary: textSecondary,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildSettingOptionCard(
+                            label: 'Bunny',
+                            iconWidget: Image.asset(
+                              RunnerType.bunny.previewAssetPath(isWhite: isDark),
+                              width: 32,
+                              height: 28,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.pets, size: 24),
+                            ),
+                            isSelected: currentRunner == RunnerType.bunny,
+                            onTap: () async {
+                              await ThemeService.instance.setSelectedRunner(RunnerType.bunny);
+                              widget.onThemeChanged();
+                            },
+                            cardBg: cardBg,
+                            cardBorder: cardBorder,
+                            activeBorder: activeBorder,
+                            textPrimary: textPrimary,
+                            textSecondary: textSecondary,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 22),
+
+                      // Section 3: Companion Color
+                      Text(
+                        'Companion Color',
                         style: TextStyle(
                           fontFamily: 'Sniglet',
                           fontSize: 15,
@@ -243,9 +360,7 @@ class _SettingsModalSheetState extends State<_SettingsModalSheet> {
                           _buildSettingOptionCard(
                             label: 'Auto',
                             iconWidget: Image.asset(
-                              isDark
-                                  ? 'assets/runners/cat_white/cat_0.png'
-                                  : 'assets/runners/cat/cat_0.png',
+                              currentRunner.previewAssetPath(isWhite: isDark),
                               width: 32,
                               height: 28,
                               fit: BoxFit.contain,
@@ -267,7 +382,7 @@ class _SettingsModalSheetState extends State<_SettingsModalSheet> {
                           _buildSettingOptionCard(
                             label: 'Black',
                             iconWidget: Image.asset(
-                              'assets/runners/cat/cat_0.png',
+                              currentRunner.previewAssetPath(isWhite: false),
                               width: 32,
                               height: 28,
                               fit: BoxFit.contain,
@@ -289,7 +404,7 @@ class _SettingsModalSheetState extends State<_SettingsModalSheet> {
                           _buildSettingOptionCard(
                             label: 'White',
                             iconWidget: Image.asset(
-                              'assets/runners/cat_white/cat_0.png',
+                              currentRunner.previewAssetPath(isWhite: true),
                               width: 32,
                               height: 28,
                               fit: BoxFit.contain,
@@ -627,6 +742,9 @@ class _SettingsModalSheetState extends State<_SettingsModalSheet> {
                   ),
                 ),
               ),
+            ),
+          );
+              },
             );
           },
         );

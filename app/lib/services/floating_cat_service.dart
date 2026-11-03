@@ -49,6 +49,7 @@ class FloatingCatService {
     String? tasksJson,
     bool? isCatWhite,
     bool? isDark,
+    String? runner,
   }) async {
     if (!isSupported) return false;
     try {
@@ -58,6 +59,7 @@ class FloatingCatService {
         'tasksJson': ?tasksJson,
         'isCatWhite': ?isCatWhite,
         'isDark': ?isDark,
+        'runner': ?runner,
       });
       return res ?? false;
     } catch (_) {
@@ -71,6 +73,7 @@ class FloatingCatService {
     String? tasksJson,
     bool? isCatWhite,
     bool? isDark,
+    String? runner,
   }) async {
     if (!isSupported) return;
     try {
@@ -80,6 +83,7 @@ class FloatingCatService {
         'tasksJson': ?tasksJson,
         'isCatWhite': ?isCatWhite,
         'isDark': ?isDark,
+        'runner': ?runner,
       });
     } catch (_) {}
   }

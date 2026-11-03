@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../services/theme_service.dart';
 import '../../../widgets/cat_animation.dart';
 
 class HomeStatusBanner extends StatelessWidget {
@@ -43,10 +44,12 @@ class HomeStatusBanner extends StatelessWidget {
       return 'Good afternoon!\nReady for today?';
     }
 
+    final runnerName = ThemeService.instance.selectedRunner.value.displayName;
+
     // Evening: 5:00 PM - 9:59 PM
     if (hour >= 17 && hour < 22) {
       if (completedTodayCount > 0 && activeCount == 0) {
-        return 'Good evening!\nYou crushed $completedTodayCount ${completedTodayCount == 1 ? 'task' : 'tasks'} today!\nCat is happy and asleep.';
+        return 'Good evening!\nYou crushed $completedTodayCount ${completedTodayCount == 1 ? 'task' : 'tasks'} today!\n$runnerName is happy and asleep.';
       }
       if (activeCount > 0) {
         return 'Good evening!\n$activeCount ${activeCount == 1 ? 'task' : 'tasks'} remaining today.';
@@ -59,9 +62,9 @@ class HomeStatusBanner extends StatelessWidget {
 
     // Night: 10:00 PM - 4:59 AM
     if (completedTodayCount > 0) {
-      return 'You crushed $completedTodayCount ${completedTodayCount == 1 ? 'task' : 'tasks'} today!\nCat is asleep.';
+      return 'You crushed $completedTodayCount ${completedTodayCount == 1 ? 'task' : 'tasks'} today!\n$runnerName is asleep.';
     }
-    return 'Cat is asleep.\nRest well for tomorrow.';
+    return '$runnerName is asleep.\nRest well for tomorrow.';
   }
 
   @override

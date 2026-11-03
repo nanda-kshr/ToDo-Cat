@@ -10,6 +10,7 @@ import '../models/task.dart';
 import '../models/analytics.dart';
 import '../models/friend.dart';
 import '../models/category.dart';
+import '../models/app_version_info.dart';
 
 class ApiException implements Exception {
   final String message;
@@ -940,6 +941,28 @@ class ApiService {
       list.add(localCat.toJson());
       await prefs.setString('cached_categories_json', jsonEncode(list));
       return localCat;
+    }
+  }
+
+  /// Check latest application version for updates.
+  Future<AppVersionInfo?> fetchAppVersion({String platform = 'android'}) async {
+    try {
+      final uri = Uri.parse('${ApiConfig.appVersion}?platform=$platform');
+      final response = await _client.get(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 8));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data is Map<String, dynamic>) {
+          return AppVersionInfo.fromJson(data);
+        }
+      }
+      return null;
+    } catch (e) {
+      debugPrint('[ApiService] fetchAppVersion failed: $e');
+      return null;
     }
   }
 }
