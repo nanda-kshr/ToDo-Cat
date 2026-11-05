@@ -23,7 +23,6 @@ class AppUpdateDialog extends StatelessWidget {
     final textPrimary = palette.textPrimary;
     final textSecondary = palette.textSecondary;
     final cardBorder = palette.cardBorder;
-    final inputBg = palette.inputBg;
 
     return Dialog(
       backgroundColor: dialogBg,
@@ -44,7 +43,9 @@ class AppUpdateDialog extends StatelessWidget {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF27272A) : const Color(0xFFF4F4F5),
+                    color: isDark
+                        ? const Color(0xFF27272A)
+                        : const Color(0xFFF4F4F5),
                     shape: BoxShape.circle,
                     border: Border.all(color: cardBorder),
                   ),
@@ -83,37 +84,16 @@ class AppUpdateDialog extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            if (versionInfo.releaseNotes.isNotEmpty) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: inputBg,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: cardBorder),
-                ),
-                child: Text(
-                  versionInfo.releaseNotes,
-                  style: TextStyle(
-                    fontFamily: 'Sniglet',
-                    fontSize: 13,
-                    height: 1.4,
-                    color: textPrimary,
-                  ),
-                ),
+            Text(
+              'A new version of TodoCat is ready for you. Update now to get the latest features and fixes.',
+              style: TextStyle(
+                fontFamily: 'Sniglet',
+                fontSize: 13,
+                height: 1.4,
+                color: textSecondary,
               ),
-              const SizedBox(height: 20),
-            ] else ...[
-              Text(
-                'A new version of TodoCat is ready for you. Update now to get the latest features and fixes.',
-                style: TextStyle(
-                  fontFamily: 'Sniglet',
-                  fontSize: 13,
-                  height: 1.4,
-                  color: textSecondary,
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
+            ),
+            const SizedBox(height: 20),
             Row(
               children: [
                 Expanded(
@@ -144,10 +124,12 @@ class AppUpdateDialog extends StatelessWidget {
                     onPressed: onUpdate,
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      backgroundColor:
-                          isDark ? Colors.white : const Color(0xFF18181B),
-                      foregroundColor:
-                          isDark ? const Color(0xFF18181B) : Colors.white,
+                      backgroundColor: isDark
+                          ? Colors.white
+                          : const Color(0xFF18181B),
+                      foregroundColor: isDark
+                          ? const Color(0xFF18181B)
+                          : Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(14),

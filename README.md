@@ -104,4 +104,4 @@ npm run dev
 
 ## License
 
-All rights reserved © 2026 Nandakishore P.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -121,3 +121,13 @@ last_updated: 2026-10-27
 - **Persistent Selection Carousel**: Pinned horizontal chips bar at the top displays currently selected friends with quick removal (`x`) so users never lose context when searching or scrolling.
 - **Scrollable List with Direct Toggles**: Full-height scrollable list with avatar initials/images, names, emails, and circular checkmarks.
 - **Universal Reusability**: Single source of truth used across Category Sharing ("Add Category") and Task Sharing ("Share Task").
+
+## 12. Multi-Runner Companion Architecture
+- **Categorized Asset Structure**: Runner assets are stored under `app/assets/runners/<runner>[_white]/<run|sleep>/<frame>.png`.
+- **Variable Frame Counts**:
+  - `Cat`: 7 running frames (`0.png`–`6.png`), 6 sleeping frames (`0.png`–`5.png`).
+  - `Bunny`: 5 running frames (`0.png`–`4.png`), 5 sleeping frames (`0.png`–`4.png`).
+- **Dynamic Selection & Persistence**: Runner choice (`Cat` vs `Bunny`) is persisted via `ThemeService` (Flutter) and `localStorage` (Next.js) under `selected_runner` with real-time UI updates across the home banner, floating overlay, and settings modal on mobile, and the dashboard banner and demo landing page on web.
+- **Dynamic Companion Previews**: The companion color selector (Auto, Black, White) dynamically displays preview frames of the currently active runner mascot.
+- **Web Parity**: `Web/public/runners/` mirrors the categorized asset structure. `Web/components/CatAnimation.tsx` cycles individual frames via dynamic interval timing adapting to frame count, speed percent, and dark mode variants.
+- **Android Home Widget & Floating Overlay Parity**: Native Android components (`TodoCatWidgetProvider` and `FloatingCatService`) adapt dynamically to the `selected_runner` preference. Optimized 400x400 drawables (`bunny_0..4`, `bunny_sleep_0..4` and their white variants) are registered in `drawable-nodpi/` to prevent memory bloat and `TransactionTooLargeException` in `RemoteViews`.

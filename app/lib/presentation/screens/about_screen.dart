@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../widgets/app_logo.dart';
 import '../widgets/app_toast.dart';
@@ -100,13 +101,22 @@ class AboutScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                'Version 1.0.0',
-                style: TextStyle(
-                  fontFamily: 'Sniglet',
-                  color: textSecondary,
-                  fontSize: 14,
-                ),
+              FutureBuilder<PackageInfo>(
+                future: PackageInfo.fromPlatform(),
+                builder: (context, snapshot) {
+                  final info = snapshot.data;
+                  if (info == null || info.version.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return Text(
+                    'Version ${info.version}+${info.buildNumber}',
+                    style: TextStyle(
+                      fontFamily: 'Sniglet',
+                      color: textSecondary,
+                      fontSize: 14,
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 8),
               Padding(

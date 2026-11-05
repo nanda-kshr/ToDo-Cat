@@ -2,7 +2,7 @@ name: todocat
 description: "TodoCat - Visual task management app developed by Nandakishore P."
 publish_to: 'none'
 
-version: 1.0.1+5
+version: 1.0.1+7
 
 environment:
   sdk: ^3.10.8

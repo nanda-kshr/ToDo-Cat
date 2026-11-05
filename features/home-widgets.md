@@ -13,7 +13,7 @@ last_updated: 2026-10-26
 Android home screen widgets allowing users to view tasks and quickly create new tasks without opening the full application:
 - **Quick Add Widget**: Direct pop-up dialog (`QuickAddActivity`) to enter and save tasks immediately.
 - **Scrollable List Widget**: `RemoteViewsService` showing active tasks with direct check-off buttons.
-- **Interactive Cat Companion Widgets**: Display cat status, current clock, task ratio, and custom progress bar with sleep/active animations.
+- **Interactive Companion Widgets**: Displays animated companion mascot (Cat or Bunny based on user settings), current clock, task ratio, and custom progress bar with sleep/active animations in default and white color variants.
 - **Dual Theme Support**: Automatically adapts layout drawables, text colors, and card surfaces to match Light (`#FDF2DD` background, `#F7E9DD` card, `#2B1D16` text) and Dark (`#0E0E0E` background, `#1A1A1A` card, `#F5F5F5` text) modes.
 - **Rounded Bottom Art Clipping**: Bottom grass illustration assets (`grass.svg` and `widget_cat_grass.png`) are clipped with a smooth anti-aliased 128px radius at bottom-left and bottom-right, and layouts include `android:clipToOutline="true"`, preventing square corner bleed over the 24dp rounded widget background on all Android launchers.
 

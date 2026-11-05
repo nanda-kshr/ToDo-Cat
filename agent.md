@@ -53,6 +53,7 @@ Each feature document must conform to the Google Open Knowledge Format specifica
 | **Android Home Widgets** | [home-widgets.md](features/home-widgets.md) | `Feature` | `active` |
 | **Theme & UI Styling** | [theming.md](features/theming.md) | `Feature` | `active` |
 | **Web Dashboard & Landing** | [web-experience.md](features/web-experience.md) | `Feature` | `active` |
+| **App Updates & Versioning** | [app-updates.md](features/app-updates.md) | `Feature` | `active` |
 | **Account & Legal Compliance** | [account-legal.md](features/account-legal.md) | `Feature` | `active` |
 | **Architectural Decisions** | [decision.md](features/decision.md) | `DecisionLog` | `active` |
 
@@ -66,10 +67,11 @@ Each feature document must conform to the Google Open Knowledge Format specifica
 5. **No assumptions**: Ask the user whenever clarification is required.
 6. **Production error sanitization**: Never display raw system logs, socket errors, DNS failures, or stack traces in the UI. All exceptions must be sanitized to user-friendly messages.
 7. **Optimistic UI with Rollback**: Fast-path interactions (checkboxes, friend actions, task moves) must update the UI immediately without waiting for network responses, rolling back gracefully upon API failure.
-8. **Zero Emojis Policy**: Do not use emojis in user-facing UI, notifications, toasts, or email templates unless explicitly requested. Use clean typography and SVG/vector icons.
+8. **Zero Emojis Policy**: Do not use emojis anywhere—including chat responses, user-facing UI, labels, notifications, toasts, or email templates. Use clean typography and SVG/vector icons instead.
 
 ---
 
 ## 4. User Workflow & Planning Preferences
 1. **Concise In-Chat Plans Only**: Never generate standalone markdown plan files (e.g. `.md` artifacts or plan documents). Always present proposals and implementation plans as concise, bulleted summaries directly in the chat response.
 2. **Feature Docs Only Upon Approval**: Create or update concept markdown files under `features/*.md` (Google OKF) **strictly after** the user approves and the feature is implemented, never for preliminary plans.
+3. **Skip Tests on Frontend-Only Edits**: Do not run Flutter tests or backend API tests (`npm test`) when making frontend-only changes (UI styling, asset reorganizations, themes, or view adjustments).
