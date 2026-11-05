@@ -9,23 +9,19 @@ interface PlatformVersionConfig {
   minSupportedVersion: string;
   minSupportedBuildNumber: number;
   updateUrl: string;
-  releaseNotes: string;
 }
 
 function getPlatformConfig(platform: Platform): PlatformVersionConfig {
   switch (platform) {
     case "android":
       return {
-        latestVersion: process.env.APP_ANDROID_LATEST_VERSION || "1.0.2",
-        latestBuildNumber: parseInt(process.env.APP_ANDROID_LATEST_BUILD || "5", 10),
+        latestVersion: process.env.APP_ANDROID_LATEST_VERSION || "1.0.1",
+        latestBuildNumber: parseInt(process.env.APP_ANDROID_LATEST_BUILD || "6", 10),
         minSupportedVersion: process.env.APP_ANDROID_MIN_VERSION || "1.0.0",
         minSupportedBuildNumber: parseInt(process.env.APP_ANDROID_MIN_BUILD || "1", 10),
         updateUrl:
           process.env.APP_ANDROID_UPDATE_URL ||
           "https://play.google.com/store/apps/details?id=com.todocat.app",
-        releaseNotes:
-          process.env.APP_ANDROID_RELEASE_NOTES ||
-          "Bug fixes and performance improvements.",
       };
     case "ios":
       return {
@@ -36,9 +32,6 @@ function getPlatformConfig(platform: Platform): PlatformVersionConfig {
         updateUrl:
           process.env.APP_IOS_UPDATE_URL ||
           "https://apps.apple.com/app/todocat/id6738900000",
-        releaseNotes:
-          process.env.APP_IOS_RELEASE_NOTES ||
-          "Bug fixes and performance improvements.",
       };
     case "web":
       return {
@@ -47,7 +40,6 @@ function getPlatformConfig(platform: Platform): PlatformVersionConfig {
         minSupportedVersion: "1.0.0",
         minSupportedBuildNumber: 1,
         updateUrl: "https://to-do-cat.vercel.app",
-        releaseNotes: "Latest web app version.",
       };
   }
 }
