@@ -373,6 +373,11 @@ class ApiService {
     if (_googleInitialized) return;
     try {
       await GoogleSignIn.instance.initialize(
+        clientId: (!kIsWeb &&
+                (defaultTargetPlatform == TargetPlatform.macOS ||
+                    defaultTargetPlatform == TargetPlatform.iOS))
+            ? ApiConfig.googleAppleClientId
+            : null,
         serverClientId: ApiConfig.googleServerClientId,
       );
       _googleInitialized = true;
@@ -418,8 +423,10 @@ class ApiService {
         throw _handleResponseError(response, 'Google sign-in failed');
       }
     } catch (e) {
+      debugPrint('[GoogleSignIn] Exception: $e');
       if (e is ApiException) rethrow;
       if (e is GoogleSignInException) {
+        debugPrint('[GoogleSignIn] code: ${e.code}, description: ${e.description}, details: ${e.details}');
         if (e.code == GoogleSignInExceptionCode.canceled) {
           throw ApiException('Sign-in was cancelled');
         }

@@ -10,6 +10,7 @@ import '../../models/user.dart';
 import '../../services/api_service.dart';
 import '../../services/fcm_service.dart';
 import '../../services/floating_cat_service.dart';
+import '../../services/mac_menu_bar_service.dart';
 import '../../services/task_sync_service.dart';
 import '../../services/theme_service.dart';
 import '../../services/widget_service.dart';
@@ -76,6 +77,23 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _scrollController.addListener(_onScroll);
     FloatingCatService.initialize();
     FloatingCatService.onTasksUpdated = _onExternalTasksUpdated;
+    MacMenuBarService.initialize();
+    MacMenuBarService.onRunnerChangedFromMenu = (runner) {
+      if (mounted) {
+        setState(() {});
+        _syncWidget();
+      }
+    };
+    MacMenuBarService.onTaskToggledFromMenu = (taskId) {
+      if (!mounted) return;
+      final task = _tasks.where((t) => t.id == taskId).firstOrNull;
+      if (task != null) {
+        _toggleTask(task);
+      }
+    };
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _syncWidget();
+    });
     _setupInAppNotificationListener();
     _startFriendRequestPolling();
     _loadCachedTasks().then((_) {
@@ -221,6 +239,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _scrollController.dispose();
     _statsScrollController.dispose();
     FloatingCatService.onTasksUpdated = null;
+    MacMenuBarService.onRunnerChangedFromMenu = null;
+    MacMenuBarService.onTaskToggledFromMenu = null;
     _searchController.dispose();
     _widgetClickSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
@@ -264,6 +284,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _tasks = TaskSyncService.mergeLocalTasks(loaded: loaded, current: _tasks);
       _loading = false;
     });
+
+    _syncWidget();
 
     TaskSyncService.syncOfflineTasksToServer(
       apiService: _apiService,

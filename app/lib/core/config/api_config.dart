@@ -8,6 +8,10 @@ class ApiConfig {
   static const String googleServerClientId =
       '17924355632-um8arel8s3b3i714rsi0ciaspcjhlif9.apps.googleusercontent.com';
 
+  // Apple (iOS/macOS) Client ID for Google Sign-In
+  static const String googleAppleClientId =
+      '17924355632-6rsed166qhhhm218hi1a1ckkhu78jlvr.apps.googleusercontent.com';
+
   // Auth endpoints
   static const String login = '$baseUrl/api/auth/login';
   static const String register = '$baseUrl/api/auth/register';

@@ -1,4 +1,4 @@
-platform :osx, '10.15'
+platform :osx, '12.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -38,5 +38,28 @@ end
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_macos_build_settings(target)
+    target.build_configurations.each do |config|
+      if config.build_settings['MACOSX_DEPLOYMENT_TARGET'].to_f < 12.0
+        config.build_settings['MACOSX_DEPLOYMENT_TARGET'] = '12.0'
+      end
+    end
+  end
+  installer.pods_project.build_configurations.each do |config|
+    if config.build_settings['MACOSX_DEPLOYMENT_TARGET'].to_f < 12.0
+      config.build_settings['MACOSX_DEPLOYMENT_TARGET'] = '12.0'
+    end
+  end
+
+  # Enable file-based keychain on macOS for GoogleSignIn / GTMAppAuth so it works with local/ad-hoc builds without requiring provisioning profiles
+  keychain_store = File.join(installer.sandbox.root, 'GTMAppAuth', 'GTMAppAuth', 'Sources', 'KeychainStore', 'KeychainStore.swift')
+  if File.exist?(keychain_store)
+    code = File.read(keychain_store)
+    target_snippet = "self.init(itemName: itemName, keychainHelper: KeychainWrapper())"
+    replacement_snippet = "#if os(macOS)\n    self.init(itemName: itemName, keychainAttributes: [.useFileBasedKeychain])\n#else\n    self.init(itemName: itemName, keychainHelper: KeychainWrapper())\n#endif"
+    if code.include?(target_snippet)
+      File.chmod(0644, keychain_store)
+      code = code.sub(target_snippet, replacement_snippet)
+      File.write(keychain_store, code)
+    end
   end
 end

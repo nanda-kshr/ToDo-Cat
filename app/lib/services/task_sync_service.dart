@@ -6,6 +6,7 @@ import '../core/utils/date_utils.dart';
 import '../models/task.dart';
 import 'api_service.dart';
 import 'floating_cat_service.dart';
+import 'mac_menu_bar_service.dart';
 import 'theme_service.dart';
 import 'widget_service.dart';
 
@@ -179,6 +180,21 @@ class TaskSyncService {
         isCatWhite: isWhite,
         isDark: isDark,
         runner: runner,
+      );
+    }
+
+    if (MacMenuBarService.isSupported) {
+      final todayTasks = tasks.where((t) => !t.completed || isToday(t.updatedAt ?? t.createdAt)).toList();
+      final menuTasksJson = jsonEncode(todayTasks.map((t) => t.toJson()).toList());
+      MacMenuBarService.update(
+        speedPercent: catSpeed,
+        speedMessage: speedMessage,
+        activeCount: activeCount,
+        todayTotalCount: todayTotalCount,
+        runner: runner,
+        isWhite: isWhite,
+        isDark: isDark,
+        tasksJson: menuTasksJson,
       );
     }
   }

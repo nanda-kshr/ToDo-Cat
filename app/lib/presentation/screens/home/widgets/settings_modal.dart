@@ -1,8 +1,10 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../models/user.dart';
 import '../../../../models/runner.dart';
+import '../../../../services/mac_menu_bar_service.dart';
 import '../../../../services/theme_service.dart';
 import '../../about_screen.dart';
 import '../../legal_screen.dart';
@@ -58,6 +60,7 @@ class _SettingsModalSheet extends StatefulWidget {
 
 class _SettingsModalSheetState extends State<_SettingsModalSheet> {
   late bool _localFloatingRunning;
+  bool _menuBarEnabled = true;
   bool _isToggling = false;
   bool _isClosing = false;
   double _overscrollAccumulator = 0.0;
@@ -105,6 +108,11 @@ class _SettingsModalSheetState extends State<_SettingsModalSheet> {
   void initState() {
     super.initState();
     _localFloatingRunning = widget.isFloatingOverlayRunning;
+    if (Platform.isMacOS) {
+      MacMenuBarService.isEnabled().then((val) {
+        if (mounted) setState(() => _menuBarEnabled = val);
+      });
+    }
   }
 
   @override
@@ -425,57 +433,100 @@ class _SettingsModalSheetState extends State<_SettingsModalSheet> {
                       ),
                       const SizedBox(height: 24),
 
-                      // Section 3: Floating Cat Overlay Switch Row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Floating Cat Overlay',
-                                  style: TextStyle(
-                                    fontFamily: 'Sniglet',
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w600,
-                                    color: textPrimary,
+                      // Section 3: Menu Bar Companion (macOS) or Floating Overlay (Mobile)
+                      if (Platform.isMacOS) ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Menu Bar Companion',
+                                    style: TextStyle(
+                                      fontFamily: 'Sniglet',
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: textPrimary,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 3),
-                                Text(
-                                  'Show a running cat on top of other apps',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: textSecondary,
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    'Show running ${currentRunner.displayName.toLowerCase()} in the macOS menu bar',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: textSecondary,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          Switch(
-                            value: _localFloatingRunning,
-                            activeTrackColor: palette.fabBg,
-                            activeThumbColor: palette.fabIcon,
-                            inactiveTrackColor: isDark ? const Color(0xFF2E2E2E) : palette.progressTrack,
-                            onChanged: _isToggling
-                                ? null
-                                : (targetVal) async {
-                                    setState(() {
-                                      _localFloatingRunning = targetVal;
-                                      _isToggling = true;
-                                    });
-                                    final actual = await widget.onToggleFloatingCat();
-                                    if (mounted) {
+                            Switch(
+                              value: _menuBarEnabled,
+                              activeTrackColor: palette.fabBg,
+                              activeThumbColor: palette.fabIcon,
+                              inactiveTrackColor: isDark ? const Color(0xFF2E2E2E) : palette.progressTrack,
+                              onChanged: (targetVal) async {
+                                setState(() => _menuBarEnabled = targetVal);
+                                await MacMenuBarService.setEnabled(targetVal);
+                                widget.onThemeChanged();
+                              },
+                            ),
+                          ],
+                        ),
+                      ] else ...[
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Floating Companion Overlay',
+                                    style: TextStyle(
+                                      fontFamily: 'Sniglet',
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    'Show a running ${currentRunner.displayName.toLowerCase()} on top of other apps',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Switch(
+                              value: _localFloatingRunning,
+                              activeTrackColor: palette.fabBg,
+                              activeThumbColor: palette.fabIcon,
+                              inactiveTrackColor: isDark ? const Color(0xFF2E2E2E) : palette.progressTrack,
+                              onChanged: _isToggling
+                                  ? null
+                                  : (targetVal) async {
                                       setState(() {
-                                        _localFloatingRunning = actual;
-                                        _isToggling = false;
+                                        _localFloatingRunning = targetVal;
+                                        _isToggling = true;
                                       });
-                                    }
-                                  },
-                          ),
-                        ],
-                      ),
+                                      final actual = await widget.onToggleFloatingCat();
+                                      if (mounted) {
+                                        setState(() {
+                                          _localFloatingRunning = actual;
+                                          _isToggling = false;
+                                        });
+                                      }
+                                    },
+                            ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 18),
 
                       // Extra field: Home Screen Widgets

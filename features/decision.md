@@ -131,3 +131,15 @@ last_updated: 2026-10-27
 - **Dynamic Companion Previews**: The companion color selector (Auto, Black, White) dynamically displays preview frames of the currently active runner mascot.
 - **Web Parity**: `Web/public/runners/` mirrors the categorized asset structure. `Web/components/CatAnimation.tsx` cycles individual frames via dynamic interval timing adapting to frame count, speed percent, and dark mode variants.
 - **Android Home Widget & Floating Overlay Parity**: Native Android components (`TodoCatWidgetProvider` and `FloatingCatService`) adapt dynamically to the `selected_runner` preference. Optimized 400x400 drawables (`bunny_0..4`, `bunny_sleep_0..4` and their white variants) are registered in `drawable-nodpi/` to prevent memory bloat and `TransactionTooLargeException` in `RemoteViews`.
+
+## 13. macOS Desktop Authentication & Menu Bar Companion
+- **Google Sign-In on macOS**:
+  - GTMAppAuth requires file-based keychain attributes (`useFileBasedKeychain`) on macOS development/ad-hoc builds to avoid sandbox `keychain-access-groups` provisioning profile constraints.
+  - Configured in `app/macos/Runner/Info.plist` (`GIDClientID`, `GIDServerClientID`, reversed client ID URL scheme) and `GoogleService-Info.plist`.
+  - Deployment target is unified to macOS 12.0 across Xcode and CocoaPods.
+- **Menu Bar Companion**:
+  - Rendered via `NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)` in `AppDelegate.swift`.
+  - Asset resolution uses `FlutterDartProject.lookupKey(forAsset:)` combined with `Bundle.main.bundleURL` to locate Flutter assets under `Contents/Frameworks/App.framework/Resources/flutter_assets/`.
+  - Dimensions: Icon target size configured to `28x28pt` with `.scaleProportionallyDown` to scale cleanly across modern Retina/notched display menu bar heights (~38pt) and external monitors.
+  - Interactive Popover UI: Clicking the menu bar companion presents a compact (`270x310pt`), scrollable `NSPopover` with frosted vibrancy (`.popover` material) instead of an OS context menu. Features live task checkboxes with optimistic completion sync to Flutter, task count pill badge, runner mascot switch (Cat / Bunny), and instant "Open App" navigation.
+  - Synchronizes active/completed tasks, velocity speed, companion mascot selection (Cat/Bunny), and system appearance (Dark/Light) dynamically.

@@ -15,7 +15,7 @@ function getPlatformConfig(platform: Platform): PlatformVersionConfig {
   switch (platform) {
     case "android":
       return {
-        latestVersion: process.env.APP_ANDROID_LATEST_VERSION || "1.0.1",
+        latestVersion: process.env.APP_ANDROID_LATEST_VERSION || "1.0.2",
         latestBuildNumber: parseInt(process.env.APP_ANDROID_LATEST_BUILD || "6", 10),
         minSupportedVersion: process.env.APP_ANDROID_MIN_VERSION || "1.0.0",
         minSupportedBuildNumber: parseInt(process.env.APP_ANDROID_MIN_BUILD || "1", 10),

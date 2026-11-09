@@ -10,6 +10,11 @@ class MainFlutterWindow: NSWindow {
 
     RegisterGeneratedPlugins(registry: flutterViewController)
 
+    MenuBarCompanionManager.shared.setup(
+      with: flutterViewController.engine.binaryMessenger,
+      window: self
+    )
+
     super.awakeFromNib()
   }
 }

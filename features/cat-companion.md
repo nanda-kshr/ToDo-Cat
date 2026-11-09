@@ -1,18 +1,19 @@
 ---
 type: Feature
-title: Cat Companion & Floating Overlay
-description: Gamified animated cat mascot reflecting user velocity and optional system-wide floating overlay on Android with light/dark theme adaptation.
-tags: [gamification, cat, animation, overlay, android, theming]
+title: Cat Companion, Floating Overlay & macOS Menu Bar
+description: Gamified animated cat/bunny companion reflecting user velocity, optional system-wide floating overlay on Android, and top status menu bar companion for macOS.
+tags: [gamification, cat, bunny, animation, overlay, android, macos, menubar, theming]
 status: active
-last_updated: 2026-10-27
+last_updated: 2026-11-06
 ---
 
-# Cat Companion & Floating Overlay
+# Cat Companion, Floating Overlay & macOS Menu Bar
 
 ## Overview
-A dynamic cat companion that animates across the header of the app and can float over other Android applications:
-- **Velocity Reactivity**: Cat's walking/running speed scales dynamically with the user's task completion pace.
+A dynamic cat companion that animates across the header of the app, floats over Android applications, and runs on the top macOS menu bar next to Wi-Fi and Control Center:
+- **Velocity Reactivity**: Companion's walking/running speed scales dynamically with the user's task completion pace.
 - **Daily Cat Briefing**: Client-side time-of-day greeting and task debrief (Morning, Afternoon, Evening, Night) without background crons or emojis.
+- **macOS Menu Bar Companion**: Native AppKit `NSStatusItem` displaying real-time running/sleeping companion frames next to system icons, complete with speed feedback, task counts, companion switcher, and quick window activation.
 - **Floating Overlay Service**: Android native Foreground Service displaying a mini cat over any app with touch interactions.
 - **Expanded Overlay View**: Tapping the floating cat reveals a full task management card supporting task creation, check-off, and priority indicators.
 - **Theme & Color Parity**: Automatically mirrors the central theme palette across light and dark modes with selectable variants (Auto, Black, White).
@@ -47,6 +48,11 @@ A dynamic cat companion that animates across the header of the app and can float
   - `app/android/app/src/main/kotlin/com/todocat/app/FloatingCatService.kt` - Android overlay implementation using WindowManager and theme-aware UI views supporting dynamic runner mascots (Cat and Bunny) in both running and sleeping states.
   - `app/lib/models/runner.dart` - `RunnerType` enum (Cat, Bunny) with dynamic frame counts and asset path resolvers.
   - `app/assets/runners/` - Multi-runner sprite frames categorized by `run/` and `sleep/` for Cat (7/6 frames) and Bunny (5/5 frames) in default and white color variants.
+- **Desktop (macOS)**:
+  - `app/macos/Runner/AppDelegate.swift` - Hosts `MenuBarCompanionManager`, managing AppKit's `NSStatusItem` (`28x28pt` sprite frames with `.scaleProportionallyDown`), sprite frame animation timer, and a compact, scrollable `NSPopover` interface with optimistic task completion checkboxes, live task count badge, and runner switcher. Prevents app termination on window close when the menu bar companion is active.
+  - `app/macos/Runner/MainFlutterWindow.swift` - Connects the Flutter engine binary messenger with the native menu bar companion manager.
+  - `app/lib/services/mac_menu_bar_service.dart` - Flutter `MethodChannel` (`com.todocat.app/macos_menu_bar`) sending real-time task velocity, active counts, theme variants, and runner mascot type.
+  - `app/lib/presentation/screens/home/widgets/settings_modal.dart` - Provides native toggle for "Menu Bar Companion" on macOS devices.
 - **Web (Next.js)**:
   - `Web/components/CatAnimation.tsx` - Reusable multi-runner animation component supporting dynamic frame loops, sleep/run cycles, theme cards/dark variants, and local storage synchronization.
   - `Web/public/runners/` - Synced multi-runner frames mirroring the Flutter asset structure.
