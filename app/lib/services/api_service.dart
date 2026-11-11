@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../core/config/api_config.dart';
 import '../models/user.dart';
 import '../models/task.dart';
@@ -388,6 +390,9 @@ class ApiService {
   }
 
   Future<User> loginWithGoogle() async {
+    if (!kIsWeb && Platform.isLinux) {
+      return await _loginWithGoogleDesktop();
+    }
     try {
       await _initGoogleSignIn();
       final GoogleSignInAccount account =
@@ -433,6 +438,111 @@ class ApiService {
         throw ApiException('Google sign-in failed. Please try again.');
       }
       throw _handleNetworkError(e, 'Unable to sign in with Google. Please check your internet connection.');
+    }
+  }
+
+  Future<User> _loginWithGoogleDesktop() async {
+    HttpServer? server;
+    try {
+      server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final port = server.port;
+
+      final statePayload = jsonEncode({'port': port});
+      final state = base64Url.encode(utf8.encode(statePayload));
+
+      final authUrl = Uri.parse('${ApiConfig.baseUrl}/api/auth/google?state=$state');
+      final launched = await launchUrl(authUrl, mode: LaunchMode.externalApplication);
+      if (!launched) {
+        throw ApiException('Could not open browser for Google authentication.');
+      }
+
+      String? accessToken;
+      String? refreshToken;
+      String? error;
+
+      await for (final HttpRequest request in server.timeout(const Duration(seconds: 120))) {
+        if (request.uri.path == '/auth-callback') {
+          accessToken = request.uri.queryParameters['token'];
+          refreshToken = request.uri.queryParameters['refreshToken'];
+          error = request.uri.queryParameters['error'];
+
+          final isSuccess = accessToken != null && accessToken.isNotEmpty;
+          final html = '''
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>TodoCat</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0E0E0E;
+      color: #F5F5F5;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: #1A1A1A;
+      border: 1px solid #353535;
+      padding: 32px;
+      border-radius: 16px;
+      text-align: center;
+      max-width: 380px;
+    }
+    h2 { margin: 0 0 10px; color: \${isSuccess ? '#FFC65C' : '#EF4444'}; font-size: 18px; }
+    p { margin: 0; color: #A6A6A6; font-size: 13px; line-height: 1.4; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>\${isSuccess ? 'Authentication Successful' : 'Authentication Failed'}</h2>
+    <p>\${isSuccess ? 'You are signed in to TodoCat. You may close this tab and return to the application.' : (error ?? 'Sign in could not be completed. Please try again.')}</p>
+  </div>
+</body>
+</html>
+''';
+          request.response
+            ..statusCode = isSuccess ? HttpStatus.ok : HttpStatus.badRequest
+            ..headers.contentType = ContentType.html
+            ..write(html);
+          await request.response.close();
+          break;
+        } else {
+          request.response
+            ..statusCode = HttpStatus.notFound
+            ..write('Not found');
+          await request.response.close();
+        }
+      }
+
+      await server.close(force: true);
+      server = null;
+
+      if (error != null) {
+        throw ApiException('Google sign-in was cancelled: $error');
+      }
+
+      if (accessToken == null || accessToken.isEmpty) {
+        throw ApiException('Google sign-in did not return authentication tokens.');
+      }
+
+      await saveTokens(
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+      );
+
+      return await getMe();
+    } on TimeoutException {
+      throw ApiException('Google sign-in timed out. Please try again.');
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      debugPrint('[ApiService] Desktop Google SignIn error: $e');
+      throw _handleNetworkError(e, 'Unable to sign in with Google. Please try again.');
+    } finally {
+      await server?.close(force: true);
     }
   }
 

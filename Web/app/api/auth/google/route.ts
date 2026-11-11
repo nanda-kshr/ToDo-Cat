@@ -12,9 +12,10 @@ export async function GET(request: Request) {
     );
   }
 
-  const { origin } = new URL(request.url);
+  const { origin, searchParams } = new URL(request.url);
   const redirectUri =
     process.env.OAUTH_REDIRECT_URI || `${origin}/api/auth/callback/google`;
+  const state = searchParams.get("state");
 
   const params = new URLSearchParams({
     client_id: clientId,
@@ -24,6 +25,10 @@ export async function GET(request: Request) {
     access_type: "offline",
     prompt: "consent",
   });
+
+  if (state) {
+    params.set("state", state);
+  }
 
   const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
   return NextResponse.redirect(googleAuthUrl);

@@ -12,7 +12,10 @@ last_updated: 2026-10-25
 ## Overview
 TodoCat provides secure authentication for both Web and Mobile platforms:
 - **Email/Password**: Standard signup and login with hashed passwords (`bcryptjs`) and JWT access + refresh tokens.
-- **Google OAuth 2.0**: Native Google Sign-In on mobile and macOS desktop (via `google_sign_in_ios` with dedicated Apple OAuth client ID and custom scheme redirect), passing `idToken` to `/api/auth/google`, and web-based OAuth callback. Automatically saves and updates the user's Google profile picture (`avatar`), rendering it in the header and profile screen on both mobile and web (using `referrerPolicy="no-referrer"` to prevent Google image 403 blocks).
+- **Google OAuth 2.0**:
+  - **Mobile & macOS**: Native Google Sign-In on mobile and macOS desktop (via `google_sign_in_ios` with dedicated Apple OAuth client ID and custom scheme redirect), passing `idToken` to `/api/auth/google`.
+  - **Linux Desktop**: Browser-based loopback OAuth (RFC 8252). The Linux client starts an ephemeral local `HttpServer` on `127.0.0.1:<port>`, launches the system browser to `/api/auth/google?state=<base64url>`, and receives tokens via `/auth-callback` without requiring native desktop C++ plugin binaries.
+  - Automatically saves and updates the user's Google profile picture (`avatar`), rendering it in the header and profile screen on both mobile and web (using `referrerPolicy="no-referrer"` to prevent Google image 403 blocks).
 - **Session Continuity (RFC 6819 Production Standard)**:
   - **Token Lifespans**: 24-hour JWT access tokens paired with 30-day sliding refresh tokens.
   - **Grace-Window Rotation**: Refresh tokens rotate on every refresh with a 60-second grace window in MongoDB (`user.rotatedTokens`), allowing concurrent/parallel requests across screens or tabs to succeed without revoking the session.

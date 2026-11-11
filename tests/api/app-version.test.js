@@ -27,8 +27,8 @@ function getPlatformConfig(platform) {
       };
     case "macos":
       return {
-        latestVersion: process.env.APP_MACOS_LATEST_VERSION || "1.0.2",
-        latestBuildNumber: parseInt(process.env.APP_MACOS_LATEST_BUILD || "8", 10),
+        latestVersion: process.env.APP_MACOS_LATEST_VERSION || "1.0.3",
+        latestBuildNumber: parseInt(process.env.APP_MACOS_LATEST_BUILD || "9", 10),
         minSupportedVersion: process.env.APP_MACOS_MIN_VERSION || "1.0.0",
         minSupportedBuildNumber: parseInt(process.env.APP_MACOS_MIN_BUILD || "1", 10),
         updateUrl:
@@ -37,8 +37,8 @@ function getPlatformConfig(platform) {
       };
     case "linux":
       return {
-        latestVersion: process.env.APP_LINUX_LATEST_VERSION || "1.0.2",
-        latestBuildNumber: parseInt(process.env.APP_LINUX_LATEST_BUILD || "8", 10),
+        latestVersion: process.env.APP_LINUX_LATEST_VERSION || "1.0.3",
+        latestBuildNumber: parseInt(process.env.APP_LINUX_LATEST_BUILD || "9", 10),
         minSupportedVersion: process.env.APP_LINUX_MIN_VERSION || "1.0.0",
         minSupportedBuildNumber: parseInt(process.env.APP_LINUX_MIN_BUILD || "1", 10),
         updateUrl:

@@ -156,6 +156,7 @@ last_updated: 2026-10-27
 - **Desktop Platform Compatibility**:
   - `FcmService`: Firebase Cloud Messaging initialization is guarded (`Platform.isAndroid || Platform.isIOS || Platform.isMacOS`) to avoid unhandled unsupported platform crashes on Linux desktop.
   - `HomeWidget`: Android widget channel initialization is guarded (`Platform.isAndroid || Platform.isIOS`) to prevent missing plugin exceptions on Linux.
+  - **Linux Google Sign-In**: Flutter's official `google_sign_in` plugin lacks Linux desktop implementation. Instead, `ApiService()._loginWithGoogleDesktop()` binds an ephemeral loopback HTTP server on `127.0.0.1:<port>` and opens the system browser to `/api/auth/google?state=<port_payload>`. Upon successful authentication, the backend redirects back to the loopback listener at `http://127.0.0.1:<port>/auth-callback` delivering `accessToken` and `refreshToken` safely.
 
 ## 15. Platform-Aware Update Redirection
 - **Dynamic Endpoint Support**:

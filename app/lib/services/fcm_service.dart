@@ -168,7 +168,9 @@ class FcmService {
 
   Future<void> syncCurrentToken() async {
     try {
-      if (kIsWeb) return;
+      if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS && !Platform.isMacOS)) {
+        return;
+      }
       _currentToken ??= await getSavedToken();
 
       if (_currentToken == null) {

@@ -3,12 +3,31 @@ import { connectDB } from "@/lib/mongodb";
 import { User } from "@/models/User";
 import { generateTokens, setRefreshTokenCookie } from "@/lib/auth";
 
+function getDesktopCallbackUrl(stateParam: string | null): string | null {
+  if (!stateParam) return null;
+  try {
+    const decoded = Buffer.from(stateParam, "base64url").toString("utf-8");
+    const parsed = JSON.parse(decoded);
+    const port = Number(parsed.port);
+    if (Number.isInteger(port) && port >= 1024 && port <= 65535) {
+      return `http://127.0.0.1:${port}/auth-callback`;
+    }
+  } catch (_) {}
+  return null;
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const error = url.searchParams.get("error");
+  const desktopCallback = getDesktopCallbackUrl(url.searchParams.get("state"));
 
   if (error || !code) {
+    if (desktopCallback) {
+      return NextResponse.redirect(
+        new URL(`${desktopCallback}?error=${encodeURIComponent(error || "access_denied")}`)
+      );
+    }
     return NextResponse.redirect(
       new URL(`/auth?error=${encodeURIComponent(error || "access_denied")}`, url.origin)
     );
@@ -25,6 +44,11 @@ export async function GET(request: Request) {
       hasClientId: Boolean(clientId),
       hasClientSecret: Boolean(clientSecret),
     });
+    if (desktopCallback) {
+      return NextResponse.redirect(
+        new URL(`${desktopCallback}?error=oauth_not_configured`)
+      );
+    }
     return NextResponse.redirect(new URL("/auth?error=oauth_not_configured", url.origin));
   }
 
@@ -47,6 +71,11 @@ export async function GET(request: Request) {
     if (!tokenRes.ok) {
       const errData = await tokenRes.text();
       console.error("Google token exchange error:", errData);
+      if (desktopCallback) {
+        return NextResponse.redirect(
+          new URL(`${desktopCallback}?error=token_exchange_failed`)
+        );
+      }
       return NextResponse.redirect(new URL("/auth?error=token_exchange_failed", url.origin));
     }
 
@@ -58,6 +87,11 @@ export async function GET(request: Request) {
     });
 
     if (!profileRes.ok) {
+      if (desktopCallback) {
+        return NextResponse.redirect(
+          new URL(`${desktopCallback}?error=profile_fetch_failed`)
+        );
+      }
       return NextResponse.redirect(new URL("/auth?error=profile_fetch_failed", url.origin));
     }
 
@@ -65,6 +99,11 @@ export async function GET(request: Request) {
     const { sub: googleId, email, name, picture: avatar } = profile;
 
     if (!email) {
+      if (desktopCallback) {
+        return NextResponse.redirect(
+          new URL(`${desktopCallback}?error=email_not_provided`)
+        );
+      }
       return NextResponse.redirect(new URL("/auth?error=email_not_provided", url.origin));
     }
 
@@ -94,9 +133,20 @@ export async function GET(request: Request) {
 
     await setRefreshTokenCookie(refreshToken);
 
+    if (desktopCallback) {
+      return NextResponse.redirect(
+        new URL(`${desktopCallback}?token=${accessToken}&refreshToken=${refreshToken}`)
+      );
+    }
+
     return NextResponse.redirect(new URL(`/dashboard?token=${accessToken}`, url.origin));
   } catch (err) {
     console.error("Google callback error:", err);
+    if (desktopCallback) {
+      return NextResponse.redirect(
+        new URL(`${desktopCallback}?error=internal_error`)
+      );
+    }
     return NextResponse.redirect(new URL("/auth?error=internal_error", url.origin));
   }
 }
