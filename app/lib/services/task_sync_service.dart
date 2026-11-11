@@ -6,6 +6,7 @@ import '../core/utils/date_utils.dart';
 import '../models/task.dart';
 import 'api_service.dart';
 import 'floating_cat_service.dart';
+import 'linux_tray_service.dart';
 import 'mac_menu_bar_service.dart';
 import 'theme_service.dart';
 import 'widget_service.dart';
@@ -195,6 +196,16 @@ class TaskSyncService {
         isWhite: isWhite,
         isDark: isDark,
         tasksJson: menuTasksJson,
+      );
+    }
+
+    if (LinuxTrayService.isSupported) {
+      final todayTasks = tasks.where((t) => !t.completed || isToday(t.updatedAt ?? t.createdAt)).toList();
+      LinuxTrayService.instance.update(
+        activeTasks: activeCount,
+        tasks: todayTasks,
+        speedPercent: catSpeed,
+        speedMessage: speedMessage,
       );
     }
   }

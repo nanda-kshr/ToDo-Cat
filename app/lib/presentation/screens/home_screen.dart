@@ -81,6 +81,27 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     FloatingCatService.onTasksUpdated = _onExternalTasksUpdated;
     MacMenuBarService.initialize();
     LinuxTrayService.instance.initialize();
+    LinuxTrayService.instance.onRunnerChanged = (runner) {
+      if (mounted) {
+        setState(() {});
+        _syncWidget();
+      }
+    };
+    LinuxTrayService.instance.onTaskToggled = (taskId) {
+      if (!mounted) return;
+      final task = _tasks.where((t) => t.id == taskId).firstOrNull;
+      if (task != null) {
+        _toggleTask(task);
+      }
+    };
+    LinuxTrayService.instance.onQuickAddRequested = () {
+      if (!mounted) return;
+      LinuxTrayService.instance.showWindow();
+      _showCreateTaskDialog();
+    };
+    LinuxTrayService.instance.onShowWindow = () {
+      LinuxTrayService.instance.showWindow();
+    };
     MacMenuBarService.onRunnerChangedFromMenu = (runner) {
       if (mounted) {
         setState(() {});
@@ -249,6 +270,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     MacMenuBarService.onRunnerChangedFromMenu = null;
     MacMenuBarService.onTaskToggledFromMenu = null;
     MacMenuBarService.onQuickTaskAddedFromMenu = null;
+    LinuxTrayService.instance.onRunnerChanged = null;
+    LinuxTrayService.instance.onTaskToggled = null;
+    LinuxTrayService.instance.onQuickAddRequested = null;
+    LinuxTrayService.instance.onShowWindow = null;
     LinuxTrayService.instance.dispose();
     _searchController.dispose();
     _widgetClickSubscription?.cancel();
@@ -319,7 +344,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       catSpeed: counts.catSpeed,
       isFloatingOverlayRunning: _isFloatingOverlayRunning,
     );
-    LinuxTrayService.instance.update(activeTasks: counts.active);
   }
 
   void _initWidgetLaunchHandling() {

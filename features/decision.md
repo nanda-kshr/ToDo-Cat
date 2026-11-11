@@ -158,7 +158,13 @@ last_updated: 2026-10-27
   - Implemented via `tray_manager` (StatusNotifierItem over D-Bus) in `app/lib/services/linux_tray_service.dart`.
   - Animates running frames (Cat: 7 frames, Bunny: 5 frames) cycling via a 150ms periodic timer.
   - Automatically adapts to runner mascot and theme brightness (dark vs. white variant).
-  - Context menu provides live active task count, "Show TodoCat", and "Quit".
+  - Context menu features:
+    - Active task count and cat velocity status header.
+    - Quick Task: "+ Add Task..." triggers native window raise and immediate task creation dialog.
+    - Interactive Task List: Today's tasks rendered with live checkable checkboxes (`MenuItem.checkbox`), with optimistic task toggling synced to Flutter state and backend.
+    - Companion mascot selector submenu (Cat / Bunny) updating preferences in real time.
+    - Window management: "Open TodoCat" raises and focuses the GTK window via custom `com.todocat.app/linux_window` method channel invoking `gtk_window_present`.
+    - Quit option.
   - Build dependency `libayatana-appindicator3-dev` integrated into Linux CI workflow.
   - CMake compiler flag `-Wno-deprecated-declarations` added to `APPLY_STANDARD_SETTINGS` in `app/linux/CMakeLists.txt` to suppress fatal deprecation errors on Ubuntu runners from `tray_manager`'s `app_indicator_new` calls.
 - **Desktop Platform Compatibility**:

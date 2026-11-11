@@ -19,6 +19,24 @@ static void first_frame_cb(MyApplication* self, FlView* view) {
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
 }
 
+static void window_method_call_cb(FlMethodChannel* channel,
+                                  FlMethodCall* method_call,
+                                  gpointer user_data) {
+  GtkWindow* window = GTK_WINDOW(user_data);
+  const gchar* method = fl_method_call_get_name(method_call);
+
+  if (strcmp(method, "showWindow") == 0) {
+    gtk_window_present(window);
+    g_autoptr(FlMethodResponse) response =
+        FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(true)));
+    fl_method_call_respond(method_call, response, nullptr);
+  } else {
+    g_autoptr(FlMethodResponse) response =
+        FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
+    fl_method_call_respond(method_call, response, nullptr);
+  }
+}
+
 // Implements GApplication::activate.
 static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
@@ -87,6 +105,19 @@ static void my_application_activate(GApplication* application) {
   gtk_widget_realize(GTK_WIDGET(view));
 
   fl_register_plugins(FL_PLUGIN_REGISTRY(view));
+
+  {
+    g_autoptr(FlPluginRegistrar) window_registrar =
+        fl_plugin_registry_get_registrar_for_plugin(FL_PLUGIN_REGISTRY(view),
+                                                    "TodoCatLinuxWindow");
+    g_autoptr(FlStandardMethodCodec) codec = fl_standard_method_codec_new();
+    FlMethodChannel* channel = fl_method_channel_new(
+        fl_plugin_registrar_get_messenger(window_registrar),
+        "com.todocat.app/linux_window",
+        FL_METHOD_CODEC(codec));
+    fl_method_channel_set_method_call_handler(
+        channel, window_method_call_cb, window, nullptr);
+  }
 
   gtk_widget_grab_focus(GTK_WIDGET(view));
 }
