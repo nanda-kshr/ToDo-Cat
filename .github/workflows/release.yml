@@ -37,6 +37,42 @@ jobs:
             keytool -genkeypair -v -keystore app/android/app/todocat.jks -alias todocat -keyalg RSA -keysize 2048 -validity 10000 -storepass todocat123 -keypass todocat123 -dname "CN=TodoCat, OU=Mobile, O=TodoCat, C=US"
           fi
 
+      - name: Setup google-services.json if missing
+        run: |
+          if [ ! -f app/android/app/google-services.json ]; then
+            cat << 'EOF' > app/android/app/google-services.json
+          {
+            "project_info": {
+              "project_number": "218636965006",
+              "project_id": "to-do-cat",
+              "storage_bucket": "to-do-cat.firebasestorage.app"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:218636965006:android:31387dd3abc248c859e5df",
+                  "android_client_info": {
+                    "package_name": "com.todocat.app"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  {
+                    "current_key": "AIzaSyBmUdtBdcTLEHCg5HdNZeL8obucqIvtcAc"
+                  }
+                ],
+                "services": {
+                  "appinvite_service": {
+                    "other_platform_oauth_client": []
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          EOF
+          fi
+
       - name: Build Android APK
         run: |
           cd app
