@@ -160,6 +160,7 @@ last_updated: 2026-10-27
   - Automatically adapts to runner mascot and theme brightness (dark vs. white variant).
   - Context menu provides live active task count, "Show TodoCat", and "Quit".
   - Build dependency `libayatana-appindicator3-dev` integrated into Linux CI workflow.
+  - CMake compiler flag `-Wno-deprecated-declarations` added to `APPLY_STANDARD_SETTINGS` in `app/linux/CMakeLists.txt` to suppress fatal deprecation errors on Ubuntu runners from `tray_manager`'s `app_indicator_new` calls.
 - **Desktop Platform Compatibility**:
   - `FcmService`: Firebase Cloud Messaging initialization is guarded (`Platform.isAndroid || Platform.isIOS || Platform.isMacOS`) to avoid unhandled unsupported platform crashes on Linux desktop.
   - `HomeWidget`: Android widget channel initialization is guarded (`Platform.isAndroid || Platform.isIOS`) to prevent missing plugin exceptions on Linux.
