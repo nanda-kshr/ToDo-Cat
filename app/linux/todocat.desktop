@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=TodoCat
+Comment=Visual task management app with companion mascot
+Exec=todocat %U
+Icon=todocat
+Terminal=false
+Categories=Utility;Office;ProjectManagement;
+StartupWMClass=todocat
+Keywords=tasks;todo;cat;productivity;

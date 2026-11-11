@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-const VALID_PLATFORMS = ["android", "ios", "web"] as const;
+const VALID_PLATFORMS = ["android", "ios", "macos", "linux", "web"] as const;
 type Platform = (typeof VALID_PLATFORMS)[number];
 
 interface PlatformVersionConfig {
@@ -32,6 +32,26 @@ function getPlatformConfig(platform: Platform): PlatformVersionConfig {
         updateUrl:
           process.env.APP_IOS_UPDATE_URL ||
           "https://apps.apple.com/app/todocat/id6738900000",
+      };
+    case "macos":
+      return {
+        latestVersion: process.env.APP_MACOS_LATEST_VERSION || "1.0.2",
+        latestBuildNumber: parseInt(process.env.APP_MACOS_LATEST_BUILD || "8", 10),
+        minSupportedVersion: process.env.APP_MACOS_MIN_VERSION || "1.0.0",
+        minSupportedBuildNumber: parseInt(process.env.APP_MACOS_MIN_BUILD || "1", 10),
+        updateUrl:
+          process.env.APP_MACOS_UPDATE_URL ||
+          "https://github.com/nanda-kshr/ToDo-Cat/releases/latest",
+      };
+    case "linux":
+      return {
+        latestVersion: process.env.APP_LINUX_LATEST_VERSION || "1.0.2",
+        latestBuildNumber: parseInt(process.env.APP_LINUX_LATEST_BUILD || "8", 10),
+        minSupportedVersion: process.env.APP_LINUX_MIN_VERSION || "1.0.0",
+        minSupportedBuildNumber: parseInt(process.env.APP_LINUX_MIN_BUILD || "1", 10),
+        updateUrl:
+          process.env.APP_LINUX_UPDATE_URL ||
+          "https://github.com/nanda-kshr/ToDo-Cat/releases/latest",
       };
     case "web":
       return {

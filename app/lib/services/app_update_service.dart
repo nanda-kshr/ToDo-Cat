@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -37,7 +39,21 @@ class AppUpdateService {
       final currentVersion = packageInfo.version;
       final currentBuild = int.tryParse(packageInfo.buildNumber) ?? 0;
 
-      final AppVersionInfo? versionInfo = await ApiService().fetchAppVersion();
+      String platformParam = 'android';
+      if (kIsWeb) {
+        platformParam = 'web';
+      } else if (Platform.isMacOS) {
+        platformParam = 'macos';
+      } else if (Platform.isLinux) {
+        platformParam = 'linux';
+      } else if (Platform.isIOS) {
+        platformParam = 'ios';
+      } else if (Platform.isAndroid) {
+        platformParam = 'android';
+      }
+
+      final AppVersionInfo? versionInfo =
+          await ApiService().fetchAppVersion(platform: platformParam);
       if (versionInfo == null || !context.mounted) return;
 
       final hasUpdate = isNewerVersion(
@@ -72,12 +88,12 @@ class AppUpdateService {
                   mode: LaunchMode.externalApplication,
                 );
                 if (!launched && context.mounted) {
-                  AppToast.show(context, 'Could not open store link',
+                  AppToast.show(context, 'Could not open update link',
                       isError: true);
                 }
               } catch (_) {
                 if (context.mounted) {
-                  AppToast.show(context, 'Could not open store link',
+                  AppToast.show(context, 'Could not open update link',
                       isError: true);
                 }
               }

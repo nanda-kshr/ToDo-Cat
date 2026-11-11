@@ -28,6 +28,8 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>LSUIElement</key>
+	<true/>
 	<key>GIDClientID</key>
 	<string>17924355632-6rsed166qhhhm218hi1a1ckkhu78jlvr.apps.googleusercontent.com</string>
 	<key>GIDServerClientID</key>

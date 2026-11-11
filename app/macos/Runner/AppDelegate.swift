@@ -8,6 +8,11 @@ class AppDelegate: FlutterAppDelegate {
     MenuBarCompanionManager.shared.start()
   }
 
+  override func applicationDidBecomeActive(_ notification: Notification) {
+    super.applicationDidBecomeActive(notification)
+    MenuBarCompanionManager.shared.ensureStatusItem()
+  }
+
   override func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
     // Keep app running in the menu bar when the window is closed
     return !MenuBarCompanionManager.shared.isEnabled
@@ -76,14 +81,15 @@ class TaskCheckboxButton: NSButton {
 }
 
 // MARK: - Cute Menu Bar Popover View Controller
-class MenuBarPopoverViewController: NSViewController {
+class MenuBarPopoverViewController: NSViewController, NSTextFieldDelegate {
   weak var manager: MenuBarCompanionManager?
 
-  let popoverWidth: CGFloat = 270
-  let popoverHeight: CGFloat = 310
+  let popoverWidth: CGFloat = 280
+  let popoverHeight: CGFloat = 340
 
   private var countBadgeLabel: NSTextField!
   private var countBadgeView: NSView!
+  private var quickTaskField: NSTextField!
   private var runnerSegment: NSSegmentedControl!
   private var scrollView: NSScrollView!
   private var taskContentView: FlippedView!
@@ -99,9 +105,10 @@ class MenuBarPopoverViewController: NSViewController {
     effectView.state = .active
     self.view = effectView
 
-    // Header
+    // 1. Header (Height: 38)
     let headerHeight: CGFloat = 38
-    let header = NSView(frame: NSRect(x: 0, y: popoverHeight - headerHeight, width: popoverWidth, height: headerHeight))
+    let headerY = popoverHeight - headerHeight
+    let header = NSView(frame: NSRect(x: 0, y: headerY, width: popoverWidth, height: headerHeight))
 
     let titleLabel = NSTextField(labelWithString: "TodoCat")
     titleLabel.font = .systemFont(ofSize: 13, weight: .bold)
@@ -140,9 +147,37 @@ class MenuBarPopoverViewController: NSViewController {
 
     effectView.addSubview(header)
 
-    // Scrollable Task List
+    // 2. Quick Task Input Bar (Height: 36)
+    let quickAddHeight: CGFloat = 36
+    let quickAddY = headerY - quickAddHeight
+    let quickAddView = NSView(frame: NSRect(x: 0, y: quickAddY, width: popoverWidth, height: quickAddHeight))
+
+    let inputField = NSTextField(frame: NSRect(x: 12, y: 5, width: popoverWidth - 52, height: 25))
+    inputField.placeholderString = "Add a quick task..."
+    inputField.font = .systemFont(ofSize: 12, weight: .regular)
+    inputField.focusRingType = .none
+    inputField.target = self
+    inputField.action = #selector(onQuickTaskSubmitted)
+    quickAddView.addSubview(inputField)
+    self.quickTaskField = inputField
+
+    let addBtn = NSButton(title: "+", target: self, action: #selector(onQuickTaskSubmitted))
+    addBtn.font = .systemFont(ofSize: 14, weight: .bold)
+    addBtn.bezelStyle = .roundRect
+    addBtn.frame = NSRect(x: popoverWidth - 36, y: 4, width: 24, height: 26)
+    quickAddView.addSubview(addBtn)
+
+    let quickAddLine = NSBox(frame: NSRect(x: 0, y: 0, width: popoverWidth, height: 0.5))
+    quickAddLine.boxType = .custom
+    quickAddLine.borderColor = .clear
+    quickAddLine.fillColor = NSColor.separatorColor.withAlphaComponent(0.3)
+    quickAddView.addSubview(quickAddLine)
+
+    effectView.addSubview(quickAddView)
+
+    // 3. Scrollable Task List (Height: popoverHeight - headerHeight - quickAddHeight - footerHeight)
     let footerHeight: CGFloat = 38
-    let scrollHeight = popoverHeight - headerHeight - footerHeight
+    let scrollHeight = quickAddY - footerHeight
     let scroll = NSScrollView(frame: NSRect(x: 0, y: footerHeight, width: popoverWidth, height: scrollHeight))
     scroll.hasVerticalScroller = true
     scroll.autohidesScrollers = true
@@ -155,7 +190,7 @@ class MenuBarPopoverViewController: NSViewController {
     self.scrollView = scroll
     self.taskContentView = doc
 
-    // Footer
+    // 4. Footer (Height: 38)
     let footer = NSView(frame: NSRect(x: 0, y: 0, width: popoverWidth, height: footerHeight))
     let footerLine = NSBox(frame: NSRect(x: 0, y: footerHeight - 0.5, width: popoverWidth, height: 0.5))
     footerLine.boxType = .custom
@@ -216,7 +251,7 @@ class MenuBarPopoverViewController: NSViewController {
       emptyLabel.frame = NSRect(x: 10, y: scrollView.frame.height / 2 - 12, width: popoverWidth - 20, height: 18)
       emptyBox.addSubview(emptyLabel)
 
-      let emptySub = NSTextField(labelWithString: "Enjoy your focus time")
+      let emptySub = NSTextField(labelWithString: "No active tasks right now")
       emptySub.font = .systemFont(ofSize: 10, weight: .regular)
       emptySub.textColor = .tertiaryLabelColor
       emptySub.alignment = .center
@@ -276,6 +311,13 @@ class MenuBarPopoverViewController: NSViewController {
         taskContentView.addSubview(line)
       }
     }
+  }
+
+  @objc private func onQuickTaskSubmitted() {
+    let text = quickTaskField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !text.isEmpty else { return }
+    quickTaskField.stringValue = ""
+    manager?.addQuickTask(title: text)
   }
 
   @objc private func onCheckboxTapped(_ sender: TaskCheckboxButton) {
@@ -374,9 +416,11 @@ class MenuBarCompanionManager: NSObject, NSPopoverDelegate {
 
   func start() {
     guard isEnabled, statusItem == nil else { return }
+    NSApp.setActivationPolicy(.accessory)
 
     let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     self.statusItem = item
+    item.isVisible = true
 
     if let button = item.button {
       button.imagePosition = .imageOnly
@@ -396,24 +440,31 @@ class MenuBarCompanionManager: NSObject, NSPopoverDelegate {
     self.popoverController = controller
     popover.contentViewController = controller
 
-    if NSApp.effectiveAppearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua {
-      self.isWhite = true
-    }
-
+    updateAppearance()
     reloadFrames()
     restartTimer()
+  }
+
+  func ensureStatusItem() {
+    guard isEnabled else { return }
+    if statusItem == nil {
+      start()
+    } else {
+      statusItem?.isVisible = true
+      updateAppearance()
+      reloadFrames()
+      restartTimer()
+    }
   }
 
   func setEnabled(_ enabled: Bool) {
     self.isEnabled = enabled
     if enabled {
-      if statusItem == nil {
-        start()
-      } else {
-        reloadFrames()
-        restartTimer()
-      }
+      NSApp.setActivationPolicy(.accessory)
+      ensureStatusItem()
     } else {
+      NSApp.setActivationPolicy(.regular)
+      openAppWindow()
       timer?.invalidate()
       timer = nil
       closePopover()
@@ -424,14 +475,23 @@ class MenuBarCompanionManager: NSObject, NSPopoverDelegate {
     }
   }
 
+  private func updateAppearance() {
+    // Detect true menu bar brightness (independent of Flutter window theme)
+    let match = statusItem?.button?.effectiveAppearance.bestMatch(from: [.darkAqua, .vibrantDark, .aqua, .vibrantLight])
+    let isDarkMenuBar = (match == .darkAqua || match == .vibrantDark)
+    self.isWhite = isDarkMenuBar
+  }
+
   private func updateState(from args: [String: Any]) {
     let runner = (args["runner"] as? String) ?? currentRunner
     let speed = (args["speedPercent"] as? Int) ?? speedPercent
     let msg = (args["speedMessage"] as? String) ?? speedMessage
-    let catWhite = (args["isWhite"] as? Bool) ?? isWhite
     let sleeping = (args["isSleeping"] as? Bool) ?? (speed <= 0)
     let active = (args["activeCount"] as? Int) ?? activeCount
     let total = (args["todayTotalCount"] as? Int) ?? todayTotalCount
+
+    // Keep sprite contrast matched to macOS menu bar
+    updateAppearance()
 
     var parsedTasks: [MenuTaskItem] = []
     if let tasksJson = args["tasksJson"] as? String,
@@ -455,11 +515,10 @@ class MenuBarCompanionManager: NSObject, NSPopoverDelegate {
       return false
     }
 
-    let visualChanged = (runner != currentRunner || catWhite != isWhite || sleeping != isSleeping)
+    let visualChanged = (runner != currentRunner || sleeping != isSleeping)
     let speedChanged = (speed != speedPercent)
 
     self.currentRunner = runner
-    self.isWhite = catWhite
     self.isSleeping = sleeping
     self.speedPercent = speed
     self.speedMessage = msg
@@ -527,6 +586,19 @@ class MenuBarCompanionManager: NSObject, NSPopoverDelegate {
   }
 
   // MARK: - Task Actions
+  func addQuickTask(title: String) {
+    let tempItem = MenuTaskItem(
+      id: "quick-\(UUID().uuidString)",
+      title: title,
+      completed: false,
+      priority: "medium"
+    )
+    taskItems.insert(tempItem, at: 0)
+    activeCount += 1
+    popoverController?.update(tasks: taskItems, activeCount: activeCount, runner: currentRunner)
+    channel?.invokeMethod("onQuickTaskAddedFromMenu", arguments: ["title": title])
+  }
+
   func toggleTask(id: String, completed: Bool) {
     if let idx = taskItems.firstIndex(where: { $0.id == id }) {
       taskItems[idx].completed = completed
@@ -551,6 +623,7 @@ class MenuBarCompanionManager: NSObject, NSPopoverDelegate {
 
   // MARK: - Sprites & Animations
   private func reloadFrames() {
+    updateAppearance()
     let folder = isWhite ? "\(currentRunner)_white" : currentRunner
     let state = isSleeping ? "sleep" : "run"
 

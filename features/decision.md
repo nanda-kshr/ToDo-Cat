@@ -141,5 +141,36 @@ last_updated: 2026-10-27
   - Rendered via `NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)` in `AppDelegate.swift`.
   - Asset resolution uses `FlutterDartProject.lookupKey(forAsset:)` combined with `Bundle.main.bundleURL` to locate Flutter assets under `Contents/Frameworks/App.framework/Resources/flutter_assets/`.
   - Dimensions: Icon target size configured to `28x28pt` with `.scaleProportionallyDown` to scale cleanly across modern Retina/notched display menu bar heights (~38pt) and external monitors.
-  - Interactive Popover UI: Clicking the menu bar companion presents a compact (`270x310pt`), scrollable `NSPopover` with frosted vibrancy (`.popover` material) instead of an OS context menu. Features live task checkboxes with optimistic completion sync to Flutter, task count pill badge, runner mascot switch (Cat / Bunny), and instant "Open App" navigation.
+  - Interactive Popover UI: Clicking the menu bar companion presents a compact (`280x340pt`), scrollable `NSPopover` with frosted vibrancy (`.popover` material) instead of an OS context menu. Features a Quick Task entry text box on top with Enter/`+` submission, live task checkboxes with optimistic completion sync to Flutter, task count pill badge, runner mascot switch (Cat / Bunny), and instant "Open App" navigation.
+  - Automatic Menu Bar Brightness Detection: Companion sprite variant (dark vs. white) dynamically matches `statusItem.button.effectiveAppearance` (VibrantLight vs. DarkAqua) rather than the Flutter window theme, ensuring the cat has high contrast and is always visible on top regardless of desktop wallpaper or light/dark menu bar modes.
+  - Dock Icon Suppression: Configured `<key>LSUIElement</key><true/>` in `Info.plist` and `NSApp.setActivationPolicy(.accessory)` in `AppDelegate.swift`, ensuring the app operates as a dedicated menu bar companion without showing an icon in the macOS Dock or Cmd+Tab app switcher.
+  - Release Packaging (`.dmg`): Automated via `scripts/build_dmg.sh` using `hdiutil` to bundle the optimized release app into a compressed UDZO disk image with a standard `/Applications` drag-and-drop symlink for distribution.
   - Synchronizes active/completed tasks, velocity speed, companion mascot selection (Cat/Bunny), and system appearance (Dark/Light) dynamically.
+
+## 14. Linux Desktop Application Architecture
+- **Runner Configuration**:
+  - `BINARY_NAME` updated to `todocat` in `app/linux/CMakeLists.txt`.
+  - Native window title and header bar title updated to `TodoCat` in `app/linux/runner/my_application.cc`.
+  - High-resolution 512x512 application icon created at `app/linux/todocat.png`.
+  - FreeDesktop `.desktop` entry configured at `app/linux/todocat.desktop` with categories `Office;ProjectManagement;`.
+- **Desktop Platform Compatibility**:
+  - `FcmService`: Firebase Cloud Messaging initialization is guarded (`Platform.isAndroid || Platform.isIOS || Platform.isMacOS`) to avoid unhandled unsupported platform crashes on Linux desktop.
+  - `HomeWidget`: Android widget channel initialization is guarded (`Platform.isAndroid || Platform.isIOS`) to prevent missing plugin exceptions on Linux.
+
+## 15. Platform-Aware Update Redirection
+- **Dynamic Endpoint Support**:
+  - `GET /api/app-version?platform=<platform>` supports `android`, `ios`, `macos`, `linux`, `web`.
+- **Target Redirection Rules**:
+  - `android`: Redirects to Google Play Store (`https://play.google.com/store/apps/details?id=com.todocat.app`).
+  - `macos`: Redirects to GitHub Releases (`https://github.com/nanda-kshr/ToDo-Cat/releases/latest`) for `.dmg` download.
+  - `linux`: Redirects to GitHub Releases (`https://github.com/nanda-kshr/ToDo-Cat/releases/latest`) for `.AppImage` or `.tar.gz` download.
+  - `ios`: Redirects to Apple App Store.
+
+## 16. Multi-Platform GitHub Release Pipeline
+- **Unified Release Workflow (`.github/workflows/release.yml`)**:
+  - Triggered automatically on semantic version tag push (`v*`) or via manual `workflow_dispatch`.
+  - Parallel matrix of three platform jobs:
+    - `build-android` (Ubuntu runner, Java 17, Flutter stable): Generates `TodoCat-<version>.apk`.
+    - `build-macos` (macOS runner, Flutter stable): Generates `TodoCat-<version>-macos.dmg` with `/Applications` symlink via `hdiutil`.
+    - `build-linux` (Ubuntu runner, GTK3 toolchains, Flutter stable): Generates `TodoCat-<version>-x86_64.AppImage` via `appimagetool` and `TodoCat-<version>-linux-x64.tar.gz`.
+  - `publish-release` job: Downloads all compiled artifacts from parallel jobs and publishes them into a single consolidated GitHub release.

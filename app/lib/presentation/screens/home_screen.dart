@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
 import '../../core/theme/app_colors.dart';
@@ -90,6 +91,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (task != null) {
         _toggleTask(task);
       }
+    };
+    MacMenuBarService.onQuickTaskAddedFromMenu = (title) {
+      if (!mounted) return;
+      _createQuickTask(title);
     };
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _syncWidget();
@@ -241,6 +246,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     FloatingCatService.onTasksUpdated = null;
     MacMenuBarService.onRunnerChangedFromMenu = null;
     MacMenuBarService.onTaskToggledFromMenu = null;
+    MacMenuBarService.onQuickTaskAddedFromMenu = null;
     _searchController.dispose();
     _widgetClickSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
@@ -313,6 +319,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   void _initWidgetLaunchHandling() {
+    if (!Platform.isAndroid && !Platform.isIOS) return;
     HomeWidget.initiallyLaunchedFromHomeWidget().then(_handleWidgetLaunchUri);
     _widgetClickSubscription = HomeWidget.widgetClicked.listen(_handleWidgetLaunchUri);
   }
@@ -839,6 +846,45 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         }
       },
     );
+  }
+
+  Future<void> _createQuickTask(String title) async {
+    final trimmed = title.trim();
+    if (trimmed.isEmpty) return;
+
+    final tempId = 'temp-${DateTime.now().millisecondsSinceEpoch}';
+    final optimisticTask = Task(
+      id: tempId,
+      title: trimmed,
+      createdAt: DateTime.now(),
+      category: 'General',
+      priority: 'medium',
+    );
+
+    if (mounted) {
+      setState(() {
+        _tasks = [optimisticTask, ..._tasks];
+        _cachedFiltered = null;
+        _cachedTodayTasks = null;
+      });
+      _syncWidget();
+    }
+
+    try {
+      final serverTask = await _apiService.createTask(
+        title: trimmed,
+        priority: 'medium',
+        category: 'General',
+      );
+      if (mounted) {
+        setState(() {
+          _tasks = _tasks.map((t) => t.id == tempId ? serverTask : t).toList();
+          _cachedFiltered = null;
+          _cachedTodayTasks = null;
+        });
+        _syncWidget();
+      }
+    } catch (_) {}
   }
 
   Future<void> _editTask(Task task, {

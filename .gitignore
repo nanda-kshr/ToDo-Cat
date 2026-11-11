@@ -6,3 +6,7 @@ google-services*.json
 google-service*.json
 *firebase*.json
 .DS_Store
+*.dmg
+*.apk
+*.AppImage
+*.tar.gz

@@ -14,6 +14,7 @@ class MainFlutterWindow: NSWindow {
       with: flutterViewController.engine.binaryMessenger,
       window: self
     )
+    MenuBarCompanionManager.shared.start()
 
     super.awakeFromNib()
   }

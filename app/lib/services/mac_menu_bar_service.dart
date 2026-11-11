@@ -10,6 +10,7 @@ class MacMenuBarService {
   static bool _initialized = false;
   static void Function(RunnerType runner)? onRunnerChangedFromMenu;
   static void Function(String taskId)? onTaskToggledFromMenu;
+  static void Function(String title)? onQuickTaskAddedFromMenu;
 
   static bool get isSupported => Platform.isMacOS;
 
@@ -34,6 +35,14 @@ class MacMenuBarService {
           final taskId = args['taskId'] as String?;
           if (taskId != null && onTaskToggledFromMenu != null) {
             onTaskToggledFromMenu!(taskId);
+          }
+        }
+      } else if (call.method == 'onQuickTaskAddedFromMenu') {
+        final args = call.arguments;
+        if (args is Map) {
+          final title = args['title'] as String?;
+          if (title != null && onQuickTaskAddedFromMenu != null) {
+            onQuickTaskAddedFromMenu!(title);
           }
         }
       }

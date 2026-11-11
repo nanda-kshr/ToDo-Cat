@@ -1,7 +1,7 @@
 const { test, describe } = require("node:test");
 const assert = require("node:assert");
 
-const VALID_PLATFORMS = ["android", "ios", "web"];
+const VALID_PLATFORMS = ["android", "ios", "macos", "linux", "web"];
 
 function getPlatformConfig(platform) {
   switch (platform) {
@@ -24,6 +24,26 @@ function getPlatformConfig(platform) {
         updateUrl:
           process.env.APP_IOS_UPDATE_URL ||
           "https://apps.apple.com/app/todocat/id6738900000",
+      };
+    case "macos":
+      return {
+        latestVersion: process.env.APP_MACOS_LATEST_VERSION || "1.0.2",
+        latestBuildNumber: parseInt(process.env.APP_MACOS_LATEST_BUILD || "8", 10),
+        minSupportedVersion: process.env.APP_MACOS_MIN_VERSION || "1.0.0",
+        minSupportedBuildNumber: parseInt(process.env.APP_MACOS_MIN_BUILD || "1", 10),
+        updateUrl:
+          process.env.APP_MACOS_UPDATE_URL ||
+          "https://github.com/nanda-kshr/ToDo-Cat/releases/latest",
+      };
+    case "linux":
+      return {
+        latestVersion: process.env.APP_LINUX_LATEST_VERSION || "1.0.2",
+        latestBuildNumber: parseInt(process.env.APP_LINUX_LATEST_BUILD || "8", 10),
+        minSupportedVersion: process.env.APP_LINUX_MIN_VERSION || "1.0.0",
+        minSupportedBuildNumber: parseInt(process.env.APP_LINUX_MIN_BUILD || "1", 10),
+        updateUrl:
+          process.env.APP_LINUX_UPDATE_URL ||
+          "https://github.com/nanda-kshr/ToDo-Cat/releases/latest",
       };
     case "web":
       return {
@@ -89,6 +109,26 @@ describe("GET /api/app-version", () => {
     assert.strictEqual(res.status, 200);
     assert.strictEqual(res.body.platform, "ios");
     assert.ok(res.body.updateUrl.includes("apps.apple.com"));
+  });
+
+  test("Happy path: platform=macos returns 200 with macOS config and GitHub releases URL", async () => {
+    const res = await handleGetAppVersion("/api/app-version?platform=macos");
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.platform, "macos");
+    assert.strictEqual(
+      res.body.updateUrl,
+      "https://github.com/nanda-kshr/ToDo-Cat/releases/latest"
+    );
+  });
+
+  test("Happy path: platform=linux returns 200 with Linux config and GitHub releases URL", async () => {
+    const res = await handleGetAppVersion("/api/app-version?platform=linux");
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.platform, "linux");
+    assert.strictEqual(
+      res.body.updateUrl,
+      "https://github.com/nanda-kshr/ToDo-Cat/releases/latest"
+    );
   });
 
   test("Happy path: platform=web returns 200 with Web config", async () => {
