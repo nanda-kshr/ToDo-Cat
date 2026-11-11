@@ -54,6 +54,19 @@ static void my_application_activate(GApplication* application) {
 
   gtk_window_set_default_size(window, 1280, 720);
 
+  // Set window icon — try flutter_assets path relative to the executable
+  {
+    gchar* exe_path = g_file_read_link("/proc/self/exe", nullptr);
+    gchar* exe_dir = exe_path ? g_path_get_dirname(exe_path) : g_strdup(".");
+    gchar* icon_path = g_build_filename(exe_dir, "data", "flutter_assets", "assets", "logo.png", nullptr);
+    GError* icon_error = nullptr;
+    gtk_window_set_icon_from_file(window, icon_path, &icon_error);
+    if (icon_error) g_error_free(icon_error);
+    g_free(icon_path);
+    g_free(exe_dir);
+    g_free(exe_path);
+  }
+
   g_autoptr(FlDartProject) project = fl_dart_project_new();
   fl_dart_project_set_dart_entrypoint_arguments(
       project, self->dart_entrypoint_arguments);

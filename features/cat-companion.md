@@ -48,10 +48,11 @@ A dynamic cat companion that animates across the header of the app, floats over 
   - `app/android/app/src/main/kotlin/com/todocat/app/FloatingCatService.kt` - Android overlay implementation using WindowManager and theme-aware UI views supporting dynamic runner mascots (Cat and Bunny) in both running and sleeping states.
   - `app/lib/models/runner.dart` - `RunnerType` enum (Cat, Bunny) with dynamic frame counts and asset path resolvers.
   - `app/assets/runners/` - Multi-runner sprite frames categorized by `run/` and `sleep/` for Cat (7/6 frames) and Bunny (5/5 frames) in default and white color variants.
-- **Desktop (macOS)**:
+- **Desktop (macOS & Linux)**:
   - `app/macos/Runner/AppDelegate.swift` - Hosts `MenuBarCompanionManager`, managing AppKit's `NSStatusItem` (`28x28pt` sprite frames with `.scaleProportionallyDown` and dynamic `NSAppearance` menu bar contrast detection), sprite frame animation timer, and a compact, scrollable `NSPopover` interface with a Quick Task entry text box on top, optimistic task completion checkboxes, live task count badge, and runner switcher. Operates as a pure menu bar companion via `LSUIElement = true` and `NSApplication.ActivationPolicy.accessory`, preventing Dock clutter and running persistently on top. Prevents app termination on window close when the menu bar companion is active.
   - `app/macos/Runner/MainFlutterWindow.swift` - Connects the Flutter engine binary messenger with the native menu bar companion manager.
   - `app/lib/services/mac_menu_bar_service.dart` - Flutter `MethodChannel` (`com.todocat.app/macos_menu_bar`) sending real-time task velocity, active counts, theme variants, and runner mascot type.
+  - `app/lib/services/linux_tray_service.dart` - Linux system tray companion (`tray_manager` StatusNotifierItem over D-Bus) cycling companion running frames, reflecting theme variant and active task counts with context menu controls.
   - `app/lib/presentation/screens/home/widgets/settings_modal.dart` - Provides native toggle for "Menu Bar Companion" on macOS devices.
 - **Web (Next.js)**:
   - `Web/components/CatAnimation.tsx` - Reusable multi-runner animation component supporting dynamic frame loops, sleep/run cycles, theme cards/dark variants, and local storage synchronization.

@@ -151,8 +151,15 @@ last_updated: 2026-10-27
 - **Runner Configuration**:
   - `BINARY_NAME` updated to `todocat` in `app/linux/CMakeLists.txt`.
   - Native window title and header bar title updated to `TodoCat` in `app/linux/runner/my_application.cc`.
+  - Window icon configured from bundled `assets/logo.png` via `gtk_window_set_icon_from_file` relative to executable path in `app/linux/runner/my_application.cc`.
   - High-resolution 512x512 application icon created at `app/linux/todocat.png`.
   - FreeDesktop `.desktop` entry configured at `app/linux/todocat.desktop` with categories `Office;ProjectManagement;`.
+- **System Tray Companion**:
+  - Implemented via `tray_manager` (StatusNotifierItem over D-Bus) in `app/lib/services/linux_tray_service.dart`.
+  - Animates running frames (Cat: 7 frames, Bunny: 5 frames) cycling via a 150ms periodic timer.
+  - Automatically adapts to runner mascot and theme brightness (dark vs. white variant).
+  - Context menu provides live active task count, "Show TodoCat", and "Quit".
+  - Build dependency `libayatana-appindicator3-dev` integrated into Linux CI workflow.
 - **Desktop Platform Compatibility**:
   - `FcmService`: Firebase Cloud Messaging initialization is guarded (`Platform.isAndroid || Platform.isIOS || Platform.isMacOS`) to avoid unhandled unsupported platform crashes on Linux desktop.
   - `HomeWidget`: Android widget channel initialization is guarded (`Platform.isAndroid || Platform.isIOS`) to prevent missing plugin exceptions on Linux.

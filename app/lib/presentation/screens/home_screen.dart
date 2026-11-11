@@ -11,6 +11,7 @@ import '../../models/user.dart';
 import '../../services/api_service.dart';
 import '../../services/fcm_service.dart';
 import '../../services/floating_cat_service.dart';
+import '../../services/linux_tray_service.dart';
 import '../../services/mac_menu_bar_service.dart';
 import '../../services/task_sync_service.dart';
 import '../../services/theme_service.dart';
@@ -79,6 +80,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     FloatingCatService.initialize();
     FloatingCatService.onTasksUpdated = _onExternalTasksUpdated;
     MacMenuBarService.initialize();
+    LinuxTrayService.instance.initialize();
     MacMenuBarService.onRunnerChangedFromMenu = (runner) {
       if (mounted) {
         setState(() {});
@@ -247,6 +249,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     MacMenuBarService.onRunnerChangedFromMenu = null;
     MacMenuBarService.onTaskToggledFromMenu = null;
     MacMenuBarService.onQuickTaskAddedFromMenu = null;
+    LinuxTrayService.instance.dispose();
     _searchController.dispose();
     _widgetClickSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
@@ -316,6 +319,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       catSpeed: counts.catSpeed,
       isFloatingOverlayRunning: _isFloatingOverlayRunning,
     );
+    LinuxTrayService.instance.update(activeTasks: counts.active);
   }
 
   void _initWidgetLaunchHandling() {
