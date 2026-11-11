@@ -19,6 +19,14 @@ static void first_frame_cb(MyApplication* self, FlView* view) {
   gtk_widget_show(gtk_widget_get_toplevel(GTK_WIDGET(view)));
 }
 
+// Intercept window close (X button) to hide to system tray instead of quitting.
+static gboolean window_delete_event_cb(GtkWidget* widget,
+                                       GdkEvent* event,
+                                       gpointer user_data) {
+  gtk_widget_hide(widget);
+  return TRUE;
+}
+
 static void window_method_call_cb(FlMethodChannel* channel,
                                   FlMethodCall* method_call,
                                   gpointer user_data) {
@@ -26,7 +34,13 @@ static void window_method_call_cb(FlMethodChannel* channel,
   const gchar* method = fl_method_call_get_name(method_call);
 
   if (strcmp(method, "showWindow") == 0) {
+    gtk_widget_show(GTK_WIDGET(window));
     gtk_window_present(window);
+    g_autoptr(FlMethodResponse) response =
+        FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(true)));
+    fl_method_call_respond(method_call, response, nullptr);
+  } else if (strcmp(method, "hideWindow") == 0) {
+    gtk_widget_hide(GTK_WIDGET(window));
     g_autoptr(FlMethodResponse) response =
         FL_METHOD_RESPONSE(fl_method_success_response_new(fl_value_new_bool(true)));
     fl_method_call_respond(method_call, response, nullptr);
@@ -42,6 +56,10 @@ static void my_application_activate(GApplication* application) {
   MyApplication* self = MY_APPLICATION(application);
   GtkWindow* window =
       GTK_WINDOW(gtk_application_window_new(GTK_APPLICATION(application)));
+
+  // Hold application so it keeps running in the background when the window is hidden.
+  g_application_hold(application);
+  g_signal_connect(window, "delete-event", G_CALLBACK(window_delete_event_cb), nullptr);
 
   // Use a header bar when running in GNOME as this is the common style used
   // by applications and is the setup most users will be using (e.g. Ubuntu

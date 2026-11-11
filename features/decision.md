@@ -165,6 +165,10 @@ last_updated: 2026-10-27
     - Companion mascot selector submenu (Cat / Bunny) updating preferences in real time.
     - Window management: "Open TodoCat" raises and focuses the GTK window via custom `com.todocat.app/linux_window` method channel invoking `gtk_window_present`.
     - Quit option.
+  - **Background & Close-to-Tray Lifecycle**:
+    - `g_application_hold(application)` held in `my_application_activate` to keep the application process running even when windows are closed/hidden.
+    - `delete-event` on `GtkWindow` intercepted in `my_application.cc` returning `TRUE` and calling `gtk_widget_hide(widget)`, ensuring closing the window keeps the companion cat running in the top bar tray.
+    - Exiting the app is performed exclusively via the tray menu "Quit" option (`exit(0)`).
   - Build dependency `libayatana-appindicator3-dev` integrated into Linux CI workflow.
   - CMake compiler flag `-Wno-deprecated-declarations` added to `APPLY_STANDARD_SETTINGS` in `app/linux/CMakeLists.txt` to suppress fatal deprecation errors on Ubuntu runners from `tray_manager`'s `app_indicator_new` calls.
 - **Desktop Platform Compatibility**:

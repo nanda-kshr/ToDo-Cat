@@ -65,6 +65,13 @@ class LinuxTrayService with TrayListener {
     } catch (_) {}
   }
 
+  Future<void> hideWindow() async {
+    if (!isSupported) return;
+    try {
+      await _windowChannel.invokeMethod('hideWindow');
+    } catch (_) {}
+  }
+
   Future<void> update({
     required int activeTasks,
     List<Task>? tasks,
