@@ -73,22 +73,37 @@ jobs:
           EOF
           fi
 
-      - name: Build Android APK
+      - name: Build Android APKs & AppBundle
         run: |
           cd app
           flutter pub get
+          # Universal APK
           flutter build apk --release
+          # Architecture-specific APKs
+          flutter build apk --release --split-per-abi
+          # Android App Bundle for Google Play
+          flutter build appbundle --release
 
-      - name: Package & Name APK
+      - name: Package & Name APKs & Bundle
         run: |
           VERSION=$(grep 'version:' app/pubspec.yaml | head -n1 | cut -d' ' -f2 | cut -d'+' -f1)
+          # Universal APK
+          cp app/build/app/outputs/flutter-apk/app-release.apk "TodoCat-${VERSION}-universal.apk"
           cp app/build/app/outputs/flutter-apk/app-release.apk "TodoCat-${VERSION}.apk"
+          # Architecture-specific APKs
+          cp app/build/app/outputs/flutter-apk/app-arm64-v8a-release.apk "TodoCat-${VERSION}-arm64-v8a.apk"
+          cp app/build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk "TodoCat-${VERSION}-armeabi-v7a.apk"
+          cp app/build/app/outputs/flutter-apk/app-x86_64-release.apk "TodoCat-${VERSION}-x86_64.apk"
+          # App Bundle
+          cp app/build/app/outputs/bundle/release/app-release.aab "TodoCat-${VERSION}.aab"
 
       - name: Upload Android Artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-release
-          path: TodoCat-*.apk
+          path: |
+            TodoCat-*.apk
+            TodoCat-*.aab
 
   build-macos:
     name: Build macOS DMG

@@ -1,5 +1,6 @@
 import Cocoa
 import FlutterMacOS
+import ServiceManagement
 
 @main
 class AppDelegate: FlutterAppDelegate {
@@ -421,6 +422,17 @@ class MenuBarCompanionManager: NSObject, NSPopoverDelegate {
         self.openAppWindow()
         result(true)
 
+      case "setLaunchAtStartup":
+        if let args = call.arguments as? [String: Any], let enabled = args["enabled"] as? Bool {
+          let success = self.setLaunchAtStartup(enabled)
+          result(success)
+        } else {
+          result(false)
+        }
+
+      case "isLaunchAtStartupEnabled":
+        result(self.isLaunchAtStartupEnabled())
+
       default:
         result(FlutterMethodNotImplemented)
       }
@@ -812,5 +824,56 @@ class MenuBarCompanionManager: NSObject, NSPopoverDelegate {
 
   @objc func quitApp() {
     NSApp.terminate(nil)
+  }
+
+  // MARK: - Launch at Startup
+  private func setLaunchAtStartup(_ enabled: Bool) -> Bool {
+    if #available(macOS 13.0, *) {
+      let service = SMAppService.mainApp
+      do {
+        if enabled {
+          try service.register()
+          return service.status == .enabled
+        } else {
+          try service.unregister()
+          return service.status != .enabled
+        }
+      } catch {
+        NSLog("TodoCat SMAppService error: %@", error.localizedDescription)
+        return false
+      }
+    } else {
+      let bundlePath = Bundle.main.bundlePath
+      let script: String
+      if enabled {
+        script = "tell application \"System Events\" to make login item at end with properties {path:\"\(bundlePath)\", hidden:false}"
+      } else {
+        let appName = Bundle.main.bundleURL.deletingPathExtension().lastPathComponent
+        script = "tell application \"System Events\" to delete (every login item whose name is \"\(appName)\")"
+      }
+      var error: NSDictionary?
+      if let appleScript = NSAppleScript(source: script) {
+        appleScript.executeAndReturnError(&error)
+      }
+      return error == nil
+    }
+  }
+
+  private func isLaunchAtStartupEnabled() -> Bool {
+    if #available(macOS 13.0, *) {
+      return SMAppService.mainApp.status == .enabled
+    } else {
+      let appName = Bundle.main.bundleURL.deletingPathExtension().lastPathComponent
+      let script = "tell application \"System Events\" to get the name of every login item"
+      var error: NSDictionary?
+      if let appleScript = NSAppleScript(source: script) {
+        let descriptor = appleScript.executeAndReturnError(&error)
+        if error == nil {
+          let names = (0..<descriptor.numberOfItems).compactMap { descriptor.atIndex($0 + 1)?.stringValue }
+          return names.contains(appName)
+        }
+      }
+      return false
+    }
   }
 }

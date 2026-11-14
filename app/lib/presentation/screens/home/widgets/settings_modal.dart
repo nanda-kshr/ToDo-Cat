@@ -1,10 +1,12 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../models/user.dart';
 import '../../../../models/runner.dart';
 import '../../../../services/mac_menu_bar_service.dart';
+import '../../../../services/startup_service.dart';
 import '../../../../services/theme_service.dart';
 import '../../about_screen.dart';
 import '../../legal_screen.dart';
@@ -61,6 +63,7 @@ class _SettingsModalSheet extends StatefulWidget {
 class _SettingsModalSheetState extends State<_SettingsModalSheet> {
   late bool _localFloatingRunning;
   bool _menuBarEnabled = true;
+  bool _launchOnStartup = false;
   bool _isToggling = false;
   bool _isClosing = false;
   double _overscrollAccumulator = 0.0;
@@ -108,9 +111,14 @@ class _SettingsModalSheetState extends State<_SettingsModalSheet> {
   void initState() {
     super.initState();
     _localFloatingRunning = widget.isFloatingOverlayRunning;
-    if (Platform.isMacOS) {
+    if (!kIsWeb && Platform.isMacOS) {
       MacMenuBarService.isEnabled().then((val) {
         if (mounted) setState(() => _menuBarEnabled = val);
+      });
+    }
+    if (StartupService.isSupported) {
+      StartupService.instance.isEnabled().then((val) {
+        if (mounted) setState(() => _launchOnStartup = val);
       });
     }
   }
@@ -454,8 +462,8 @@ class _SettingsModalSheetState extends State<_SettingsModalSheet> {
                       ),
                       const SizedBox(height: 24),
 
-                      // Section 3: Menu Bar Companion (macOS) or Floating Overlay (Mobile)
-                      if (Platform.isMacOS) ...[
+                      // Section 3: Menu Bar Companion (macOS) or Floating Overlay (Android)
+                      if (!kIsWeb && Platform.isMacOS) ...[
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -496,7 +504,7 @@ class _SettingsModalSheetState extends State<_SettingsModalSheet> {
                             ),
                           ],
                         ),
-                      ] else ...[
+                      ] else if (!kIsWeb && Platform.isAndroid) ...[
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -548,60 +556,109 @@ class _SettingsModalSheetState extends State<_SettingsModalSheet> {
                           ],
                         ),
                       ],
+
+                      // Run on Startup toggle (macOS & Linux)
+                      if (StartupService.isSupported) ...[
+                        const SizedBox(height: 18),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Launch on Startup',
+                                    style: TextStyle(
+                                      fontFamily: 'Sniglet',
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: textPrimary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    'Automatically launch TodoCat when you log in',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: textSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Switch(
+                              value: _launchOnStartup,
+                              activeTrackColor: palette.fabBg,
+                              activeThumbColor: palette.fabIcon,
+                              inactiveTrackColor: isDark ? const Color(0xFF2E2E2E) : palette.progressTrack,
+                              onChanged: (targetVal) async {
+                                setState(() => _launchOnStartup = targetVal);
+                                final ok = await StartupService.instance.setEnabled(targetVal);
+                                if (mounted && !ok && targetVal) {
+                                  setState(() => _launchOnStartup = false);
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 18),
 
                       // Extra field: Home Screen Widgets
-                      InkWell(
-                        onTap: () {
-                          Navigator.pop(context);
-                          widget.onShowWidgetChoice();
-                        },
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: cardBg,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: cardBorder),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 36,
-                                height: 36,
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE4E4E7),
-                                  borderRadius: BorderRadius.circular(10),
+                      if (!kIsWeb && Platform.isAndroid) ...[
+                        InkWell(
+                          onTap: () {
+                            Navigator.pop(context);
+                            widget.onShowWidgetChoice();
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: cardBg,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: cardBorder),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 36,
+                                  height: 36,
+                                  decoration: BoxDecoration(
+                                    color: isDark ? const Color(0xFF2A2A2A) : const Color(0xFFE4E4E7),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(Icons.widgets_outlined, size: 20, color: textPrimary),
                                 ),
-                                child: Icon(Icons.widgets_outlined, size: 20, color: textPrimary),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Home Screen Widgets',
-                                      style: TextStyle(
-                                        fontFamily: 'Sniglet',
-                                        fontWeight: FontWeight.w600,
-                                        color: textPrimary,
-                                        fontSize: 14,
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Home Screen Widgets',
+                                        style: TextStyle(
+                                          fontFamily: 'Sniglet',
+                                          fontWeight: FontWeight.w600,
+                                          color: textPrimary,
+                                          fontSize: 14,
+                                        ),
                                       ),
-                                    ),
-                                    Text(
-                                      'Setup quick tasks and running cat widgets',
-                                      style: TextStyle(color: textSecondary, fontSize: 11),
-                                    ),
-                                  ],
+                                      Text(
+                                        'Setup quick tasks and running cat widgets',
+                                        style: TextStyle(color: textSecondary, fontSize: 11),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              Icon(Icons.chevron_right, color: textSecondary, size: 20),
-                            ],
+                                Icon(Icons.chevron_right, color: textSecondary, size: 20),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 10),
+                        const SizedBox(height: 10),
+                      ],
 
                       // About TodoCat
                       InkWell(

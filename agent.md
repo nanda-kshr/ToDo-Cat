@@ -83,6 +83,11 @@ Each feature document must conform to the Google Open Knowledge Format specifica
   - Test framework: `flutter_test`
   - Test command: `flutter test` (or `flutter test test/<file>_test.dart`)
   - Runner configurations: `RunnerType` (`cat`: 7 run, 6 sleep; `bunny`: 8 run, 7 sleep, white: 5/5; `axolotl`: 9 run, 7 sleep).
+  - Asset specs: 400x400 RGBA PNG with Lanczos downsampling and lossless optimization across all runner directories (`app/assets/runners/` and `Web/public/runners/`).
+  - Android build commands:
+    - Universal APK: `flutter build apk --release`
+    - Split per ABI APKs: `flutter build apk --release --split-per-abi` (outputs `arm64-v8a`, `armeabi-v7a`, `x86_64`)
+    - App Bundle: `flutter build appbundle --release` (for Google Play Console)
 - **Web Frontend (`Web/`)**:
   - Stack: Next.js (App Router), React, Tailwind CSS, TypeScript
   - Dev/build: `npm run dev` / `npm run build`
@@ -92,3 +97,7 @@ Each feature document must conform to the Google Open Knowledge Format specifica
   - Home widgets: `TodoCatWidgetProvider.kt` & `todocat_cat_widget*.xml`
 - **Native macOS Companion**:
   - AppKit menu bar companion: `AppDelegate.swift` (`MenuBarCompanionManager`)
+  - Launch on Startup: `SMAppService.mainApp` via `com.todocat.app/macos_menu_bar` method channel
+- **Linux Desktop Support**:
+  - System tray: `linux_tray_service.dart` (`tray_manager`)
+  - Launch on Startup: `startup_service.dart` (XDG autostart `~/.config/autostart/todocat.desktop`)

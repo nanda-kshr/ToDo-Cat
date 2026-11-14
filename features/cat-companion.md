@@ -18,6 +18,7 @@ A dynamic cat companion that animates across the header of the app, floats over 
 - **Expanded Overlay View**: Tapping the floating cat reveals a full task management card supporting task creation, check-off, and priority indicators.
 - **Theme & Color Parity**: Automatically mirrors the central theme palette across light and dark modes with selectable variants (Auto, Black, White).
 - **Multiple Runner Companions**: Supports selectable companion mascots (`Cat`, `Bunny`, and `Axolotl`), each with independent run/sleep frame counts (`assets/runners/<runner>/run/<frame>.png` and `assets/runners/<runner>/sleep/<frame>.png`).
+- **Launch on Startup (macOS & Linux)**: Native in-house auto-start support without external plugin bloat (`SMAppService.mainApp` on macOS 13+ with legacy AppleScript fallback, and XDG desktop entry in `~/.config/autostart/todocat.desktop` on Linux).
 
 ## Daily Cat Briefing
 - **Client-Side Trigger**: Evaluated on app open and foreground resume (`didChangeAppLifecycleState`). Deduplicated by period key (`YYYY-MM-DD-period`) so users only receive one in-app toast per time bracket.
@@ -47,7 +48,7 @@ A dynamic cat companion that animates across the header of the app, floats over 
   - `app/lib/services/floating_cat_service.dart` - MethodChannel bridge for controlling the floating companion overlay with dynamic runner parameter.
   - `app/android/app/src/main/kotlin/com/todocat/app/FloatingCatService.kt` - Android overlay implementation using WindowManager and theme-aware UI views supporting dynamic runner mascots (Cat, Bunny, and Axolotl) in both running and sleeping states.
   - `app/lib/models/runner.dart` - `RunnerType` enum (Cat, Bunny, Axolotl) with dynamic frame counts and asset path resolvers.
-  - `app/assets/runners/` - Multi-runner sprite frames categorized by `run/` and `sleep/` for Cat (7/6 frames), Bunny (8/7 frames, white: 5/5 frames), and Axolotl (9/7 frames) in default and white color variants.
+  - `app/assets/runners/` - Multi-runner sprite frames categorized by `run/` and `sleep/` for Cat (7/6 frames), Bunny (8/7 frames, white: 5/5 frames), and Axolotl (9/7 frames) in default and white color variants. All frames are normalized to 400x400 RGBA PNGs with Lanczos resampling and lossless compression to keep binary sizes minimal (~4MB total).
 - **Desktop (macOS & Linux)**:
   - `app/macos/Runner/AppDelegate.swift` - Hosts `MenuBarCompanionManager`, managing AppKit's `NSStatusItem` (`28x28pt` sprite frames with `.scaleProportionallyDown` and dynamic `NSAppearance` menu bar contrast detection), sprite frame animation timer, and a compact, scrollable `NSPopover` interface with a Quick Task entry text box on top, optimistic task completion checkboxes, live task count badge, and runner switcher (Cat / Bunny / Axolotl). Operates as a pure menu bar companion via `LSUIElement = true` and `NSApplication.ActivationPolicy.accessory`, preventing Dock clutter and running persistently on top. Prevents app termination on window close when the menu bar companion is active.
   - `app/macos/Runner/MainFlutterWindow.swift` - Connects the Flutter engine binary messenger with the native menu bar companion manager.

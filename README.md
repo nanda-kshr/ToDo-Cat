@@ -1,92 +1,261 @@
-# TodoCat
+<p align="center">
+  <img src="app/assets/logo.png" alt="TodoCat Logo" width="190" />
+</p>
 
-> **Visual task management powered by an animated running companion.**
+<h1 align="center">TodoCat</h1>
 
----
+<p align="center">
+  <em>Visual task management powered by animated companion runners that pace with your daily productivity.</em>
+</p>
 
-## Store Listings (Google Play Store)
+<p align="center">
+  <a href="https://github.com/nanda-kshr/ToDo-Cat/releases/latest">
+    <img src="https://img.shields.io/github/v/release/nanda-kshr/ToDo-Cat?color=blue&label=Latest%20Release&style=flat-square" alt="Latest Release" />
+  </a>
+  <a href="https://play.google.com/store/apps/details?id=com.todocat.app">
+    <img src="https://img.shields.io/badge/Google_Play-TodoCat-34A853?style=flat-square&logo=google-play&logoColor=white" alt="Google Play Store" />
+  </a>
+  <a href="https://to-do-cat.vercel.app">
+    <img src="https://img.shields.io/badge/Web_App-Live-000000?style=flat-square&logo=vercel&logoColor=white" alt="Web App" />
+  </a>
+  <a href="https://github.com/nanda-kshr/ToDo-Cat/releases/latest">
+    <img src="https://img.shields.io/badge/Platforms-Android%20%7C%20macOS%20%7C%20Linux%20%7C%20Web-6c5ce7?style=flat-square" alt="Supported Platforms" />
+  </a>
+  <a href="LICENSE">
+    <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="MIT License" />
+  </a>
+  <a href="https://github.com/nanda-kshr/ToDo-Cat/actions">
+    <img src="https://img.shields.io/github/actions/workflow/status/nanda-kshr/ToDo-Cat/release.yml?branch=main&label=Build&style=flat-square" alt="Build Status" />
+  </a>
+</p>
 
-### Short Description (80 characters max)
-```text
-Visual task manager with a running cat companion that speeds up with your goals.
-```
-
-### Full Description
-```text
-Meet TodoCat — the visual task management app that transforms daily productivity into an engaging experience with an animated running companion!
-
-Inspired by the iconic RunCat runners, TodoCat connects your task completion velocity directly to a lively cat that runs faster as you finish your work. When all your goals are met, your cat rests peacefully, giving you instant, clear feedback on your daily progress.
-
-KEY FEATURES:
-
-Dynamic Runner Companion
-• Your cat's running speed visually reflects your task progress in real time.
-• Catch up on pending tasks to see your companion sprint, and enjoy a well-deserved rest when you're done.
-
-Floating Cat Screen Overlay
-• Keep your running companion floating seamlessly over any app on your screen.
-• Tap to quickly expand today's tasks, check items off, or quick-add new tasks on the fly without leaving your current app.
-• Drag to dismiss whenever you need full-screen focus.
-
-Home Screen Widgets
-• Clean, resizable Android home screen widgets for your tasks and runner cat.
-• Mark tasks complete and monitor active goals directly from your home screen.
-
-Smart Task Management
-• Organize tasks by priority (Low, Medium, High) and custom categories (Work, Personal, Study, Health, Shopping, General).
-• Set due dates with intuitive quick filters for Today, Earlier, and Completed.
-• Instant search to find any task in seconds.
-
-Productivity Velocity & Analytics
-• Visual charts tracking your weekly and monthly task completion velocity.
-• Monitor completion rates, active work volume, and streaks.
-
-Personalization & Themes
-• Seamless Dark Mode, Light Mode, and System Theme support.
-• Choose your favorite cat companion variant: Classic Black Cat, White Cat, or Auto-Contrast.
-
-Cloud Sync & Offline-First
-• Works 100% offline with zero latency.
-• Synchronizes smoothly across devices with secure Google Sign-In or email authentication.
-
-Privacy First & No Ads
-• Your data belongs to you. No tracking ads, no third-party data broker sharing.
-• Full account and data deletion available anytime directly within the app or online.
-
-Developed by Nandakishore P.
-Support the project: https://buymeacoffee.com/nanda_kshr
-Website & Web App: https://to-do-cat.vercel.app
-```
+<p align="center">
+  <img src="app/assets/cat_runner.gif" alt="TodoCat Animated Runner" width="96" />
+</p>
 
 ---
 
-## Architecture & Tech Stack
+## Overview
 
-- **Mobile Application (`/app`)**: Built with [Flutter](https://flutter.dev) (Dart), utilizing native Android services for `SYSTEM_ALERT_WINDOW` floating companion overlay and `AppWidgetProvider` home screen widgets.
-- **Web Application & Backend (`/Web`)**: Built with [Next.js](https://nextjs.org) (App Router, TypeScript, Tailwind CSS), backed by MongoDB with JWT & Google OAuth authentication.
-- **API Server**: Hosted live at `https://to-do-cat.vercel.app/api`.
+**TodoCat** transforms daily task execution into a visual, gamified experience. Inspired by classic system-monitor runners, your productivity completion velocity directly controls a lively animated companion:
+
+- **Active goals pending**: Your companion runs faster as you cross items off your list.
+- **All goals completed**: Your companion rests peacefully, providing immediate visual feedback on your daily progress.
+- **Multiple companions**: Choose between **Cat**, **Bunny**, and **Axolotl** with light, dark, and auto-contrast themes.
+- **Native integrations everywhere**: Floating screen overlays on Android, status menu bar runners on macOS, system tray indicators on Linux, and an accessible Web dashboard.
 
 ---
 
-## Getting Started
+## Downloads & Availability
+
+All desktop installers and APK packages always point dynamically to the **newest available release** without hardcoded version strings.
+
+| Platform | Package Format | Source | Action |
+| :--- | :--- | :--- | :--- |
+| **Android** | Google Play Store | Official Store | [Get on Google Play](https://play.google.com/store/apps/details?id=com.todocat.app) |
+| **Android** | Universal APK | Direct GitHub Release | [Download Latest APK](https://github.com/nanda-kshr/ToDo-Cat/releases/latest) |
+| **macOS** | DMG Installer (Apple Silicon & Intel) | Direct GitHub Release | [Download Latest macOS DMG](https://github.com/nanda-kshr/ToDo-Cat/releases/latest) |
+| **Linux** | AppImage (x86_64) | Direct GitHub Release | [Download Latest Linux AppImage](https://github.com/nanda-kshr/ToDo-Cat/releases/latest) |
+| **Linux** | Standalone Tarball (x86_64) | Direct GitHub Release | [Download Latest Linux Tarball](https://github.com/nanda-kshr/ToDo-Cat/releases/latest) |
+| **Web** | Responsive Dashboard / PWA | Vercel Cloud | [Open Web Dashboard](https://to-do-cat.vercel.app) |
+
+---
+
+## Google Play Store (Android)
+
+Install TodoCat directly on Android devices with automated background updates and seamless Google Play Integrity:
+
+- **Store Page**: [TodoCat on Google Play Store](https://play.google.com/store/apps/details?id=com.todocat.app)
+- **Package Identifier**: `com.todocat.app`
+- **Supported Android Versions**: Android 5.0 (API 21) and newer
+
+### Android Native Features
+- **Floating Companion Overlay**: Uses `SYSTEM_ALERT_WINDOW` to place your running cat over any screen. Tap the companion anytime to expand your daily tasks, check items off, or quick-add tasks without switching applications.
+- **Home Screen Widgets**: Clean, resizable Android home screen widgets displaying pending items and runner animations.
+- **Offline First**: Works with zero network latency; automatically synchronizes when connectivity is restored.
+
+---
+
+## macOS Installation Guide
+
+TodoCat for macOS includes both the full task workspace and a native AppKit status bar companion running directly in your macOS menu bar next to Wi-Fi and Control Center.
+
+### Compatibility
+- macOS 11.0 (Big Sur) or later
+- Universal binary supporting both Apple Silicon (M1/M2/M3/M4) and Intel Macs
+
+### Step-by-Step Installation
+1. **Download the Installer**:
+   Grab the latest `.dmg` installer directly from the [GitHub Latest Releases](https://github.com/nanda-kshr/ToDo-Cat/releases/latest) page.
+
+   Alternatively, download the latest macOS release directly via terminal:
+   ```bash
+   curl -s https://api.github.com/repos/nanda-kshr/ToDo-Cat/releases/latest \
+     | grep "browser_download_url.*macos.dmg" \
+     | cut -d : -f 2,3 \
+     | tr -d \" \
+     | xargs curl -LO
+   ```
+
+2. **Mount and Install**:
+   - Double-click the downloaded `TodoCat-*-macos.dmg` file.
+   - Drag **TodoCat.app** into your `/Applications` directory.
+
+3. **First Launch & Security Notice**:
+   Because TodoCat is distributed directly via GitHub outside the Mac App Store, macOS Gatekeeper may show a notice on first launch:
+   
+   - **Method A (Finder)**: Open `/Applications` in Finder, right-click (or Control-click) `TodoCat.app`, select **Open**, and click **Open** in the confirmation dialog. You only need to perform this step once.
+   - **Method B (Terminal)**: Remove the quarantine flag:
+     ```bash
+     xattr -cr /Applications/TodoCat.app
+     ```
+
+### macOS Native Menu Bar Companion
+- Your companion animates directly in the macOS menu bar (`NSStatusItem`).
+- Running speed mirrors your task completion velocity in real time.
+- Click the menu bar companion to view quick stats, switch active mascots, or bring the main window forward.
+
+---
+
+## Linux Installation Guide
+
+TodoCat on Linux is distributed as a self-contained **AppImage** (compatible with all major distributions) and as a standalone tarball archive.
 
 ### Prerequisites
-- Flutter SDK 3.10+
-- Android SDK (API 21+)
-- Node.js 18+ (for Web / Backend)
+TodoCat requires GTK 3 and Ayatana AppIndicator for desktop windowing and tray support. Ensure runtime dependencies are installed:
 
-### Mobile App Setup
+- **Ubuntu / Debian / Linux Mint**:
+  ```bash
+  sudo apt update && sudo apt install -y libgtk-3-0 libayatana-appindicator3-1
+  ```
+- **Fedora / RHEL / CentOS**:
+  ```bash
+  sudo dnf install -y gtk3 libayatana-appindicator
+  ```
+- **Arch Linux / Manjaro**:
+  ```bash
+  sudo pacman -S --needed gtk3 libayatana-appindicator
+  ```
+
+---
+
+### Method A: AppImage (Recommended)
+
+The AppImage runs out-of-the-box without altering your system directories.
+
+1. **Download Latest AppImage**:
+   Download `TodoCat-*-x86_64.AppImage` from [GitHub Latest Releases](https://github.com/nanda-kshr/ToDo-Cat/releases/latest).
+
+   Or fetch the latest release directly with a single terminal command:
+   ```bash
+   curl -s https://api.github.com/repos/nanda-kshr/ToDo-Cat/releases/latest \
+     | grep "browser_download_url.*AppImage" \
+     | cut -d : -f 2,3 \
+     | tr -d \" \
+     | xargs curl -LO
+   ```
+
+2. **Make Executable**:
+   ```bash
+   chmod +x TodoCat-*-x86_64.AppImage
+   ```
+
+3. **Run**:
+   ```bash
+   ./TodoCat-*-x86_64.AppImage
+   ```
+
+*(Optional: Use [AppImageLauncher](https://github.com/TheAssassin/AppImageLauncher) or create a desktop shortcut with `app/linux/todocat.desktop` to integrate directly into your desktop application menu).*
+
+---
+
+### Method B: Standalone Tarball
+
+1. **Download and Extract**:
+   Download `TodoCat-*-linux-x64.tar.gz` from [GitHub Latest Releases](https://github.com/nanda-kshr/ToDo-Cat/releases/latest).
+
+   ```bash
+   mkdir -p ~/todocat
+   curl -s https://api.github.com/repos/nanda-kshr/ToDo-Cat/releases/latest \
+     | grep "browser_download_url.*linux-x64.tar.gz" \
+     | cut -d : -f 2,3 \
+     | tr -d \" \
+     | xargs curl -LO
+   tar -xzf TodoCat-*-linux-x64.tar.gz -C ~/todocat
+   ```
+
+2. **Launch**:
+   ```bash
+   ~/todocat/todocat
+   ```
+
+---
+
+## Key Features
+
+- **Pacing Runner Companion**: Speed scales dynamically with your task completion velocity. Choose between Cat, Bunny, or Axolotl in auto, black, or white variants.
+- **Android Floating Overlay**: System overlay companion allows you to check off tasks, add new goals, and check progress over any running mobile application.
+- **macOS Menu Bar Runner**: Native system menu bar integration mirroring your progress throughout the workday.
+- **Android Home Widgets**: Resizable home screen widgets with one-tap completion.
+- **Smart Organization**: Categorize tasks by Priority (Low, Medium, High) and Domain (Work, Personal, Study, Health, Shopping, General).
+- **Productivity Analytics**: Visual charts tracking weekly velocity, completion distribution, and consistency streaks.
+- **100% Offline-First Architecture**: Full local database persistence with background cloud synchronization.
+- **Zero Ads & Privacy First**: No ad tracking SDKs, no telemetry selling, and full one-click account and data deletion.
+
+---
+
+## Tech Stack & Architecture
+
+```
+todocat/
+├── app/                  # Mobile & Desktop Client (Flutter / Dart)
+│   ├── android/          # Native Android companion service & widgets
+│   ├── macos/            # Native macOS AppKit menu bar companion
+│   ├── linux/            # Linux desktop runner & desktop integration
+│   └── lib/              # Shared presentation, state, and domain models
+├── Web/                  # Web Dashboard & Backend API (Next.js / TypeScript)
+│   ├── app/              # Next.js App Router (pages & API routes)
+│   ├── components/       # Shared UI components
+│   └── public/           # Static assets, runners, and icons
+└── features/             # Google Open Knowledge Format (OKF) specification
+```
+
+- **Client Application**: Built with Flutter (Dart), utilizing native platform channels for Android floating overlays and macOS AppKit menu bar integration.
+- **Web Application & API Server**: Built with Next.js (App Router, TypeScript, Tailwind CSS).
+- **Database & Auth**: MongoDB Atlas with JWT session authentication and Google OAuth support.
+- **Push Notifications**: Firebase Cloud Messaging (FCM).
+
+---
+
+## Local Development
+
+### Prerequisites
+- Flutter SDK (3.10+)
+- Node.js (18+) & npm
+- Android SDK (API 21+) / Xcode (for macOS)
+
+### Running the Flutter Client
 ```bash
 cd app
 flutter pub get
 flutter run
 ```
 
-### Web App Setup
+### Running the Web Dashboard & API
 ```bash
 cd Web
 npm install
 npm run dev
+```
+
+### Running Tests
+```bash
+# Flutter Client Tests
+cd app
+flutter test
+
+# Backend API Tests
+npm test
 ```
 
 ---
@@ -96,12 +265,11 @@ npm run dev
 - **Privacy Policy**: [https://to-do-cat.vercel.app/privacy](https://to-do-cat.vercel.app/privacy)
 - **Terms of Service**: [https://to-do-cat.vercel.app/terms](https://to-do-cat.vercel.app/terms)
 - **Account Deletion**: [https://to-do-cat.vercel.app/delete-account](https://to-do-cat.vercel.app/delete-account)
-- **Developer Contact**: Nandakishore P (`nandakishorep212@gmail.com`)
-- **GitHub**: [https://github.com/nanda-kshr](https://github.com/nanda-kshr)
-- **Buy Me a Coffee**: [https://buymeacoffee.com/nanda_kshr](https://buymeacoffee.com/nanda_kshr)
+- **Developer**: Nandakishore P ([nandakishorep212@gmail.com](mailto:nandakishorep212@gmail.com))
+- **Support the Project**: [Buy Me a Coffee](https://buymeacoffee.com/nanda_kshr)
 
 ---
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
