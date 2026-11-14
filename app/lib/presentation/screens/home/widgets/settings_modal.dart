@@ -347,6 +347,27 @@ class _SettingsModalSheetState extends State<_SettingsModalSheet> {
                             textPrimary: textPrimary,
                             textSecondary: textSecondary,
                           ),
+                          const SizedBox(width: 8),
+                          _buildSettingOptionCard(
+                            label: 'Axolotl',
+                            iconWidget: Image.asset(
+                              RunnerType.axolotl.previewAssetPath(isWhite: isDark),
+                              width: 32,
+                              height: 28,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) => const Icon(Icons.pets, size: 24),
+                            ),
+                            isSelected: currentRunner == RunnerType.axolotl,
+                            onTap: () async {
+                              await ThemeService.instance.setSelectedRunner(RunnerType.axolotl);
+                              widget.onThemeChanged();
+                            },
+                            cardBg: cardBg,
+                            cardBorder: cardBorder,
+                            activeBorder: activeBorder,
+                            textPrimary: textPrimary,
+                            textSecondary: textSecondary,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 22),

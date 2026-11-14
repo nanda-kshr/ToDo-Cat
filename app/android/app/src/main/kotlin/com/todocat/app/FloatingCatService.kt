@@ -124,7 +124,8 @@ class FloatingCatService : Service() {
     )
 
     private val blackBunnyFrames = intArrayOf(
-        R.drawable.bunny_0, R.drawable.bunny_1, R.drawable.bunny_2, R.drawable.bunny_3, R.drawable.bunny_4
+        R.drawable.bunny_0, R.drawable.bunny_1, R.drawable.bunny_2, R.drawable.bunny_3,
+        R.drawable.bunny_4, R.drawable.bunny_5, R.drawable.bunny_6, R.drawable.bunny_7
     )
 
     private val whiteBunnyFrames = intArrayOf(
@@ -133,12 +134,32 @@ class FloatingCatService : Service() {
 
     private val blackBunnySleepFrames = intArrayOf(
         R.drawable.bunny_sleep_0, R.drawable.bunny_sleep_1, R.drawable.bunny_sleep_2,
-        R.drawable.bunny_sleep_3, R.drawable.bunny_sleep_4
+        R.drawable.bunny_sleep_3, R.drawable.bunny_sleep_4, R.drawable.bunny_sleep_5, R.drawable.bunny_sleep_6
     )
 
     private val whiteBunnySleepFrames = intArrayOf(
         R.drawable.bunny_white_sleep_0, R.drawable.bunny_white_sleep_1, R.drawable.bunny_white_sleep_2,
         R.drawable.bunny_white_sleep_3, R.drawable.bunny_white_sleep_4
+    )
+
+    private val blackAxolotlFrames = intArrayOf(
+        R.drawable.axolotl_0, R.drawable.axolotl_1, R.drawable.axolotl_2, R.drawable.axolotl_3,
+        R.drawable.axolotl_4, R.drawable.axolotl_5, R.drawable.axolotl_6, R.drawable.axolotl_7, R.drawable.axolotl_8
+    )
+
+    private val whiteAxolotlFrames = intArrayOf(
+        R.drawable.axolotl_white_0, R.drawable.axolotl_white_1, R.drawable.axolotl_white_2, R.drawable.axolotl_white_3,
+        R.drawable.axolotl_white_4, R.drawable.axolotl_white_5, R.drawable.axolotl_white_6, R.drawable.axolotl_white_7, R.drawable.axolotl_white_8
+    )
+
+    private val blackAxolotlSleepFrames = intArrayOf(
+        R.drawable.axolotl_sleep_0, R.drawable.axolotl_sleep_1, R.drawable.axolotl_sleep_2,
+        R.drawable.axolotl_sleep_3, R.drawable.axolotl_sleep_4, R.drawable.axolotl_sleep_5, R.drawable.axolotl_sleep_6
+    )
+
+    private val whiteAxolotlSleepFrames = intArrayOf(
+        R.drawable.axolotl_white_sleep_0, R.drawable.axolotl_white_sleep_1, R.drawable.axolotl_white_sleep_2,
+        R.drawable.axolotl_white_sleep_3, R.drawable.axolotl_white_sleep_4, R.drawable.axolotl_white_sleep_5, R.drawable.axolotl_white_sleep_6
     )
 
     private fun loadDrawables(frames: IntArray): Array<Drawable> {
@@ -159,21 +180,24 @@ class FloatingCatService : Service() {
     private val blackBunnySleepDrawables: Array<Drawable> by lazy { loadDrawables(blackBunnySleepFrames) }
     private val whiteBunnySleepDrawables: Array<Drawable> by lazy { loadDrawables(whiteBunnySleepFrames) }
 
+    private val blackAxolotlDrawables: Array<Drawable> by lazy { loadDrawables(blackAxolotlFrames) }
+    private val whiteAxolotlDrawables: Array<Drawable> by lazy { loadDrawables(whiteAxolotlFrames) }
+    private val blackAxolotlSleepDrawables: Array<Drawable> by lazy { loadDrawables(blackAxolotlSleepFrames) }
+    private val whiteAxolotlSleepDrawables: Array<Drawable> by lazy { loadDrawables(whiteAxolotlSleepFrames) }
+
     private fun getActiveRunDrawables(): Array<Drawable> {
-        val isBunny = runner == "bunny"
-        return if (isCatWhite) {
-            if (isBunny) whiteBunnyDrawables else whiteCatDrawables
-        } else {
-            if (isBunny) blackBunnyDrawables else blackCatDrawables
+        return when (runner) {
+            "bunny" -> if (isCatWhite) whiteBunnyDrawables else blackBunnyDrawables
+            "axolotl" -> if (isCatWhite) whiteAxolotlDrawables else blackAxolotlDrawables
+            else -> if (isCatWhite) whiteCatDrawables else blackCatDrawables
         }
     }
 
     private fun getActiveSleepDrawables(): Array<Drawable> {
-        val isBunny = runner == "bunny"
-        return if (isCatWhite) {
-            if (isBunny) whiteBunnySleepDrawables else whiteCatSleepDrawables
-        } else {
-            if (isBunny) blackBunnySleepDrawables else blackCatSleepDrawables
+        return when (runner) {
+            "bunny" -> if (isCatWhite) whiteBunnySleepDrawables else blackBunnySleepDrawables
+            "axolotl" -> if (isCatWhite) whiteAxolotlSleepDrawables else blackAxolotlSleepDrawables
+            else -> if (isCatWhite) whiteCatSleepDrawables else blackCatSleepDrawables
         }
     }
 
@@ -458,12 +482,16 @@ class FloatingCatService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notifIcon = if (runner == "bunny") {
-            if (isCatWhite) R.drawable.bunny_white_0 else R.drawable.bunny_0
-        } else {
-            if (isCatWhite) R.drawable.cat_white_0 else R.drawable.cat_0
+        val notifIcon = when (runner) {
+            "bunny" -> if (isCatWhite) R.drawable.bunny_white_0 else R.drawable.bunny_0
+            "axolotl" -> if (isCatWhite) R.drawable.axolotl_white_0 else R.drawable.axolotl_0
+            else -> if (isCatWhite) R.drawable.cat_white_0 else R.drawable.cat_0
         }
-        val closeLabel = if (runner == "bunny") "Close Bunny" else "Close Cat"
+        val closeLabel = when (runner) {
+            "bunny" -> "Close Bunny"
+            "axolotl" -> "Close Axolotl"
+            else -> "Close Cat"
+        }
         val notification: Notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("TodoCat Floating Companion")
             .setContentText(speedMessage)

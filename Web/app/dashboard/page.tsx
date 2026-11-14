@@ -612,7 +612,7 @@ function DashboardContent() {
       return "Good afternoon! Ready for today?";
     }
 
-    const runnerName = selectedRunner === "bunny" ? "Bunny" : "Cat";
+    const runnerName = selectedRunner === "bunny" ? "Bunny" : selectedRunner === "axolotl" ? "Axolotl" : "Cat";
 
     // Evening: 5:00 PM - 9:59 PM
     if (hour >= 17 && hour < 22) {
@@ -753,7 +753,7 @@ function DashboardContent() {
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-xs uppercase tracking-wider font-semibold text-neutral-400">
-                {selectedRunner === "bunny" ? "Bunny" : "Cat"} Speed & Activity
+                {selectedRunner === "bunny" ? "Bunny" : selectedRunner === "axolotl" ? "Axolotl" : "Cat"} Speed & Activity
               </span>
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-neutral-800 text-neutral-200 border border-neutral-700">
                 {catSpeedPercent}% Speed
@@ -787,6 +787,18 @@ function DashboardContent() {
                   title="Switch to Bunny"
                 >
                   Bunny
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRunnerChange("axolotl")}
+                  className={`px-2 py-0.5 text-xs font-medium rounded-md transition ${
+                    selectedRunner === "axolotl"
+                      ? "bg-neutral-800 text-white shadow-sm"
+                      : "text-neutral-400 hover:text-neutral-200"
+                  }`}
+                  title="Switch to Axolotl"
+                >
+                  Axolotl
                 </button>
               </div>
             </div>

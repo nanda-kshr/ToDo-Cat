@@ -176,9 +176,23 @@
                     android:layout_height="match_parent"
                     android:scaleType="fitCenter"
                     android:src="@drawable/cat_white_6" />
+
+                <ImageView
+                    android:id="@+id/widget_cat_frame_7"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/cat_white_0" />
+
+                <ImageView
+                    android:id="@+id/widget_cat_frame_8"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/cat_white_0" />
             </ViewFlipper>
 
-            <!-- Sleeping Cat when 0 tasks (Frames 0-5) -->
+            <!-- Sleeping Cat when 0 tasks (Frames 0-6) -->
             <ViewFlipper
                 android:id="@+id/widget_cat_sleeping"
                 android:layout_width="match_parent"
@@ -229,6 +243,13 @@
                     android:layout_height="match_parent"
                     android:scaleType="fitCenter"
                     android:src="@drawable/cat_white_sleep_5" />
+
+                <ImageView
+                    android:id="@+id/widget_cat_sleep_6"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/cat_white_sleep_0" />
             </ViewFlipper>
         </FrameLayout>
 

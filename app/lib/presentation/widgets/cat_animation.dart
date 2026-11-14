@@ -106,8 +106,8 @@ class _CatAnimationState extends State<CatAnimation>
             animation: _controller,
             builder: (context, _) {
               final totalFrames = isSleeping
-                  ? activeRunner.sleepFrameCount
-                  : activeRunner.runFrameCount;
+                  ? activeRunner.sleepFramesFor(isWhite: useWhite)
+                  : activeRunner.runFramesFor(isWhite: useWhite);
               final frame = (_controller.value * totalFrames).floor().clamp(0, totalFrames - 1);
               final assetPath = activeRunner.assetPath(
                 isWhite: useWhite,

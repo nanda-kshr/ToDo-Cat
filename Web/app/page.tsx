@@ -161,7 +161,7 @@ export default function Home() {
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-white">
-                      {demoRunner === "bunny" ? "Bunny" : "Cat"} Status
+                      {demoRunner === "bunny" ? "Bunny" : demoRunner === "axolotl" ? "Axolotl" : "Cat"} Status
                     </span>
                     <span
                       className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
@@ -177,10 +177,10 @@ export default function Home() {
                   </div>
                   <p className="text-xs text-neutral-400 mt-0.5">
                     {demoSpeed === 0
-                      ? `All tasks cleared. ${demoRunner === "bunny" ? "Bunny" : "Cat"} is sleeping peacefully.`
+                      ? `All tasks cleared. ${demoRunner === "bunny" ? "Bunny" : demoRunner === "axolotl" ? "Axolotl" : "Cat"} is sleeping peacefully.`
                       : demoSpeed >= 100
                       ? `${activeCount} pending tasks. Maximum speed zoomies!`
-                      : `${activeCount} pending tasks. ${demoRunner === "bunny" ? "Bunny" : "Cat"} is running along.`}
+                      : `${activeCount} pending tasks. ${demoRunner === "bunny" ? "Bunny" : demoRunner === "axolotl" ? "Axolotl" : "Cat"} is running along.`}
                   </p>
                 </div>
               </div>
@@ -204,6 +204,15 @@ export default function Home() {
                     }`}
                   >
                     Bunny
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDemoRunner("axolotl")}
+                    className={`px-2 py-0.5 text-xs font-medium rounded-md transition ${
+                      demoRunner === "axolotl" ? "bg-neutral-800 text-white shadow-sm" : "text-neutral-400 hover:text-neutral-200"
+                    }`}
+                  >
+                    Axolotl
                   </button>
                 </div>
 

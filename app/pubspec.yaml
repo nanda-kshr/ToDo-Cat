@@ -42,6 +42,10 @@ flutter:
     - assets/runners/bunny/sleep/
     - assets/runners/bunny_white/run/
     - assets/runners/bunny_white/sleep/
+    - assets/runners/axolotl/run/
+    - assets/runners/axolotl/sleep/
+    - assets/runners/axolotl_white/run/
+    - assets/runners/axolotl_white/sleep/
     - assets/svg/
 
   fonts:

@@ -75,3 +75,20 @@ Each feature document must conform to the Google Open Knowledge Format specifica
 1. **Concise In-Chat Plans Only**: Never generate standalone markdown plan files (e.g. `.md` artifacts or plan documents). Always present proposals and implementation plans as concise, bulleted summaries directly in the chat response.
 2. **Feature Docs Only Upon Approval**: Create or update concept markdown files under `features/*.md` (Google OKF) **strictly after** the user approves and the feature is implemented, never for preliminary plans.
 3. **Skip Tests on Frontend-Only Edits**: Do not run Flutter tests or backend API tests (`npm test`) when making frontend-only changes (UI styling, asset reorganizations, themes, or view adjustments).
+
+---
+
+## 5. Repository Stack & Verification Reference
+- **Flutter Mobile & Desktop (`app/`)**:
+  - Test framework: `flutter_test`
+  - Test command: `flutter test` (or `flutter test test/<file>_test.dart`)
+  - Runner configurations: `RunnerType` (`cat`: 7 run, 6 sleep; `bunny`: 8 run, 7 sleep, white: 5/5; `axolotl`: 9 run, 7 sleep).
+- **Web Frontend (`Web/`)**:
+  - Stack: Next.js (App Router), React, Tailwind CSS, TypeScript
+  - Dev/build: `npm run dev` / `npm run build`
+- **Native Android Companion**:
+  - Drawables: `app/android/app/src/main/res/drawable-nodpi/` (400x400 PNGs)
+  - Floating overlay: `FloatingCatService.kt`
+  - Home widgets: `TodoCatWidgetProvider.kt` & `todocat_cat_widget*.xml`
+- **Native macOS Companion**:
+  - AppKit menu bar companion: `AppDelegate.swift` (`MenuBarCompanionManager`)

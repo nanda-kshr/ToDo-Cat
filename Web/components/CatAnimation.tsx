@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 
-export type RunnerType = "cat" | "bunny";
+export type RunnerType = "cat" | "bunny" | "axolotl";
 
 export interface RunnerConfig {
   id: RunnerType;
@@ -21,8 +21,14 @@ export const RUNNER_CONFIGS: Record<RunnerType, RunnerConfig> = {
   bunny: {
     id: "bunny",
     name: "Bunny",
-    runFrames: 5,
-    sleepFrames: 5,
+    runFrames: 8,
+    sleepFrames: 7,
+  },
+  axolotl: {
+    id: "axolotl",
+    name: "Axolotl",
+    runFrames: 9,
+    sleepFrames: 7,
   },
 };
 
@@ -30,7 +36,7 @@ export function getGlobalRunner(): RunnerType {
   if (typeof window !== "undefined") {
     try {
       const saved = localStorage.getItem("selected_runner");
-      if (saved === "bunny" || saved === "cat") return saved;
+      if (saved === "bunny" || saved === "cat" || saved === "axolotl") return saved;
     } catch {
       // ignore
     }
@@ -101,12 +107,14 @@ export default function CatAnimation({
     return Math.max(0.2, Number(sec.toFixed(3)));
   }, [speedPercent, isSleeping]);
 
-  const totalFrames = isSleeping ? config.sleepFrames : config.runFrames;
+  const useWhite = isWhite ?? (theme === "dark");
+  const isBunnyWhite = currentRunner === "bunny" && useWhite;
+  const totalFrames = isBunnyWhite ? 5 : (isSleeping ? config.sleepFrames : config.runFrames);
 
   // Reset frame index on state / runner switch
   useEffect(() => {
     setFrame(0);
-  }, [isSleeping, currentRunner]);
+  }, [isSleeping, currentRunner, useWhite]);
 
   // Frame tick loop
   useEffect(() => {
@@ -120,7 +128,6 @@ export default function CatAnimation({
     return () => clearInterval(timer);
   }, [isSleeping, duration, totalFrames]);
 
-  const useWhite = isWhite ?? (theme === "dark");
   const folder = `${currentRunner}${useWhite ? "_white" : ""}`;
   const stateFolder = isSleeping ? "sleep" : "run";
 

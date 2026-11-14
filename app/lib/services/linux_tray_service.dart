@@ -45,9 +45,8 @@ class LinuxTrayService with TrayListener {
   }
 
   void _updateRunnerFrames() {
-    final runnerName =
-        ThemeService.instance.selectedRunner.value.name.toLowerCase();
-    _totalFrames = runnerName.contains('bunny') ? 5 : 7;
+    _totalFrames = ThemeService.instance.selectedRunner.value
+        .runFramesFor(isWhite: _isCatWhite());
   }
 
   void dispose() {
@@ -184,6 +183,11 @@ class LinuxTrayService with TrayListener {
             label: 'Bunny',
             checked: currentRunner == RunnerType.bunny,
           ),
+          MenuItem.checkbox(
+            key: 'runner_axolotl',
+            label: 'Axolotl',
+            checked: currentRunner == RunnerType.axolotl,
+          ),
         ]),
       ),
       MenuItem.separator(),
@@ -227,6 +231,11 @@ class LinuxTrayService with TrayListener {
       ThemeService.instance.setSelectedRunner(RunnerType.bunny);
       _updateRunnerFrames();
       onRunnerChanged?.call(RunnerType.bunny);
+      _updateMenu();
+    } else if (key == 'runner_axolotl') {
+      ThemeService.instance.setSelectedRunner(RunnerType.axolotl);
+      _updateRunnerFrames();
+      onRunnerChanged?.call(RunnerType.axolotl);
       _updateMenu();
     } else if (key.startsWith('task_')) {
       final taskId = key.substring(5);

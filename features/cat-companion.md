@@ -17,7 +17,7 @@ A dynamic cat companion that animates across the header of the app, floats over 
 - **Floating Overlay Service**: Android native Foreground Service displaying a mini cat over any app with touch interactions.
 - **Expanded Overlay View**: Tapping the floating cat reveals a full task management card supporting task creation, check-off, and priority indicators.
 - **Theme & Color Parity**: Automatically mirrors the central theme palette across light and dark modes with selectable variants (Auto, Black, White).
-- **Multiple Runner Companions**: Supports selectable companion mascots (`Cat` and `Bunny`), each with independent run/sleep frame counts (`assets/runners/<runner>/run/<frame>.png` and `assets/runners/<runner>/sleep/<frame>.png`).
+- **Multiple Runner Companions**: Supports selectable companion mascots (`Cat`, `Bunny`, and `Axolotl`), each with independent run/sleep frame counts (`assets/runners/<runner>/run/<frame>.png` and `assets/runners/<runner>/sleep/<frame>.png`).
 
 ## Daily Cat Briefing
 - **Client-Side Trigger**: Evaluated on app open and foreground resume (`didChangeAppLifecycleState`). Deduplicated by period key (`YYYY-MM-DD-period`) so users only receive one in-app toast per time bracket.
@@ -45,16 +45,16 @@ A dynamic cat companion that animates across the header of the app, floats over 
 - **Mobile (Flutter & Android)**:
   - `app/lib/presentation/screens/home/widgets/home_status_banner.dart` - Home screen big status card with a 50/50 horizontal split: half width for the enlarged animated cat (`size: ~135px`, responsive clamp `120-155px`) with clean speech bubble, and half width for active tasks count, prominent `48px` percentage counter, `16px` pill progress bar, and completion summary.
   - `app/lib/services/floating_cat_service.dart` - MethodChannel bridge for controlling the floating companion overlay with dynamic runner parameter.
-  - `app/android/app/src/main/kotlin/com/todocat/app/FloatingCatService.kt` - Android overlay implementation using WindowManager and theme-aware UI views supporting dynamic runner mascots (Cat and Bunny) in both running and sleeping states.
-  - `app/lib/models/runner.dart` - `RunnerType` enum (Cat, Bunny) with dynamic frame counts and asset path resolvers.
-  - `app/assets/runners/` - Multi-runner sprite frames categorized by `run/` and `sleep/` for Cat (7/6 frames) and Bunny (5/5 frames) in default and white color variants.
+  - `app/android/app/src/main/kotlin/com/todocat/app/FloatingCatService.kt` - Android overlay implementation using WindowManager and theme-aware UI views supporting dynamic runner mascots (Cat, Bunny, and Axolotl) in both running and sleeping states.
+  - `app/lib/models/runner.dart` - `RunnerType` enum (Cat, Bunny, Axolotl) with dynamic frame counts and asset path resolvers.
+  - `app/assets/runners/` - Multi-runner sprite frames categorized by `run/` and `sleep/` for Cat (7/6 frames), Bunny (8/7 frames, white: 5/5 frames), and Axolotl (9/7 frames) in default and white color variants.
 - **Desktop (macOS & Linux)**:
-  - `app/macos/Runner/AppDelegate.swift` - Hosts `MenuBarCompanionManager`, managing AppKit's `NSStatusItem` (`28x28pt` sprite frames with `.scaleProportionallyDown` and dynamic `NSAppearance` menu bar contrast detection), sprite frame animation timer, and a compact, scrollable `NSPopover` interface with a Quick Task entry text box on top, optimistic task completion checkboxes, live task count badge, and runner switcher. Operates as a pure menu bar companion via `LSUIElement = true` and `NSApplication.ActivationPolicy.accessory`, preventing Dock clutter and running persistently on top. Prevents app termination on window close when the menu bar companion is active.
+  - `app/macos/Runner/AppDelegate.swift` - Hosts `MenuBarCompanionManager`, managing AppKit's `NSStatusItem` (`28x28pt` sprite frames with `.scaleProportionallyDown` and dynamic `NSAppearance` menu bar contrast detection), sprite frame animation timer, and a compact, scrollable `NSPopover` interface with a Quick Task entry text box on top, optimistic task completion checkboxes, live task count badge, and runner switcher (Cat / Bunny / Axolotl). Operates as a pure menu bar companion via `LSUIElement = true` and `NSApplication.ActivationPolicy.accessory`, preventing Dock clutter and running persistently on top. Prevents app termination on window close when the menu bar companion is active.
   - `app/macos/Runner/MainFlutterWindow.swift` - Connects the Flutter engine binary messenger with the native menu bar companion manager.
   - `app/lib/services/mac_menu_bar_service.dart` - Flutter `MethodChannel` (`com.todocat.app/macos_menu_bar`) sending real-time task velocity, active counts, theme variants, and runner mascot type.
-  - `app/lib/services/linux_tray_service.dart` - Linux system tray companion (`tray_manager` StatusNotifierItem over D-Bus) cycling companion running frames, reflecting theme variant and active task counts. Features an interactive context menu with today's tasks as checkable items, Quick Add task trigger, runner mascot switcher (Cat/Bunny), and native window focus via `gtk_window_present`.
+  - `app/lib/services/linux_tray_service.dart` - Linux system tray companion (`tray_manager` StatusNotifierItem over D-Bus) cycling companion running frames, reflecting theme variant and active task counts. Features an interactive context menu with today's tasks as checkable items, Quick Add task trigger, runner mascot switcher (Cat / Bunny / Axolotl), and native window focus via `gtk_window_present`.
   - `app/lib/presentation/screens/home/widgets/settings_modal.dart` - Provides native toggle for "Menu Bar Companion" on macOS devices.
 - **Web (Next.js)**:
   - `Web/components/CatAnimation.tsx` - Reusable multi-runner animation component supporting dynamic frame loops, sleep/run cycles, theme cards/dark variants, and local storage synchronization.
   - `Web/public/runners/` - Synced multi-runner frames mirroring the Flutter asset structure.
-  - `Web/app/dashboard/page.tsx` & `Web/app/page.tsx` - Live runner switcher (Cat vs. Bunny) and briefing messages.
+  - `Web/app/dashboard/page.tsx` & `Web/app/page.tsx` - Live runner switcher (Cat vs. Bunny vs. Axolotl) and briefing messages.

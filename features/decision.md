@@ -126,11 +126,12 @@ last_updated: 2026-10-27
 - **Categorized Asset Structure**: Runner assets are stored under `app/assets/runners/<runner>[_white]/<run|sleep>/<frame>.png`.
 - **Variable Frame Counts**:
   - `Cat`: 7 running frames (`0.png`–`6.png`), 6 sleeping frames (`0.png`–`5.png`).
-  - `Bunny`: 5 running frames (`0.png`–`4.png`), 5 sleeping frames (`0.png`–`4.png`).
-- **Dynamic Selection & Persistence**: Runner choice (`Cat` vs `Bunny`) is persisted via `ThemeService` (Flutter) and `localStorage` (Next.js) under `selected_runner` with real-time UI updates across the home banner, floating overlay, and settings modal on mobile, and the dashboard banner and demo landing page on web.
+  - `Bunny`: 8 running frames (`0.png`–`7.png`), 7 sleeping frames (`0.png`–`6.png`). Bunny White variant retains 5 running frames (`0.png`–`4.png`) and 5 sleeping frames (`0.png`–`4.png`).
+  - `Axolotl`: 9 running frames (`0.png`–`8.png`), 7 sleeping frames (`0.png`–`6.png`) for both default and white variants.
+- **Dynamic Selection & Persistence**: Runner choice (`Cat` vs `Bunny` vs `Axolotl`) is persisted via `ThemeService` (Flutter) and `localStorage` (Next.js) under `selected_runner` with real-time UI updates across the home banner, floating overlay, and settings modal on mobile, and the dashboard banner and demo landing page on web.
 - **Dynamic Companion Previews**: The companion color selector (Auto, Black, White) dynamically displays preview frames of the currently active runner mascot.
 - **Web Parity**: `Web/public/runners/` mirrors the categorized asset structure. `Web/components/CatAnimation.tsx` cycles individual frames via dynamic interval timing adapting to frame count, speed percent, and dark mode variants.
-- **Android Home Widget & Floating Overlay Parity**: Native Android components (`TodoCatWidgetProvider` and `FloatingCatService`) adapt dynamically to the `selected_runner` preference. Optimized 400x400 drawables (`bunny_0..4`, `bunny_sleep_0..4` and their white variants) are registered in `drawable-nodpi/` to prevent memory bloat and `TransactionTooLargeException` in `RemoteViews`.
+- **Android Home Widget & Floating Overlay Parity**: Native Android components (`TodoCatWidgetProvider` and `FloatingCatService`) adapt dynamically to the `selected_runner` preference. Optimized 400x400 drawables (`bunny_0..7`, `bunny_sleep_0..6`, `axolotl_0..8`, `axolotl_sleep_0..6`, and white variants) are registered in `drawable-nodpi/` to prevent memory bloat and `TransactionTooLargeException` in `RemoteViews`.
 
 ## 13. macOS Desktop Authentication & Menu Bar Companion
 - **Google Sign-In on macOS**:
@@ -141,11 +142,11 @@ last_updated: 2026-10-27
   - Rendered via `NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)` in `AppDelegate.swift`.
   - Asset resolution uses `FlutterDartProject.lookupKey(forAsset:)` combined with `Bundle.main.bundleURL` to locate Flutter assets under `Contents/Frameworks/App.framework/Resources/flutter_assets/`.
   - Dimensions: Icon target size configured to `28x28pt` with `.scaleProportionallyDown` to scale cleanly across modern Retina/notched display menu bar heights (~38pt) and external monitors.
-  - Interactive Popover UI: Clicking the menu bar companion presents a compact (`280x340pt`), scrollable `NSPopover` with frosted vibrancy (`.popover` material) instead of an OS context menu. Features a Quick Task entry text box on top with Enter/`+` submission, live task checkboxes with optimistic completion sync to Flutter, task count pill badge, runner mascot switch (Cat / Bunny), and instant "Open App" navigation.
+  - Interactive Popover UI: Clicking the menu bar companion presents a compact (`280x340pt`), scrollable `NSPopover` with frosted vibrancy (`.popover` material) instead of an OS context menu. Features a Quick Task entry text box on top with Enter/`+` submission, live task checkboxes with optimistic completion sync to Flutter, task count pill badge, runner mascot switch (Cat / Bunny / Axolotl), and instant "Open App" navigation.
   - Automatic Menu Bar Brightness Detection: Companion sprite variant (dark vs. white) dynamically matches `statusItem.button.effectiveAppearance` (VibrantLight vs. DarkAqua) rather than the Flutter window theme, ensuring the cat has high contrast and is always visible on top regardless of desktop wallpaper or light/dark menu bar modes.
   - Dock Icon Suppression: Configured `<key>LSUIElement</key><true/>` in `Info.plist` and `NSApp.setActivationPolicy(.accessory)` in `AppDelegate.swift`, ensuring the app operates as a dedicated menu bar companion without showing an icon in the macOS Dock or Cmd+Tab app switcher.
   - Release Packaging (`.dmg`): Automated via `scripts/build_dmg.sh` using `hdiutil` to bundle the optimized release app into a compressed UDZO disk image with a standard `/Applications` drag-and-drop symlink for distribution.
-  - Synchronizes active/completed tasks, velocity speed, companion mascot selection (Cat/Bunny), and system appearance (Dark/Light) dynamically.
+  - Synchronizes active/completed tasks, velocity speed, companion mascot selection (Cat/Bunny/Axolotl), and system appearance (Dark/Light) dynamically.
 
 ## 14. Linux Desktop Application Architecture
 - **Runner Configuration**:
@@ -156,13 +157,13 @@ last_updated: 2026-10-27
   - FreeDesktop `.desktop` entry configured at `app/linux/todocat.desktop` with categories `Office;ProjectManagement;`.
 - **System Tray Companion**:
   - Implemented via `tray_manager` (StatusNotifierItem over D-Bus) in `app/lib/services/linux_tray_service.dart`.
-  - Animates running frames (Cat: 7 frames, Bunny: 5 frames) cycling via a 150ms periodic timer.
+  - Animates running frames (Cat: 7 frames, Bunny: 8 frames, Axolotl: 9 frames) cycling via a 150ms periodic timer.
   - Automatically adapts to runner mascot and theme brightness (dark vs. white variant).
   - Context menu features:
     - Active task count and cat velocity status header.
     - Quick Task: "+ Add Task..." triggers native window raise and immediate task creation dialog.
     - Interactive Task List: Today's tasks rendered with live checkable checkboxes (`MenuItem.checkbox`), with optimistic task toggling synced to Flutter state and backend.
-    - Companion mascot selector submenu (Cat / Bunny) updating preferences in real time.
+    - Companion mascot selector submenu (Cat / Bunny / Axolotl) updating preferences in real time.
     - Window management: "Open TodoCat" raises and focuses the GTK window via custom `com.todocat.app/linux_window` method channel invoking `gtk_window_present`.
     - Quit option.
   - **Background & Close-to-Tray Lifecycle**:

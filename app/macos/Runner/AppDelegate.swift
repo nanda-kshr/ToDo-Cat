@@ -198,9 +198,9 @@ class MenuBarPopoverViewController: NSViewController, NSTextFieldDelegate {
     footerLine.fillColor = NSColor.separatorColor.withAlphaComponent(0.4)
     footer.addSubview(footerLine)
 
-    let seg = NSSegmentedControl(labels: ["Cat", "Bunny"], trackingMode: .selectOne, target: self, action: #selector(onRunnerSegmentChanged(_:)))
+    let seg = NSSegmentedControl(labels: ["Cat", "Bunny", "Axolotl"], trackingMode: .selectOne, target: self, action: #selector(onRunnerSegmentChanged(_:)))
     seg.controlSize = .small
-    seg.frame = NSRect(x: 12, y: 8, width: 100, height: 22)
+    seg.frame = NSRect(x: 8, y: 8, width: 160, height: 22)
     footer.addSubview(seg)
     self.runnerSegment = seg
 
@@ -232,7 +232,13 @@ class MenuBarPopoverViewController: NSViewController, NSTextFieldDelegate {
     }
 
     // 2. Runner segment
-    runnerSegment.selectedSegment = (runner == "bunny") ? 1 : 0
+    if runner == "bunny" {
+      runnerSegment.selectedSegment = 1
+    } else if runner == "axolotl" {
+      runnerSegment.selectedSegment = 2
+    } else {
+      runnerSegment.selectedSegment = 0
+    }
 
     // 3. Render task rows
     renderTasks()
@@ -340,7 +346,14 @@ class MenuBarPopoverViewController: NSViewController, NSTextFieldDelegate {
   }
 
   @objc private func onRunnerSegmentChanged(_ sender: NSSegmentedControl) {
-    let runner = (sender.selectedSegment == 1) ? "bunny" : "cat"
+    let runner: String
+    if sender.selectedSegment == 1 {
+      runner = "bunny"
+    } else if sender.selectedSegment == 2 {
+      runner = "axolotl"
+    } else {
+      runner = "cat"
+    }
     manager?.setRunnerFromMenu(runner)
   }
 }
@@ -632,8 +645,14 @@ class MenuBarCompanionManager: NSObject, NSPopoverDelegate {
     }
 
     let count: Int
-    if currentRunner == "bunny" {
-      count = 5
+    if currentRunner == "axolotl" {
+      count = isSleeping ? 7 : 9
+    } else if currentRunner == "bunny" {
+      if isWhite {
+        count = 5
+      } else {
+        count = isSleeping ? 7 : 8
+      }
     } else {
       count = isSleeping ? 6 : 7
     }
@@ -741,8 +760,14 @@ class MenuBarCompanionManager: NSObject, NSPopoverDelegate {
 
   private func computeTimerInterval() -> TimeInterval {
     let frameCount: Double
-    if currentRunner == "bunny" {
-      frameCount = 5.0
+    if currentRunner == "axolotl" {
+      frameCount = isSleeping ? 7.0 : 9.0
+    } else if currentRunner == "bunny" {
+      if isWhite {
+        frameCount = 5.0
+      } else {
+        frameCount = isSleeping ? 7.0 : 8.0
+      }
     } else {
       frameCount = isSleeping ? 6.0 : 7.0
     }
